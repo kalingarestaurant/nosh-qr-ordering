@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nosh QR — Cashier Screen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #0f1117; color: #e8e8e8; min-height: 100vh; }
+
+        /* ===== AUTH SCREEN ===== */
+        .auth-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #0f1117 0%, #1a1a2e 100%); }
+        .auth-card { width: 360px; text-align: center; }
+        .auth-logo { font-size: 28px; font-weight: 800; color: #e94560; margin-bottom: 8px; }
+        .auth-subtitle { font-size: 14px; color: #888; margin-bottom: 28px; }
+        .auth-input-group { display: flex; gap: 0; margin-bottom: 12px; }
+        .auth-prefix { background: #1e2030; border: 1.5px solid #2a2d3e; border-right: none; border-radius: 8px 0 0 8px; padding: 12px; font-size: 14px; color: #888; }
+        .auth-input { flex: 1; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 0 8px 8px 0; padding: 12px 14px; font-size: 15px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
+        .auth-input:focus { border-color: #e94560; }
+        .otp-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+        .otp-box { width: 48px; height: 52px; text-align: center; font-size: 20px; font-weight: 600; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 8px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
+        .otp-box:focus { border-color: #e94560; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        .btn-primary { background: #e94560; color: #fff; }
+        .btn-primary:disabled { background: #444; cursor: not-allowed; }
+        .auth-error { color: #ff6b6b; font-size: 13px; margin-bottom: 10px; min-height: 18px; }
+        .auth-link { color: #666; font-size: 12px; margin-top: 10px; cursor: pointer; }
+        .auth-link.active-link { color: #e94560; }
+        .outlet-select { width: 100%; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 8px; padding: 12px 14px; font-size: 14px; color: #fff; font-family: 'Poppins', sans-serif; outline: none; margin-bottom: 12px; appearance: none; cursor: pointer; }
+        .outlet-select option { background: #1e2030; color: #fff; }
+
+        /* ===== MAIN DASHBOARD ===== */
+        .dashboard { display: none; flex-direction: column; min-height: 100vh; }
+        .dashboard.active { display: flex; }
+
+        /* Top Bar */
+        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #161822; border-bottom: 1px solid #1e2030; }
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .topbar-title { font-size: 16px; font-weight: 700; color: #e94560; }
+        .topbar-outlet { font-size: 13px; color: #888; }
+        .topbar-right { display: flex; align-items: center; gap: 16px; }
+        .topbar-stats { display: flex; gap: 16px; }
+        .stat-item { text-align: center; }
+        .stat-num { font-size: 20px; font-weight: 800; color: #fff; }
+        .stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .topbar-time { font-size: 13px; color: #666; }
+        .btn-logout { padding: 6px 14px; border: 1px solid #333; border-radius: 6px; background: none; color: #888; font-size: 12px; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        .btn-logout:hover { border-color: #e94560; color: #e94560; }
+
+        /* Sound toggle */
+        .sound-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #333; background: none; color: #888; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .sound-toggle.active { border-color: #e94560; color: #e94560; }
+
+        /* ===== ORDER COLUMNS ===== */
+        .columns-container { display: flex; flex: 1; overflow: hidden; }
+        .column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #1e2030; overflow-y: auto; }
+        .column:last-child { border-right: none; }
+        .column-header { padding: 12px 16px; background: #161822; border-bottom: 1px solid #1e2030; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+        .column-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .column-count { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+        .col-new .column-title { color: #ff6b6b; } .col-new .column-count { background: #ff6b6b20; color: #ff6b6b; }
+        .col-accepted .column-title { color: #ffd93d; } .col-accepted .column-count { background: #ffd93d20; color: #ffd93d; }
+        .col-served .column-title { color: #4ecdc4; } .col-served .column-count { background: #4ecdc420; color: #4ecdc4; }
+        .column-body { flex: 1; padding: 12px; overflow-y: auto; }
+
+        /* ===== ORDER CARD ===== */
+        .order-card { background: #1a1c2e; border-radius: 12px; padding: 14px; margin-bottom: 12px; border-left: 4px solid transparent; transition: all 0.3s; }
+        .order-card.status-new { border-left-color: #ff6b6b; }
+        .order-card.status-accepted { border-left-color: #ffd93d; }
+        .order-card.status-served { border-left-color: #4ecdc4; opacity: 0.6; }
+        .order-card.status-cancelled { border-left-color: #666; opacity: 0.4; }
+
+        /* New order pulse animation */
+        .order-card.status-new.pulse { animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+            50% { box-shadow: 0 0 20px 4px rgba(255, 107, 107, 0.3); }
+        }
+
+        .order-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .order-number { font-size: 18px; font-weight: 800; color: #fff; }
+        .order-table { font-size: 13px; font-weight: 600; color: #e94560; background: #e9456015; padding: 3px 10px; border-radius: 6px; }
+        .order-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 12px; color: #666; }
+        .order-phone { color: #888; }
+
+        /* Order Items */
+        .order-items { border-top: 1px solid #252840; padding-top: 10px; }
+        .order-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; }
+        .order-item-qty { font-size: 14px; font-weight: 700; color: #e94560; min-width: 30px; }
+        .order-item-details { flex: 1; }
+        .order-item-name { font-size: 14px; font-weight: 600; color: #e8e8e8; display: flex; align-items: center; gap: 6px; }
+        .order-item-price { font-size: 13px; color: #888; margin-left: auto; white-space: nowrap; }
+        .order-item-mods { font-size: 12px; color: #f0a500; margin-top: 2px; }
+        .order-item-instr { font-size: 12px; color: #e94560; font-style: italic; margin-top: 2px; }
+        .veg-dot { width: 12px; height: 12px; border: 1.5px solid; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .veg-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+        .veg-dot.veg { border-color: #0a8f0a; } .veg-dot.veg::after { background: #0a8f0a; }
+        .veg-dot.nonveg { border-color: #ff4444; } .veg-dot.nonveg::after { background: #ff4444; }
+        .veg-dot.egg { border-color: #f9a825; } .veg-dot.egg::after { background: #f9a825; }
+
+        .order-total { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #252840; padding-top: 10px; margin-top: 8px; }
+        .order-total-label { font-size: 13px; color: #888; }
+        .order-total-value { font-size: 16px; font-weight: 700; color: #fff; }
+
+        /* Action Buttons */
+        .order-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; transition: all 0.2s; }
+        .btn-accept { background: #2ecc71; color: #fff; }
+        .btn-accept:hover { background: #27ae60; }
+        .btn-served { background: #3498db; color: #fff; }
+        .btn-served:hover { background: #2980b9; }
+        .btn-cancel { background: #1e2030; color: #ff6b6b; border: 1px solid #ff6b6b30; }
+        .btn-cancel:hover { background: #ff6b6b15; }
+
+        /* ===== 86 ITEM MODAL ===== */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: #1a1c2e; border-radius: 16px; padding: 24px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-close { background: none; border: none; color: #888; font-size: 22px; cursor: pointer; }
+        .modal-search { width: 100%; padding: 10px 14px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px; color: #fff; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; margin-bottom: 12px; }
+        .modal-search:focus { border-color: #e94560; }
+        .avail-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2030; }
+        .avail-item-name { font-size: 14px; color: #e8e8e8; }
+        .avail-toggle { position: relative; width: 44px; height: 24px; background: #333; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+        .avail-toggle.on { background: #2ecc71; }
+        .avail-toggle::after { content: ''; position: absolute; width: 20px; height: 20px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
+        .avail-toggle.on::after { transform: translateX(20px); }
+
+        /* Cancel reason modal */
+        .cancel-modal textarea { width: 100%; padding: 10px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px; color: #fff; font-size: 14px; font-family: 'Poppins', sans-serif; resize: none; height: 80px; outline: none; margin-bottom: 12px; }
+        .cancel-modal textarea:focus { border-color: #e94560; }
+
+        /* ===== CLEAR TABLE DROPDOWN ===== */
+        .clear-table-bar { padding: 10px 20px; background: #161822; border-top: 1px solid #1e2030; display: flex; align-items: center; gap: 12px; }
+        .clear-table-select { background: #1e2030; border: 1px solid #2a2d3e; border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 13px; font-family: 'Poppins', sans-serif; outline: none; cursor: pointer; }
+        .btn-clear-table { padding: 8px 16px; background: #e94560; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: #444; }
+        .empty-state-icon { font-size: 40px; margin-bottom: 8px; }
+        .empty-state-text { font-size: 13px; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .columns-container { flex-direction: column; }
+            .column { border-right: none; border-bottom: 1px solid #1e2030; max-height: 40vh; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== AUTH SCREEN ===== -->
+<div id="authScreen" class="auth-screen">
+    <div class="auth-card" id="authCard">
+        <!-- Phone step -->
+        <div id="phoneStep">
+            <div class="auth-logo">NOSH QR</div>
+            <div class="auth-subtitle">Cashier Login</div>
+            <div class="auth-error" id="phoneError"></div>
+            <div class="auth-input-group">
+                <span class="auth-prefix">+91</span>
+                <input type="tel" class="auth-input" id="phoneInput" placeholder="Enter your phone number" maxlength="10" inputmode="numeric">
+            </div>
+            <button class="btn btn-primary" onclick="sendStaffOTP()">Send OTP</button>
+        </div>
+        <!-- OTP step -->
+        <div id="otpStep" style="display:none;">
+            <div class="auth-logo">NOSH QR</div>
+            <div class="auth-subtitle" id="otpSubtitle">OTP sent to +91 XXXXX XXXXX</div>
+            <div class="auth-error" id="otpError"></div>
+            <div class="otp-inputs">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
+            </div>
+            <button class="btn btn-primary" onclick="verifyStaffOTP()">Verify</button>
+            <div class="auth-link" id="resendLink">Resend OTP in <span id="resendTimer">30</span>s</div>
+        </div>
+        <!-- Outlet selection step -->
+        <div id="outletStep" style="display:none;">
+            <div class="auth-logo">NOSH QR</div>
+            <div class="auth-subtitle">Select your outlet</div>
+            <select class="outlet-select" id="outletSelect"></select>
+            <button class="btn btn-primary" onclick="enterDashboard()">Enter Dashboard</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MAIN DASHBOARD ===== -->
+<div id="dashboard" class="dashboard">
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <div>
+                <div class="topbar-title">NOSH QR ORDERS</div>
+                <div class="topbar-outlet" id="dashOutletName">House Of Nosh</div>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="topbar-stats">
+                <div class="stat-item">
+                    <div class="stat-num" id="statNew">0</div>
+                    <div class="stat-label">New</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-num" id="statTotal">0</div>
+                    <div class="stat-label">Today</div>
+                </div>
+            </div>
+            <button class="sound-toggle active" id="soundToggle" onclick="toggleSound()" title="Toggle sound">🔔</button>
+            <button class="btn-logout" onclick="openAvailabilityModal()">86 Items</button>
+            <span class="topbar-time" id="dashTime"></span>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Order Columns -->
+    <div class="columns-container">
+        <!-- NEW ORDERS -->
+        <div class="column col-new">
+            <div class="column-header">
+                <span class="column-title">🔴 New Orders</span>
+                <span class="column-count" id="newCount">0</span>
+            </div>
+            <div class="column-body" id="newOrders"></div>
+        </div>
+        <!-- ACCEPTED (Entered into POS) -->
+        <div class="column col-accepted">
+            <div class="column-header">
+                <span class="column-title">🟡 Entered into POS</span>
+                <span class="column-count" id="acceptedCount">0</span>
+            </div>
+            <div class="column-body" id="acceptedOrders"></div>
+        </div>
+        <!-- SERVED -->
+        <div class="column col-served">
+            <div class="column-header">
+                <span class="column-title">🟢 Served / Done</span>
+                <span class="column-count" id="servedCount">0</span>
+            </div>
+            <div class="column-body" id="servedOrders"></div>
+        </div>
+    </div>
+
+    <!-- Clear Table Bar -->
+    <div class="clear-table-bar">
+        <span style="font-size:13px;color:#888;">Clear Table:</span>
+        <select class="clear-table-select" id="clearTableSelect"></select>
+        <button class="btn-clear-table" onclick="clearTable()">Clear & End Session</button>
+    </div>
+</div>
+
+<!-- ===== 86 ITEM AVAILABILITY MODAL ===== -->
+<div class="modal-overlay" id="availModal">
+    <div class="modal">
+        <div class="modal-title">
+            <span>86 — Item Availability</span>
+            <button class="modal-close" onclick="closeModal('availModal')">✕</button>
+        </div>
+        <input type="text" class="modal-search" id="availSearch" placeholder="Search items..." oninput="filterAvailItems()">
+        <div id="availItemsList"></div>
+    </div>
+</div>
+
+<!-- ===== CANCEL REASON MODAL ===== -->
+<div class="modal-overlay cancel-modal" id="cancelModal">
+    <div class="modal" style="max-width:400px;">
+        <div class="modal-title">
+            <span>Cancel Order</span>
+            <button class="modal-close" onclick="closeModal('cancelModal')">✕</button>
+        </div>
+        <div style="font-size:13px;color:#888;margin-bottom:12px;" id="cancelOrderInfo"></div>
+        <textarea id="cancelReason" placeholder="Reason for cancellation (e.g., item unavailable, customer changed mind)"></textarea>
+        <button class="btn btn-primary" style="background:#ff6b6b;" onclick="confirmCancel()">Cancel Order</button>
+    </div>
+</div>
+
+<!-- ===== AUDIO ===== -->
+<audio id="alertSound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH+Jj4+JgHZsakBYYHGBjpKOhHlxZFtTUl9vjJGQioB4a2FXU1licICNk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbYKOk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbQ==" type="audio/wav">
+</audio>
+
+<!-- ===== FIREBASE ===== -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBHmyK6NTVuSsKCh-969SElL1EEnq9Ln0M",
+    authDomain: "nosh-qr-ordering-trial.firebaseapp.com",
+    projectId: "nosh-qr-ordering-trial",
+    storageBucket: "nosh-qr-ordering-trial.firebasestorage.app",
+    messagingSenderId: "672306605373",
+    appId: "1:672306605373:web:c234755331d045142c6954"
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.firestore();
+
+const MSG91_WIDGET_ID = "36637a6f3552313230313634";
+const MSG91_AUTH_KEY = "493471A8DVB9KDG698b5d93P1";
+
+// IST Helpers
+function getIST() { return new Date(Date.now() + 5.5 * 60 * 60 * 1000); }
+function getISTDateString() {
+    const ist = getIST();
+    return ist.getUTCFullYear() + '-' + String(ist.getUTCMonth() + 1).padStart(2, '0') + '-' + String(ist.getUTCDate()).padStart(2, '0');
+}
+function getISTTimeString() {
+    const ist = getIST();
+    let h = ist.getUTCHours(), m = ist.getUTCMinutes(), s = ist.getUTCSeconds();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ' ' + ampm;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let staffPhone = '';
+let staffRole = '';
+let staffOutletIds = [];
+let selectedOutletId = '';
+let selectedOutletName = '';
+let allOrders = [];
+let allMenuItems = [];
+let ordersListener = null;
+let soundEnabled = true;
+let lastNewOrderCount = 0;
+let alertInterval = null;
+let cancelOrderId = '';
+
+// ============================================================
+// AUTH — Staff Login
+// ============================================================
+function sendStaffOTP() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        document.getElementById('phoneError').textContent = 'Enter a valid 10-digit number';
+        return;
+    }
+    document.getElementById('phoneError').textContent = '';
+    staffPhone = '+91' + phone;
+
+    document.getElementById('phoneInput').disabled = true;
+
+    fetch('https://control.msg91.com/api/v5/otp?otp_length=4&template_id=' + MSG91_WIDGET_ID + '&mobile=91' + phone + '&authkey=' + MSG91_AUTH_KEY + '&realTimeResponse=1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('phoneInput').disabled = false;
+        if (data.type === 'success') {
+            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
+            document.getElementById('phoneStep').style.display = 'none';
+            document.getElementById('otpStep').style.display = 'block';
+            document.querySelector('#otpStep .otp-box[data-idx="0"]').focus();
+            startResendTimer();
+        } else {
+            document.getElementById('phoneError').textContent = data.message || 'Failed to send OTP';
+        }
+    })
+    .catch(() => {
+        document.getElementById('phoneInput').disabled = false;
+        document.getElementById('phoneError').textContent = 'Network error';
+    });
+}
+
+function verifyStaffOTP() {
+    const boxes = document.querySelectorAll('#otpStep .otp-box');
+    let otp = '';
+    boxes.forEach(b => otp += b.value);
+    if (otp.length !== 4) { document.getElementById('otpError').textContent = 'Enter 4-digit OTP'; return; }
+    document.getElementById('otpError').textContent = '';
+
+    const phone10 = staffPhone.replace('+91', '');
+    fetch('https://control.msg91.com/api/v5/otp/verify?mobile=91' + phone10 + '&otp=' + otp + '&authkey=' + MSG91_AUTH_KEY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(async data => {
+        if (data.type === 'success') {
+                // Check if this phone is a registered staff member
+                const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
+                if (!staffDoc.exists || !staffDoc.data().isActive) {
+                    document.getElementById('otpError').textContent = 'You are not authorized. Contact admin.';
+                    return;
+                }
+                staffRole = staffDoc.data().role;
+                staffOutletIds = staffDoc.data().outletIds || [];
+
+                // Save login
+                localStorage.setItem('nosh_cashier_login', JSON.stringify({
+                    phone: staffPhone, role: staffRole, outletIds: staffOutletIds, loginAt: Date.now()
+                }));
+
+                await showOutletSelection();
+            } else {
+                document.getElementById('otpError').textContent = data.message || 'Invalid OTP';
+            }
+        })
+        .catch(() => { document.getElementById('otpError').textContent = 'Verification failed'; });
+}
+
+async function showOutletSelection() {
+    // Load outlets this staff can access
+    let outlets = [];
+    if (staffOutletIds.includes('all')) {
+        const snap = await db.collection('qr_outlets').where('isActive', '==', true).get();
+        outlets = snap.docs.map(d => d.data());
+    } else {
+        for (const oid of staffOutletIds) {
+            const doc = await db.collection('qr_outlets').doc(oid).get();
+            if (doc.exists && doc.data().isActive) outlets.push(doc.data());
+        }
+    }
+
+    if (outlets.length === 0) {
+        document.getElementById('otpError').textContent = 'No active outlets assigned to you.';
+        return;
+    }
+
+    if (outlets.length === 1) {
+        // Auto-select single outlet
+        selectedOutletId = outlets[0].id;
+        selectedOutletName = outlets[0].name;
+        startDashboard();
+        return;
+    }
+
+    // Multiple outlets — show selector
+    const select = document.getElementById('outletSelect');
+    select.innerHTML = outlets.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+    document.getElementById('otpStep').style.display = 'none';
+    document.getElementById('outletStep').style.display = 'block';
+}
+
+function enterDashboard() {
+    const select = document.getElementById('outletSelect');
+    selectedOutletId = select.value;
+    selectedOutletName = select.options[select.selectedIndex].text;
+    startDashboard();
+}
+
+// OTP input helpers (4 digits)
+document.querySelectorAll('#otpStep .otp-box').forEach((box, idx) => {
+    box.addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); if (e.target.value && idx < 3) document.querySelector(`#otpStep .otp-box[data-idx="${idx+1}"]`).focus(); if (idx === 3 && e.target.value) verifyStaffOTP(); });
+    box.addEventListener('keydown', e => { if (e.key === 'Backspace' && !e.target.value && idx > 0) document.querySelector(`#otpStep .otp-box[data-idx="${idx-1}"]`).focus(); });
+});
+document.getElementById('phoneInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendStaffOTP(); });
+
+let resendTimerInterval = null;
+function startResendTimer() {
+    let s = 30;
+    const el = document.getElementById('resendTimer');
+    const link = document.getElementById('resendLink');
+    link.classList.remove('active-link'); link.onclick = null;
+    if (resendTimerInterval) clearInterval(resendTimerInterval);
+    resendTimerInterval = setInterval(() => {
+        s--;
+        el.textContent = s;
+        if (s <= 0) { clearInterval(resendTimerInterval); link.textContent = 'Resend OTP'; link.classList.add('active-link'); link.onclick = () => { link.textContent = 'Resending...'; sendStaffOTP(); }; }
+    }, 1000);
+}
+
+// Auto-login check
+async function checkAutoLogin() {
+    const stored = localStorage.getItem('nosh_cashier_login');
+    if (!stored) return;
+    try {
+        const login = JSON.parse(stored);
+        // Login valid for 12 hours
+        if (Date.now() - login.loginAt > 12 * 60 * 60 * 1000) {
+            localStorage.removeItem('nosh_cashier_login');
+            return;
+        }
+        // Verify staff still exists
+        const doc = await db.collection('qr_staff').doc(login.phone).get();
+        if (!doc.exists || !doc.data().isActive) { localStorage.removeItem('nosh_cashier_login'); return; }
+
+        staffPhone = login.phone;
+        staffRole = doc.data().role;
+        staffOutletIds = doc.data().outletIds || [];
+
+        // Check stored outlet
+        const lastOutlet = localStorage.getItem('nosh_cashier_outlet');
+        if (lastOutlet) {
+            const outletDoc = await db.collection('qr_outlets').doc(lastOutlet).get();
+            if (outletDoc.exists && outletDoc.data().isActive) {
+                selectedOutletId = lastOutlet;
+                selectedOutletName = outletDoc.data().name;
+                startDashboard();
+                return;
+            }
+        }
+        await showOutletSelection();
+        document.getElementById('phoneStep').style.display = 'none';
+        document.getElementById('outletStep').style.display = 'block';
+    } catch (e) {
+        console.error('Auto-login failed:', e);
+    }
+}
+
+function logout() {
+    localStorage.removeItem('nosh_cashier_login');
+    localStorage.removeItem('nosh_cashier_outlet');
+    if (ordersListener) ordersListener();
+    if (alertInterval) clearInterval(alertInterval);
+    location.reload();
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function startDashboard() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('dashboard').classList.add('active');
+    document.getElementById('dashOutletName').textContent = selectedOutletName;
+    localStorage.setItem('nosh_cashier_outlet', selectedOutletId);
+
+    // Start clock
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Load menu items for availability toggle
+    loadMenuItems();
+
+    // Load tables for clear-table dropdown
+    loadTables();
+
+    // Start real-time orders listener
+    startOrdersListener();
+}
+
+function updateClock() {
+    document.getElementById('dashTime').textContent = getISTTimeString();
+}
+
+// ============================================================
+// REAL-TIME ORDERS
+// ============================================================
+function startOrdersListener() {
+    const today = getISTDateString();
+    
+    ordersListener = db.collection('qr_orders')
+        .where('outletId', '==', selectedOutletId)
+        .where('dateString', '==', today)
+        .orderBy('createdAt', 'desc')
+        .onSnapshot(snapshot => {
+            allOrders = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
+            renderOrders();
+
+            // Check for new orders and alert
+            const newOrders = allOrders.filter(o => o.status === 'new');
+            if (newOrders.length > lastNewOrderCount && lastNewOrderCount >= 0) {
+                playAlert();
+            }
+            lastNewOrderCount = newOrders.length;
+        });
+}
+
+function renderOrders() {
+    const newOrders = allOrders.filter(o => o.status === 'new');
+    const acceptedOrders = allOrders.filter(o => o.status === 'accepted');
+    const servedOrders = allOrders.filter(o => o.status === 'served' || o.status === 'cancelled');
+
+    document.getElementById('newCount').textContent = newOrders.length;
+    document.getElementById('acceptedCount').textContent = acceptedOrders.length;
+    document.getElementById('servedCount').textContent = servedOrders.length;
+    document.getElementById('statNew').textContent = newOrders.length;
+    document.getElementById('statTotal').textContent = allOrders.length;
+
+    document.getElementById('newOrders').innerHTML = newOrders.length
+        ? newOrders.map(o => renderOrderCard(o)).join('')
+        : '<div class="empty-state"><div class="empty-state-icon">✨</div><div class="empty-state-text">No new orders</div></div>';
+
+    document.getElementById('acceptedOrders').innerHTML = acceptedOrders.length
+        ? acceptedOrders.map(o => renderOrderCard(o)).join('')
+        : '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">No orders being prepared</div></div>';
+
+    document.getElementById('servedOrders').innerHTML = servedOrders.length
+        ? servedOrders.slice(0, 20).map(o => renderOrderCard(o)).join('')
+        : '<div class="empty-state"><div class="empty-state-icon">🍽️</div><div class="empty-state-text">No served orders yet</div></div>';
+}
+
+function renderOrderCard(order) {
+    const pulse = order.status === 'new' ? ' pulse' : '';
+    
+    let actionsHtml = '';
+    if (order.status === 'new') {
+        actionsHtml = `
+            <div class="order-actions">
+                <button class="btn-action btn-accept" onclick="acceptOrder('${order.docId}')">✓ Entered into POS</button>
+                <button class="btn-action btn-cancel" onclick="openCancelModal('${order.docId}', ${order.orderNumber})">Cancel</button>
+            </div>`;
+    } else if (order.status === 'accepted') {
+        actionsHtml = `
+            <div class="order-actions">
+                <button class="btn-action btn-served" onclick="markServed('${order.docId}')">✓ Mark Served</button>
+            </div>`;
+    }
+
+    const itemsHtml = (order.items || []).map(item => {
+        const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
+        const modsText = (item.modifiers || []).map(m => m.option).join(', ');
+        const itemPrice = item.price + (item.modifiers || []).reduce((s, m) => s + (m.extraPrice || 0), 0);
+        
+        return `
+        <div class="order-item">
+            <div class="order-item-qty">${item.qty}×</div>
+            <div class="order-item-details">
+                <div class="order-item-name">
+                    ${vegClass ? `<span class="veg-dot ${vegClass}"></span>` : ''}
+                    ${item.name}
+                </div>
+                ${modsText ? `<div class="order-item-mods">↳ ${modsText}</div>` : ''}
+                ${item.specialInstructions ? `<div class="order-item-instr">"${item.specialInstructions}"</div>` : ''}
+            </div>
+            <div class="order-item-price">₹${Math.round(itemPrice * item.qty)}</div>
+        </div>`;
+    }).join('');
+
+    const phone = order.customerPhone ? order.customerPhone.replace('+91', '') : '';
+    const displayPhone = phone ? phone.replace(/(\d{5})(\d{5})/, '$1 $2') : '';
+
+    return `
+    <div class="order-card status-${order.status}${pulse}">
+        <div class="order-header">
+            <span class="order-number">#${order.orderNumber}</span>
+            <span class="order-table">${order.tableName || 'Table ' + order.tableNumber}</span>
+        </div>
+        <div class="order-meta">
+            <span>${order.createdAtIST || ''}</span>
+            ${displayPhone ? `<span class="order-phone">📱 ${displayPhone}</span>` : ''}
+            <span>${order.itemCount || 0} item${(order.itemCount || 0) > 1 ? 's' : ''}</span>
+        </div>
+        <div class="order-items">${itemsHtml}</div>
+        <div class="order-total">
+            <span class="order-total-label">Total (reference)</span>
+            <span class="order-total-value">₹${Math.round(order.orderTotal || 0)}</span>
+        </div>
+        ${order.status === 'cancelled' && order.cancelReason ? `<div style="font-size:12px;color:#ff6b6b;margin-top:8px;">Cancelled: ${order.cancelReason}</div>` : ''}
+        ${actionsHtml}
+    </div>`;
+}
+
+// ============================================================
+// ORDER ACTIONS
+// ============================================================
+async function acceptOrder(docId) {
+    try {
+        await db.collection('qr_orders').doc(docId).update({
+            status: 'accepted',
+            acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        stopAlert();
+    } catch (e) {
+        console.error('Accept error:', e);
+        alert('Failed to accept order. Try again.');
+    }
+}
+
+async function markServed(docId) {
+    try {
+        await db.collection('qr_orders').doc(docId).update({
+            status: 'served',
+            servedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (e) {
+        console.error('Served error:', e);
+        alert('Failed to mark served.');
+    }
+}
+
+function openCancelModal(docId, orderNum) {
+    cancelOrderId = docId;
+    document.getElementById('cancelOrderInfo').textContent = `Order #${orderNum}`;
+    document.getElementById('cancelReason').value = '';
+    document.getElementById('cancelModal').classList.add('active');
+}
+
+async function confirmCancel() {
+    const reason = document.getElementById('cancelReason').value.trim();
+    if (!reason) { alert('Please enter a cancellation reason.'); return; }
+    try {
+        await db.collection('qr_orders').doc(cancelOrderId).update({
+            status: 'cancelled',
+            cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
+            cancelReason: reason
+        });
+        closeModal('cancelModal');
+        stopAlert();
+    } catch (e) {
+        console.error('Cancel error:', e);
+        alert('Failed to cancel order.');
+    }
+}
+
+// ============================================================
+// SOUND ALERT
+// ============================================================
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundToggle');
+    btn.textContent = soundEnabled ? '🔔' : '🔕';
+    btn.classList.toggle('active', soundEnabled);
+    if (!soundEnabled) stopAlert();
+}
+
+function playAlert() {
+    if (!soundEnabled) return;
+    stopAlert();
+    const audio = document.getElementById('alertSound');
+    // Play immediately
+    try { audio.play().catch(() => {}); } catch(e) {}
+    // Repeat every 8 seconds until acknowledged
+    alertInterval = setInterval(() => {
+        try { audio.play().catch(() => {}); } catch(e) {}
+    }, 8000);
+}
+
+function stopAlert() {
+    if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
+}
+
+// ============================================================
+// 86 ITEMS — AVAILABILITY TOGGLE
+// ============================================================
+async function loadMenuItems() {
+    const snap = await db.collection('menu_items').where('isActive', '==', true).get();
+    allMenuItems = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    allMenuItems.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function openAvailabilityModal() {
+    renderAvailItems('');
+    document.getElementById('availSearch').value = '';
+    document.getElementById('availModal').classList.add('active');
+}
+
+function filterAvailItems() {
+    renderAvailItems(document.getElementById('availSearch').value.trim().toLowerCase());
+}
+
+function renderAvailItems(search) {
+    let items = allMenuItems;
+    if (search) items = items.filter(i => i.name.toLowerCase().includes(search));
+
+    document.getElementById('availItemsList').innerHTML = items.slice(0, 50).map(item => {
+        const onClass = item.isAvailable ? 'on' : '';
+        return `
+        <div class="avail-item">
+            <span class="avail-item-name">${item.name}</span>
+            <div class="avail-toggle ${onClass}" onclick="toggleAvailability('${item.docId}', ${!item.isAvailable})"></div>
+        </div>`;
+    }).join('');
+}
+
+async function toggleAvailability(docId, newValue) {
+    try {
+        await db.collection('menu_items').doc(docId).update({
+            isAvailable: newValue,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        // Update local state
+        const item = allMenuItems.find(i => i.docId === docId);
+        if (item) item.isAvailable = newValue;
+        filterAvailItems();
+    } catch (e) {
+        console.error('Toggle availability error:', e);
+        alert('Failed to update. Try again.');
+    }
+}
+
+// ============================================================
+// CLEAR TABLE
+// ============================================================
+async function loadTables() {
+    const snap = await db.collection('qr_tables')
+        .where('outletId', '==', selectedOutletId)
+        .where('isActive', '==', true)
+        .orderBy('tableNumber')
+        .get();
+
+    const select = document.getElementById('clearTableSelect');
+    select.innerHTML = '<option value="">Select table...</option>' +
+        snap.docs.map(d => {
+            const t = d.data();
+            return `<option value="${t.id}">${t.tableName}</option>`;
+        }).join('');
+}
+
+async function clearTable() {
+    const tableId = document.getElementById('clearTableSelect').value;
+    if (!tableId) { alert('Select a table first.'); return; }
+
+    if (!confirm(`Clear this table and end the customer session?`)) return;
+
+    try {
+        // Get table's current session
+        const tableDoc = await db.collection('qr_tables').doc(tableId).get();
+        const sessionId = tableDoc.data()?.currentSessionId;
+
+        // Deactivate session
+        if (sessionId) {
+            await db.collection('qr_sessions').doc(sessionId).update({ isActive: false });
+        }
+
+        // Clear table's session
+        await db.collection('qr_tables').doc(tableId).update({ currentSessionId: '' });
+
+        document.getElementById('clearTableSelect').value = '';
+        alert('Table cleared! Customer will need to scan QR and verify again.');
+    } catch (e) {
+        console.error('Clear table error:', e);
+        alert('Failed to clear table.');
+    }
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+});
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', checkAutoLogin);
+</script>
+</body>
+</html>
