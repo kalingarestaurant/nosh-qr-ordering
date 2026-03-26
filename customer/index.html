@@ -288,8 +288,8 @@
 var msg91OtpResolve = null;
 var msg91OtpReject = null;
 var configuration = {
-    widgetId: "36637a6f3552313230313634",
-    tokenAuth: "493471TSZpd0kcaE69c5641fP1",
+    widgetId: "366278704a57303934373930",
+    tokenAuth: "493471T68i0srho699dd45cP1",
     exposeMethods: true,
     success: (data) => {
         console.log('MSG91 OTP success:', data);
@@ -688,13 +688,16 @@ function startResendTimer() {
     let seconds = 30;
     const el = document.getElementById('resendTimer');
     const link = document.getElementById('resendLink');
+    if (!el || !link) return; // Safety check
     link.classList.remove('active-link');
     link.onclick = null;
+    link.innerHTML = 'Resend OTP in <span id="resendTimer">30</span>s';
     
     if (otpResendTimer) clearInterval(otpResendTimer);
     otpResendTimer = setInterval(() => {
         seconds--;
-        el.textContent = seconds;
+        const timerEl = document.getElementById('resendTimer');
+        if (timerEl) timerEl.textContent = seconds;
         if (seconds <= 0) {
             clearInterval(otpResendTimer);
             link.textContent = 'Resend OTP';
