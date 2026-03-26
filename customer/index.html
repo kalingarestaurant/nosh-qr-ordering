@@ -1,1 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>House Of Nosh — Order</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Poppins', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; overflow-x: hidden; }
+        
+        /* ===== SCREEN MANAGEMENT ===== */
+        .screen { display: none; min-height: 100vh; }
+        .screen.active { display: flex; flex-direction: column; }
+
+        /* ===== WELCOME / OTP SCREENS ===== */
+        .auth-screen { justify-content: center; align-items: center; padding: 24px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: #fff; }
+        .auth-card { width: 100%; max-width: 380px; text-align: center; }
+        .auth-logo { width: 80px; height: 80px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 32px; font-weight: 700; color: #0f3460; }
+        .auth-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+        .auth-subtitle { font-size: 14px; opacity: 0.8; margin-bottom: 6px; }
+        .auth-table-badge { display: inline-block; background: rgba(255,255,255,0.15); padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; margin-bottom: 28px; }
+        .auth-input-group { display: flex; gap: 0; margin-bottom: 16px; }
+        .auth-prefix { background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.25); border-right: none; border-radius: 10px 0 0 10px; padding: 14px 12px; font-size: 15px; color: #fff; font-weight: 500; }
+        .auth-input { flex: 1; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 0 10px 10px 0; padding: 14px 16px; font-size: 16px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
+        .auth-input::placeholder { color: rgba(255,255,255,0.4); }
+        .auth-input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.15); }
+        .otp-inputs { display: flex; gap: 10px; justify-content: center; margin-bottom: 16px; }
+        .otp-box { width: 52px; height: 56px; text-align: center; font-size: 22px; font-weight: 600; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 10px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
+        .otp-box:focus { border-color: #e94560; background: rgba(255,255,255,0.15); }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; transition: all 0.2s; }
+        .btn-primary { background: #e94560; color: #fff; }
+        .btn-primary:hover { background: #d63851; }
+        .btn-primary:disabled { background: #666; cursor: not-allowed; }
+        .auth-link { color: rgba(255,255,255,0.6); font-size: 13px; margin-top: 12px; cursor: pointer; }
+        .auth-link.active-link { color: #e94560; cursor: pointer; }
+        .auth-error { color: #ff6b6b; font-size: 13px; margin-bottom: 12px; min-height: 18px; }
+
+        /* ===== MENU SCREEN ===== */
+        .menu-screen { background: #f5f5f5; }
+        .menu-header { position: sticky; top: 0; z-index: 100; background: #fff; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .menu-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .menu-outlet-name { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+        .menu-table-badge { font-size: 12px; font-weight: 600; color: #e94560; background: #fef0f2; padding: 4px 10px; border-radius: 12px; }
+        .menu-search { position: relative; }
+        .menu-search input { width: 100%; padding: 10px 16px 10px 40px; border: 1.5px solid #e8e8e8; border-radius: 10px; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; background: #f8f8f8; }
+        .menu-search input:focus { border-color: #e94560; background: #fff; }
+        .menu-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; font-size: 16px; }
+
+        /* Category Tabs */
+        .cat-tabs { position: sticky; top: 90px; z-index: 99; background: #fff; border-bottom: 1px solid #eee; overflow-x: auto; white-space: nowrap; padding: 0 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .cat-tabs::-webkit-scrollbar { display: none; }
+        .cat-tab { display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 2.5px solid transparent; transition: all 0.2s; }
+        .cat-tab.active { color: #e94560; border-bottom-color: #e94560; font-weight: 600; }
+
+        /* Subcategory Header */
+        .subcat-header { padding: 16px 16px 8px; font-size: 15px; font-weight: 700; color: #1a1a1a; background: #f5f5f5; }
+
+        /* Menu Items */
+        .menu-items-container { flex: 1; padding: 0 12px 120px; }
+        .menu-item-card { display: flex; gap: 12px; background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .menu-item-img { width: 90px; height: 90px; border-radius: 10px; object-fit: cover; background: #f0f0f0; flex-shrink: 0; }
+        .menu-item-img-placeholder { width: 90px; height: 90px; border-radius: 10px; background: linear-gradient(135deg, #f0f0f0, #e8e8e8); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .menu-item-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+        .menu-item-name { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+        .menu-item-desc { font-size: 12px; color: #888; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .menu-item-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+        .menu-item-price { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+        .veg-badge { display: inline-block; width: 16px; height: 16px; border: 1.5px solid; border-radius: 3px; position: relative; flex-shrink: 0; }
+        .veg-badge::after { content: ''; position: absolute; width: 8px; height: 8px; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .veg-badge.veg { border-color: #0a8f0a; } .veg-badge.veg::after { background: #0a8f0a; }
+        .veg-badge.nonveg { border-color: #b71c1c; } .veg-badge.nonveg::after { background: #b71c1c; }
+        .veg-badge.egg { border-color: #f9a825; } .veg-badge.egg::after { background: #f9a825; }
+        .btn-add { padding: 6px 20px; border: 1.5px solid #e94560; border-radius: 8px; background: #fff; color: #e94560; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        .btn-add:active { background: #e94560; color: #fff; }
+        .item-qty-control { display: flex; align-items: center; gap: 0; border: 1.5px solid #e94560; border-radius: 8px; overflow: hidden; }
+        .item-qty-btn { width: 32px; height: 32px; border: none; background: #e94560; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        .item-qty-num { width: 28px; text-align: center; font-size: 14px; font-weight: 600; color: #e94560; }
+        .no-results { text-align: center; padding: 40px 20px; color: #999; font-size: 14px; }
+
+        /* ===== MODIFIER POPUP ===== */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; justify-content: flex-end; align-items: flex-end; }
+        .modal-overlay.active { display: flex; }
+        .modifier-modal { width: 100%; max-height: 85vh; background: #fff; border-radius: 20px 20px 0 0; overflow-y: auto; padding: 20px 16px 30px; animation: slideUp 0.25s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modifier-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .modifier-item-name { font-size: 18px; font-weight: 700; }
+        .modifier-close { width: 32px; height: 32px; border: none; background: #f0f0f0; border-radius: 50%; font-size: 18px; cursor: pointer; color: #666; }
+        .modifier-group { margin-bottom: 20px; }
+        .modifier-group-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+        .modifier-group-subtitle { font-size: 12px; color: #999; margin-bottom: 10px; }
+        .modifier-option { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+        .modifier-option-left { display: flex; align-items: center; gap: 10px; }
+        .modifier-radio, .modifier-check { width: 20px; height: 20px; border: 2px solid #ccc; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .modifier-check { border-radius: 4px; }
+        .modifier-radio.selected, .modifier-check.selected { border-color: #e94560; background: #e94560; }
+        .modifier-radio.selected::after { content: ''; width: 8px; height: 8px; background: #fff; border-radius: 50%; }
+        .modifier-check.selected::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 700; }
+        .modifier-option-name { font-size: 14px; color: #1a1a1a; }
+        .modifier-option-price { font-size: 13px; color: #888; }
+        .modifier-instructions { margin-bottom: 16px; }
+        .modifier-instructions textarea { width: 100%; padding: 12px; border: 1.5px solid #e8e8e8; border-radius: 10px; font-size: 14px; font-family: 'Poppins', sans-serif; resize: none; height: 70px; outline: none; }
+        .modifier-instructions textarea:focus { border-color: #e94560; }
+        .modifier-qty { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 16px; }
+        .modifier-qty-btn { width: 36px; height: 36px; border: 1.5px solid #e94560; border-radius: 50%; background: #fff; color: #e94560; font-size: 18px; font-weight: 600; cursor: pointer; }
+        .modifier-qty-num { font-size: 20px; font-weight: 700; min-width: 30px; text-align: center; }
+        .btn-add-to-cart { width: 100%; padding: 14px; background: #e94560; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+
+        /* ===== CART BAR ===== */
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 150; padding: 12px 16px; background: #fff; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); display: none; }
+        .cart-bar.visible { display: block; }
+        .cart-bar-inner { display: flex; align-items: center; justify-content: space-between; background: #e94560; color: #fff; padding: 12px 16px; border-radius: 12px; cursor: pointer; }
+        .cart-bar-info { font-size: 14px; font-weight: 500; }
+        .cart-bar-action { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+        /* ===== CART SCREEN ===== */
+        .cart-screen { background: #f5f5f5; }
+        .cart-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 100; }
+        .back-btn { width: 36px; height: 36px; border: none; background: #f0f0f0; border-radius: 50%; font-size: 18px; cursor: pointer; color: #666; font-family: 'Poppins', sans-serif; }
+        .cart-title { font-size: 18px; font-weight: 700; }
+        .cart-items-list { flex: 1; padding: 12px 16px 160px; }
+        .cart-item { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .cart-item-top { display: flex; align-items: flex-start; justify-content: space-between; }
+        .cart-item-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .cart-item-remove { border: none; background: none; color: #ff4444; font-size: 18px; cursor: pointer; padding: 0 4px; }
+        .cart-item-modifiers { font-size: 12px; color: #888; margin-top: 4px; }
+        .cart-item-instructions { font-size: 12px; color: #e94560; font-style: italic; margin-top: 4px; }
+        .cart-item-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+        .cart-place-order { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px; background: #fff; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); }
+        .cart-summary { font-size: 13px; color: #888; margin-bottom: 10px; text-align: center; }
+
+        /* ===== ORDER CONFIRMATION SCREEN ===== */
+        .confirm-screen { justify-content: flex-start; align-items: center; padding: 24px 16px; background: #f5f5f5; }
+        .confirm-icon { font-size: 64px; margin-top: 40px; margin-bottom: 16px; }
+        .confirm-title { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+        .confirm-subtitle { font-size: 14px; color: #888; margin-bottom: 24px; text-align: center; }
+        .confirm-order-card { width: 100%; max-width: 400px; background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .confirm-order-header { font-size: 13px; font-weight: 600; color: #e94560; margin-bottom: 10px; }
+        .confirm-order-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 14px; }
+        .confirm-order-qty { font-weight: 600; color: #1a1a1a; min-width: 28px; }
+        .confirm-order-name { color: #333; }
+        .confirm-order-mods { font-size: 12px; color: #888; margin-left: 28px; }
+        .btn-add-more { width: 100%; max-width: 400px; margin-bottom: 12px; }
+        .btn-add-more.outline { background: #fff; color: #e94560; border: 1.5px solid #e94560; }
+
+        /* ===== SESSION HISTORY ===== */
+        .session-history { width: 100%; max-width: 400px; margin-top: 8px; }
+        .session-history-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 12px; }
+        .session-order { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .session-order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .session-order-num { font-size: 13px; font-weight: 600; color: #e94560; }
+        .session-order-time { font-size: 12px; color: #999; }
+        .session-order-status { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+        .status-new { background: #fff3e0; color: #f57c00; }
+        .status-accepted { background: #e8f5e9; color: #388e3c; }
+        .status-served { background: #e0f2f1; color: #00796b; }
+        .status-cancelled { background: #ffebee; color: #c62828; }
+
+        /* ===== ERROR SCREEN ===== */
+        .error-screen { justify-content: center; align-items: center; padding: 24px; text-align: center; }
+        .error-icon { font-size: 64px; margin-bottom: 16px; }
+        .error-title { font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+        .error-subtitle { font-size: 14px; color: #888; max-width: 300px; line-height: 1.5; }
+
+        /* ===== LOADING ===== */
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: none; justify-content: center; align-items: center; }
+        .loading-overlay.active { display: flex; }
+        .loading-box { background: #fff; padding: 24px 32px; border-radius: 12px; text-align: center; }
+        .loading-box .loading-spinner { border-color: rgba(233,69,96,0.3); border-top-color: #e94560; width: 32px; height: 32px; }
+        .loading-text { font-size: 14px; color: #666; margin-top: 12px; }
+    </style>
+</head>
+<body>
+
+<!-- ===== SCREEN: ERROR (invalid QR / missing params) ===== -->
+<div id="errorScreen" class="screen error-screen">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title" id="errorTitle">Invalid QR Code</div>
+    <div class="error-subtitle" id="errorSubtitle">Please scan the QR code on your table to start ordering.</div>
+</div>
+
+<!-- ===== SCREEN: WELCOME (phone input) ===== -->
+<div id="welcomeScreen" class="screen auth-screen">
+    <div class="auth-card">
+        <div class="auth-logo">N</div>
+        <div class="auth-title" id="welcomeOutletName">House Of Nosh</div>
+        <div class="auth-subtitle">Scan. Order. Enjoy.</div>
+        <div class="auth-table-badge" id="welcomeTableName">Table 1</div>
+        <div class="auth-error" id="phoneError"></div>
+        <div class="auth-input-group">
+            <span class="auth-prefix">+91</span>
+            <input type="tel" class="auth-input" id="phoneInput" placeholder="Enter phone number" maxlength="10" inputmode="numeric" autocomplete="tel">
+        </div>
+        <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
+    </div>
+</div>
+
+<!-- ===== SCREEN: OTP VERIFICATION ===== -->
+<div id="otpScreen" class="screen auth-screen">
+    <div class="auth-card">
+        <div class="auth-logo">N</div>
+        <div class="auth-title">Verify OTP</div>
+        <div class="auth-subtitle" id="otpSubtitle">OTP sent to +91 98765 43210</div>
+        <div class="auth-table-badge" id="otpTableName">Table 1</div>
+        <div class="auth-error" id="otpError"></div>
+        <div class="otp-inputs">
+            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
+            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
+            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
+            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
+        </div>
+        <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOTP()">Verify & Start Ordering</button>
+        <div class="auth-link" id="resendLink">Resend OTP in <span id="resendTimer">30</span>s</div>
+    </div>
+</div>
+
+<!-- ===== SCREEN: MENU ===== -->
+<div id="menuScreen" class="screen menu-screen">
+    <div class="menu-header">
+        <div class="menu-header-top">
+            <span class="menu-outlet-name" id="menuOutletName">House Of Nosh</span>
+            <span class="menu-table-badge" id="menuTableBadge">Table 1</span>
+        </div>
+        <div class="menu-search">
+            <span class="menu-search-icon">🔍</span>
+            <input type="text" id="menuSearchInput" placeholder="Search menu..." oninput="filterMenu()">
+        </div>
+    </div>
+    <div class="cat-tabs" id="catTabs"></div>
+    <div class="menu-items-container" id="menuItemsContainer"></div>
+    <div class="cart-bar" id="cartBar">
+        <div class="cart-bar-inner" onclick="showScreen('cartScreen')">
+            <span class="cart-bar-info" id="cartBarInfo">0 items added</span>
+            <span class="cart-bar-action">View Cart →</span>
+        </div>
+    </div>
+    <!-- Session history toggle -->
+    <div style="position:fixed;bottom:70px;right:16px;z-index:140;">
+        <button onclick="showScreen('confirmScreen')" id="historyBtn" style="display:none;width:48px;height:48px;border-radius:50%;background:#1a1a2e;color:#fff;border:none;font-size:20px;box-shadow:0 4px 12px rgba(0,0,0,0.2);cursor:pointer;">📋</button>
+    </div>
+</div>
+
+<!-- ===== SCREEN: CART ===== -->
+<div id="cartScreen" class="screen cart-screen">
+    <div class="cart-header">
+        <button class="back-btn" onclick="showScreen('menuScreen')">←</button>
+        <span class="cart-title">Your Order</span>
+    </div>
+    <div class="cart-items-list" id="cartItemsList"></div>
+    <div class="cart-place-order" id="cartFooter">
+        <div class="cart-summary" id="cartSummary">Items will be sent to our kitchen</div>
+        <button class="btn btn-primary" onclick="placeOrder()">Place Order</button>
+    </div>
+</div>
+
+<!-- ===== SCREEN: ORDER CONFIRMATION + SESSION HISTORY ===== -->
+<div id="confirmScreen" class="screen confirm-screen">
+    <div class="confirm-icon" id="confirmIcon">✅</div>
+    <div class="confirm-title" id="confirmTitle">Order Placed!</div>
+    <div class="confirm-subtitle" id="confirmSubtitle">Your order has been sent to our team. They'll enter it right away.</div>
+    <div id="confirmOrderCard" class="confirm-order-card"></div>
+    <button class="btn btn-primary btn-add-more outline" onclick="showScreen('menuScreen')" style="max-width:400px;">Add More Items</button>
+    <div class="session-history" id="sessionHistory"></div>
+</div>
+
+<!-- ===== MODIFIER POPUP ===== -->
+<div class="modal-overlay" id="modifierModal">
+    <div class="modifier-modal" id="modifierModalContent"></div>
+</div>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Please wait...</div>
+    </div>
+</div>
+
+<!-- ===== FIREBASE SDK ===== -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ============================================================
+// CONFIGURATION
+// ============================================================
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBHmyK6NTVuSsKCh-969SElL1EEnq9Ln0M",
+    authDomain: "nosh-qr-ordering-trial.firebaseapp.com",
+    projectId: "nosh-qr-ordering-trial",
+    storageBucket: "nosh-qr-ordering-trial.firebasestorage.app",
+    messagingSenderId: "672306605373",
+    appId: "1:672306605373:web:c234755331d045142c6954"
+};
+
+const MSG91_WIDGET_ID = "36637a6f3552313230313634";
+const MSG91_AUTH_KEY = "493471A8DVB9KDG698b5d93P1";
+const SESSION_DURATION_HOURS = 4;
+const CUSTOMER_PORTAL_URL = "https://order.houseofnosh.in";
+
+// ============================================================
+// FIREBASE INIT
+// ============================================================
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.firestore();
+
+// ============================================================
+// IST HELPERS (same as Nosh Waitlist)
+// ============================================================
+function getIST() { return new Date(Date.now() + 5.5 * 60 * 60 * 1000); }
+function getISTDateString() {
+    const ist = getIST();
+    return ist.getUTCFullYear() + '-' + String(ist.getUTCMonth() + 1).padStart(2, '0') + '-' + String(ist.getUTCDate()).padStart(2, '0');
+}
+function getISTTimeString() {
+    const ist = getIST();
+    let h = ist.getUTCHours(), m = ist.getUTCMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+}
+function getISTTimestamp() { return getIST().getTime(); }
+
+// ============================================================
+// STATE
+// ============================================================
+let outletId = '';
+let tableId = '';
+let outletName = '';
+let tableName = '';
+let tableNumber = 0;
+let customerPhone = '';
+let sessionId = '';
+let sessionOrders = []; // orders in this session
+let menuCategories = [];
+let menuItems = [];
+let cart = []; // { itemId, name, vegType, qty, modifiers: [{group, option, extraPrice}], instructions }
+let activeCategory = '';
+let searchTerm = '';
+let ordersListener = null; // Firestore listener for session orders
+
+// ============================================================
+// SCREEN MANAGEMENT
+// ============================================================
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (id === 'menuScreen') updateCartBar();
+    if (id === 'confirmScreen') renderSessionHistory();
+}
+function showLoading(msg) {
+    document.getElementById('loadingText').textContent = msg || 'Please wait...';
+    document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+function showError(title, subtitle) {
+    document.getElementById('errorTitle').textContent = title;
+    document.getElementById('errorSubtitle').textContent = subtitle;
+    showScreen('errorScreen');
+}
+
+// ============================================================
+// INIT — Parse QR params, check session, load menu
+// ============================================================
+async function init() {
+    const params = new URLSearchParams(window.location.search);
+    outletId = params.get('o') || '';
+    tableId = params.get('t') || '';
+
+    if (!outletId || !tableId) {
+        showError('Invalid QR Code', 'Please scan the QR code on your table to start ordering.');
+        return;
+    }
+
+    showLoading('Loading...');
+
+    try {
+        // 1. Verify outlet exists and QR ordering is enabled
+        const outletDoc = await db.collection('qr_outlets').doc(outletId).get();
+        if (!outletDoc.exists || !outletDoc.data().qrOrderingEnabled) {
+            showError('Ordering Unavailable', 'Online ordering is not available at this outlet right now.');
+            return;
+        }
+        outletName = outletDoc.data().name;
+
+        // 2. Verify table exists
+        const tableDoc = await db.collection('qr_tables').doc(tableId).get();
+        if (!tableDoc.exists || !tableDoc.data().isActive) {
+            showError('Invalid Table', 'This table is not set up for ordering. Please ask staff for help.');
+            return;
+        }
+        tableName = tableDoc.data().tableName;
+        tableNumber = tableDoc.data().tableNumber;
+
+        // 3. Check for existing valid session
+        const existingSession = await checkExistingSession();
+        if (existingSession) {
+            // Valid session found — skip OTP, go to menu
+            customerPhone = existingSession.phone;
+            sessionId = existingSession.sessionId;
+            await loadMenu();
+            await startOrdersListener();
+            hideLoading();
+            showScreen('menuScreen');
+            return;
+        }
+
+        // 4. No valid session — show phone input
+        updateAuthScreens();
+        hideLoading();
+        showScreen('welcomeScreen');
+        document.getElementById('phoneInput').focus();
+
+    } catch (err) {
+        console.error('Init error:', err);
+        hideLoading();
+        showError('Something went wrong', 'Please try scanning the QR code again.');
+    }
+}
+
+function updateAuthScreens() {
+    document.getElementById('welcomeOutletName').textContent = outletName;
+    document.getElementById('welcomeTableName').textContent = tableName;
+    document.getElementById('otpTableName').textContent = tableName;
+    document.getElementById('menuOutletName').textContent = outletName;
+    document.getElementById('menuTableBadge').textContent = tableName;
+}
+
+// ============================================================
+// SESSION MANAGEMENT (Stale QR Protection)
+// ============================================================
+async function checkExistingSession() {
+    // Check localStorage first
+    const stored = localStorage.getItem('nosh_qr_session');
+    if (!stored) return null;
+
+    try {
+        const session = JSON.parse(stored);
+        const now = getISTTimestamp();
+        const sessionAge = now - session.verifiedAt;
+        const maxAge = SESSION_DURATION_HOURS * 60 * 60 * 1000;
+
+        // Session expired?
+        if (sessionAge > maxAge) {
+            localStorage.removeItem('nosh_qr_session');
+            return null;
+        }
+
+        // Session is for a DIFFERENT table?
+        if (session.tableId !== tableId) {
+            // Check if the other session is still active in Firestore
+            const fsSession = await db.collection('qr_sessions').doc(session.sessionId).get();
+            if (fsSession.exists && fsSession.data().isActive) {
+                const otherTable = fsSession.data().tableName || 'another table';
+                showError(
+                    'Wrong Table',
+                    `You have an active session on ${otherTable}. Please scan the QR code on YOUR table, or wait for your current session to expire.`
+                );
+                return 'BLOCKED'; // special return to prevent further flow
+            }
+            // Other session expired or doesn't exist — allow fresh start
+            localStorage.removeItem('nosh_qr_session');
+            return null;
+        }
+
+        // Same table, not expired — verify in Firestore too
+        const fsSession = await db.collection('qr_sessions').doc(session.sessionId).get();
+        if (fsSession.exists && fsSession.data().isActive) {
+            return {
+                phone: session.phone,
+                sessionId: session.sessionId
+            };
+        }
+
+        // Firestore session gone — clear local
+        localStorage.removeItem('nosh_qr_session');
+        return null;
+
+    } catch (e) {
+        console.error('Session check error:', e);
+        localStorage.removeItem('nosh_qr_session');
+        return null;
+    }
+}
+
+async function createSession(phone) {
+    const now = getISTTimestamp();
+    const sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+    await db.collection('qr_sessions').doc(sid).set({
+        sessionId: sid,
+        phone: phone,
+        outletId: outletId,
+        tableId: tableId,
+        tableName: tableName,
+        tableNumber: tableNumber,
+        isActive: true,
+        verifiedAt: now,
+        expiresAt: now + (SESSION_DURATION_HOURS * 60 * 60 * 1000),
+        dateString: getISTDateString(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Update table's currentSessionId
+    await db.collection('qr_tables').doc(tableId).update({
+        currentSessionId: sid
+    });
+
+    // Save to localStorage
+    localStorage.setItem('nosh_qr_session', JSON.stringify({
+        sessionId: sid,
+        phone: phone,
+        outletId: outletId,
+        tableId: tableId,
+        verifiedAt: now
+    }));
+
+    // Upsert customer record
+    const custRef = db.collection('customers').doc(phone);
+    const custDoc = await custRef.get();
+    if (custDoc.exists) {
+        await custRef.update({
+            lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastOutletId: outletId
+        });
+    } else {
+        await custRef.set({
+            phone: phone,
+            name: '',
+            firstSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
+            totalOrders: 0,
+            totalSpent: 0,
+            outlets: [outletId],
+            source: 'qr_order'
+        });
+    }
+
+    return sid;
+}
+
+// ============================================================
+// OTP FLOW (MSG91 Widget)
+// ============================================================
+let otpResendTimer = null;
+
+function sendOTP() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        document.getElementById('phoneError').textContent = 'Enter a valid 10-digit phone number';
+        return;
+    }
+    document.getElementById('phoneError').textContent = '';
+    customerPhone = '+91' + phone;
+    
+    showLoading('Sending OTP...');
+
+    // MSG91 Send OTP
+    fetch('https://control.msg91.com/api/v5/otp?otp_length=4&template_id=' + MSG91_WIDGET_ID + '&mobile=91' + phone + '&authkey=' + MSG91_AUTH_KEY + '&realTimeResponse=1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        hideLoading();
+        if (data.type === 'success') {
+            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
+            showScreen('otpScreen');
+            document.querySelector('.otp-box[data-idx="0"]').focus();
+            startResendTimer();
+        } else {
+            document.getElementById('phoneError').textContent = data.message || 'Failed to send OTP. Try again.';
+        }
+    })
+    .catch(err => {
+        hideLoading();
+        console.error('OTP send error:', err);
+        document.getElementById('phoneError').textContent = 'Network error. Please try again.';
+    });
+}
+
+function verifyOTP() {
+    const boxes = document.querySelectorAll('.otp-box');
+    let otp = '';
+    boxes.forEach(b => otp += b.value);
+    
+    if (otp.length !== 4) {
+        document.getElementById('otpError').textContent = 'Enter the 4-digit OTP';
+        return;
+    }
+    document.getElementById('otpError').textContent = '';
+
+    showLoading('Verifying...');
+
+    const phone10 = customerPhone.replace('+91', '');
+    fetch('https://control.msg91.com/api/v5/otp/verify?mobile=91' + phone10 + '&otp=' + otp + '&authkey=' + MSG91_AUTH_KEY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(async data => {
+        if (data.type === 'success') {
+            // OTP verified — create session and load menu
+            sessionId = await createSession(customerPhone);
+            await loadMenu();
+            await startOrdersListener();
+            hideLoading();
+            updateAuthScreens();
+            showScreen('menuScreen');
+        } else {
+            hideLoading();
+            document.getElementById('otpError').textContent = data.message || 'Invalid OTP. Please try again.';
+        }
+    })
+    .catch(err => {
+        hideLoading();
+        console.error('OTP verify error:', err);
+        document.getElementById('otpError').textContent = 'Verification failed. Please try again.';
+    });
+}
+
+// OTP input auto-advance (4 boxes)
+document.querySelectorAll('.otp-box').forEach((box, idx) => {
+    box.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+        if (e.target.value && idx < 3) {
+            document.querySelector(`.otp-box[data-idx="${idx + 1}"]`).focus();
+        }
+        // Auto-submit when 4th digit entered
+        if (idx === 3 && e.target.value) {
+            verifyOTP();
+        }
+    });
+    box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+            document.querySelector(`.otp-box[data-idx="${idx - 1}"]`).focus();
+        }
+    });
+});
+
+// Phone input — enter key
+document.getElementById('phoneInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendOTP(); });
+
+// Resend timer
+function startResendTimer() {
+    let seconds = 30;
+    const el = document.getElementById('resendTimer');
+    const link = document.getElementById('resendLink');
+    link.classList.remove('active-link');
+    link.onclick = null;
+    
+    if (otpResendTimer) clearInterval(otpResendTimer);
+    otpResendTimer = setInterval(() => {
+        seconds--;
+        el.textContent = seconds;
+        if (seconds <= 0) {
+            clearInterval(otpResendTimer);
+            link.textContent = 'Resend OTP';
+            link.classList.add('active-link');
+            link.onclick = () => {
+                link.textContent = 'Resending...';
+                sendOTP();
+            };
+        }
+    }, 1000);
+}
+
+// ============================================================
+// MENU LOADING
+// ============================================================
+async function loadMenu() {
+    // Load categories
+    const catSnap = await db.collection('menu_categories').orderBy('sortOrder').get();
+    menuCategories = catSnap.docs.map(d => d.data());
+
+    // Load active items for this outlet
+    const itemSnap = await db.collection('menu_items')
+        .where('isActive', '==', true)
+        .where('isAvailable', '==', true)
+        .get();
+    
+    menuItems = itemSnap.docs.map(d => d.data()).filter(item => {
+        // Filter outlet-specific items
+        if (item.outletSpecific && item.outletIds && item.outletIds.length > 0) {
+            return item.outletIds.includes(outletId);
+        }
+        return true; // non-outlet-specific items show everywhere
+    });
+
+    // Sort items by sortOrder
+    menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+    // Render
+    renderCategoryTabs();
+    if (menuCategories.length > 0) {
+        activeCategory = menuCategories[0].id;
+        document.querySelector('.cat-tab')?.classList.add('active');
+    }
+    renderMenuItems();
+}
+
+function renderCategoryTabs() {
+    const container = document.getElementById('catTabs');
+    container.innerHTML = menuCategories.filter(c => c.isActive).map(cat => {
+        const count = menuItems.filter(i => i.categoryId === cat.id).length;
+        if (count === 0) return '';
+        return `<span class="cat-tab" data-cat="${cat.id}" onclick="selectCategory('${cat.id}')">${cat.name}</span>`;
+    }).join('');
+}
+
+function selectCategory(catId) {
+    activeCategory = catId;
+    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.cat-tab[data-cat="${catId}"]`)?.classList.add('active');
+    renderMenuItems();
+    // Scroll to top of items
+    document.getElementById('menuItemsContainer').scrollTop = 0;
+}
+
+function renderMenuItems() {
+    const container = document.getElementById('menuItemsContainer');
+    let filtered = menuItems.filter(i => i.categoryId === activeCategory);
+    
+    // Search filter
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filtered = menuItems.filter(i => 
+            i.name.toLowerCase().includes(term) || 
+            (i.description && i.description.toLowerCase().includes(term))
+        );
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="no-results">No items found</div>';
+        return;
+    }
+
+    // Group by subcategory
+    const cat = menuCategories.find(c => c.id === activeCategory);
+    const subcats = cat ? cat.subcategories || [] : [];
+    let html = '';
+
+    if (searchTerm) {
+        // Search mode — no grouping
+        html = filtered.map(item => renderItemCard(item)).join('');
+    } else if (subcats.length > 0) {
+        // Group by subcategory
+        for (const sc of subcats) {
+            const scItems = filtered.filter(i => i.subCategoryId === sc.id);
+            if (scItems.length === 0) continue;
+            html += `<div class="subcat-header">${sc.name}</div>`;
+            html += scItems.map(item => renderItemCard(item)).join('');
+        }
+        // Items without subcategory
+        const noSubcat = filtered.filter(i => !i.subCategoryId);
+        if (noSubcat.length > 0) {
+            html += noSubcat.map(item => renderItemCard(item)).join('');
+        }
+    } else {
+        html = filtered.map(item => renderItemCard(item)).join('');
+    }
+
+    container.innerHTML = html;
+}
+
+function renderItemCard(item) {
+    const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
+    const imgHtml = item.imageUrl 
+        ? `<img class="menu-item-img" src="${item.imageUrl}" alt="${item.name}" loading="lazy">`
+        : `<div class="menu-item-img-placeholder">🍽️</div>`;
+    
+    const cartItem = getCartItemCount(item.id);
+    const addBtnHtml = cartItem > 0
+        ? `<div class="item-qty-control">
+            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',-1)">−</button>
+            <span class="item-qty-num">${cartItem}</span>
+            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',1)">+</button>
+           </div>`
+        : `<button class="btn-add" onclick="event.stopPropagation();addItem('${item.id}')">ADD</button>`;
+
+    return `
+    <div class="menu-item-card" onclick="addItem('${item.id}')">
+        ${imgHtml}
+        <div class="menu-item-info">
+            <div>
+                <div class="menu-item-name">
+                    ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
+                    ${item.name}
+                </div>
+                ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
+            </div>
+            <div class="menu-item-bottom">
+                <span class="menu-item-price">₹${Math.round(item.price)}</span>
+                ${addBtnHtml}
+            </div>
+        </div>
+    </div>`;
+}
+
+function filterMenu() {
+    searchTerm = document.getElementById('menuSearchInput').value.trim();
+    renderMenuItems();
+}
+
+// ============================================================
+// ADD TO CART / MODIFIER POPUP
+// ============================================================
+function addItem(itemId) {
+    const item = menuItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    if (item.modifierGroups && item.modifierGroups.length > 0) {
+        openModifierPopup(item);
+    } else {
+        // No modifiers — add directly
+        cart.push({
+            itemId: item.id,
+            name: item.name,
+            vegType: item.vegType,
+            price: item.price,
+            qty: 1,
+            modifiers: [],
+            instructions: ''
+        });
+        updateCartBar();
+        renderMenuItems();
+    }
+}
+
+function openModifierPopup(item) {
+    const modal = document.getElementById('modifierModal');
+    const content = document.getElementById('modifierModalContent');
+
+    let html = `
+        <div class="modifier-header">
+            <div>
+                <div class="modifier-item-name">${item.name}</div>
+                <div style="font-size:13px;color:#888;margin-top:2px;">₹${Math.round(item.price)}</div>
+            </div>
+            <button class="modifier-close" onclick="closeModifierPopup()">✕</button>
+        </div>`;
+
+    // Modifier groups
+    item.modifierGroups.forEach((mg, gIdx) => {
+        const isRadio = mg.maxSelect === 1;
+        html += `<div class="modifier-group">
+            <div class="modifier-group-title">${mg.groupName}</div>
+            <div class="modifier-group-subtitle">${mg.required ? 'Required' : 'Optional'} · ${isRadio ? 'Select one' : `Select up to ${mg.maxSelect}`}</div>`;
+        
+        mg.options.forEach((opt, oIdx) => {
+            const elClass = isRadio ? 'modifier-radio' : 'modifier-check';
+            const priceText = opt.extraPrice > 0 ? `+₹${Math.round(opt.extraPrice)}` : '';
+            html += `
+            <div class="modifier-option" onclick="toggleModifier(${gIdx}, ${oIdx}, ${isRadio}, ${mg.maxSelect})">
+                <div class="modifier-option-left">
+                    <div class="${elClass}" id="mod_${gIdx}_${oIdx}"></div>
+                    <span class="modifier-option-name">${opt.name}</span>
+                </div>
+                ${priceText ? `<span class="modifier-option-price">${priceText}</span>` : ''}
+            </div>`;
+        });
+        html += '</div>';
+    });
+
+    // Special instructions
+    html += `
+        <div class="modifier-instructions">
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Special Instructions</div>
+            <textarea id="modInstructions" placeholder="E.g., No onion, extra spicy..." maxlength="200"></textarea>
+        </div>`;
+
+    // Quantity
+    html += `
+        <div class="modifier-qty">
+            <button class="modifier-qty-btn" onclick="modQty(-1)">−</button>
+            <span class="modifier-qty-num" id="modQtyNum">1</span>
+            <button class="modifier-qty-btn" onclick="modQty(1)">+</button>
+        </div>`;
+
+    // Add to cart button
+    html += `<button class="btn-add-to-cart" id="modAddBtn" onclick="addFromModifier()">Add to Cart</button>`;
+
+    content.innerHTML = html;
+    modal.classList.add('active');
+
+    // Store current item for the popup
+    modal.dataset.itemId = item.id;
+    modal.dataset.qty = '1';
+    modal.dataset.selections = JSON.stringify({});
+
+    // Auto-select first option for required groups
+    item.modifierGroups.forEach((mg, gIdx) => {
+        if (mg.required && mg.options.length > 0) {
+            toggleModifier(gIdx, 0, mg.maxSelect === 1, mg.maxSelect);
+        }
+    });
+}
+
+function closeModifierPopup() {
+    document.getElementById('modifierModal').classList.remove('active');
+}
+
+// Close modal on overlay click
+document.getElementById('modifierModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModifierPopup();
+});
+
+function toggleModifier(gIdx, oIdx, isRadio, maxSelect) {
+    const modal = document.getElementById('modifierModal');
+    let selections = JSON.parse(modal.dataset.selections || '{}');
+    
+    if (!selections[gIdx]) selections[gIdx] = [];
+    
+    if (isRadio) {
+        // Single select — clear others in group, select this one
+        const groupEls = document.querySelectorAll(`[id^="mod_${gIdx}_"]`);
+        groupEls.forEach(el => el.classList.remove('selected'));
+        document.getElementById(`mod_${gIdx}_${oIdx}`).classList.add('selected');
+        selections[gIdx] = [oIdx];
+    } else {
+        // Multi select
+        const el = document.getElementById(`mod_${gIdx}_${oIdx}`);
+        if (el.classList.contains('selected')) {
+            el.classList.remove('selected');
+            selections[gIdx] = selections[gIdx].filter(i => i !== oIdx);
+        } else {
+            if (selections[gIdx].length >= maxSelect) return; // max reached
+            el.classList.add('selected');
+            selections[gIdx].push(oIdx);
+        }
+    }
+    
+    modal.dataset.selections = JSON.stringify(selections);
+}
+
+function modQty(delta) {
+    const modal = document.getElementById('modifierModal');
+    let qty = parseInt(modal.dataset.qty) + delta;
+    if (qty < 1) qty = 1;
+    if (qty > 20) qty = 20;
+    modal.dataset.qty = qty.toString();
+    document.getElementById('modQtyNum').textContent = qty;
+}
+
+function addFromModifier() {
+    const modal = document.getElementById('modifierModal');
+    const itemId = modal.dataset.itemId;
+    const item = menuItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    const qty = parseInt(modal.dataset.qty);
+    const selections = JSON.parse(modal.dataset.selections || '{}');
+    const instructions = document.getElementById('modInstructions').value.trim();
+
+    // Validate required modifiers
+    for (let gIdx = 0; gIdx < item.modifierGroups.length; gIdx++) {
+        const mg = item.modifierGroups[gIdx];
+        if (mg.required && (!selections[gIdx] || selections[gIdx].length === 0)) {
+            alert(`Please select ${mg.groupName}`);
+            return;
+        }
+    }
+
+    // Build modifier list
+    const modifiers = [];
+    for (const [gIdx, optIndices] of Object.entries(selections)) {
+        const mg = item.modifierGroups[parseInt(gIdx)];
+        for (const oIdx of optIndices) {
+            const opt = mg.options[oIdx];
+            modifiers.push({
+                group: mg.groupName,
+                option: opt.name,
+                extraPrice: opt.extraPrice
+            });
+        }
+    }
+
+    cart.push({
+        itemId: item.id,
+        name: item.name,
+        vegType: item.vegType,
+        price: item.price,
+        qty: qty,
+        modifiers: modifiers,
+        instructions: instructions
+    });
+
+    closeModifierPopup();
+    updateCartBar();
+    renderMenuItems();
+}
+
+// Quick qty change from menu card (only for items without modifiers)
+function quickQty(itemId, delta) {
+    // Find the LAST cart entry for this item (simple items only)
+    for (let i = cart.length - 1; i >= 0; i--) {
+        if (cart[i].itemId === itemId && cart[i].modifiers.length === 0) {
+            cart[i].qty += delta;
+            if (cart[i].qty <= 0) cart.splice(i, 1);
+            break;
+        }
+    }
+    updateCartBar();
+    renderMenuItems();
+}
+
+function getCartItemCount(itemId) {
+    return cart.filter(c => c.itemId === itemId).reduce((sum, c) => sum + c.qty, 0);
+}
+
+// ============================================================
+// CART
+// ============================================================
+function updateCartBar() {
+    const bar = document.getElementById('cartBar');
+    const totalItems = cart.reduce((sum, c) => sum + c.qty, 0);
+    
+    if (totalItems > 0) {
+        bar.classList.add('visible');
+        document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} added`;
+    } else {
+        bar.classList.remove('visible');
+    }
+
+    // Show history button if there are past orders
+    const histBtn = document.getElementById('historyBtn');
+    if (sessionOrders.length > 0) {
+        histBtn.style.display = 'block';
+    }
+}
+
+function renderCart() {
+    const container = document.getElementById('cartItemsList');
+    
+    if (cart.length === 0) {
+        container.innerHTML = '<div class="no-results">Your cart is empty</div>';
+        document.getElementById('cartFooter').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('cartFooter').style.display = 'block';
+    const totalItems = cart.reduce((sum, c) => sum + c.qty, 0);
+    document.getElementById('cartSummary').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Will be sent to our kitchen`;
+
+    container.innerHTML = cart.map((c, idx) => {
+        const vegClass = c.vegType === 'Veg' ? 'veg' : c.vegType === 'NonVeg' ? 'nonveg' : c.vegType === 'Egg' ? 'egg' : '';
+        const modsText = c.modifiers.map(m => m.option).join(', ');
+        
+        return `
+        <div class="cart-item">
+            <div class="cart-item-top">
+                <div class="cart-item-name">
+                    ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
+                    ${c.name}
+                </div>
+                <button class="cart-item-remove" onclick="removeCartItem(${idx})">✕</button>
+            </div>
+            ${modsText ? `<div class="cart-item-modifiers">${modsText}</div>` : ''}
+            ${c.instructions ? `<div class="cart-item-instructions">"${c.instructions}"</div>` : ''}
+            <div class="cart-item-bottom">
+                <div class="item-qty-control">
+                    <button class="item-qty-btn" onclick="cartQty(${idx},-1)">−</button>
+                    <span class="item-qty-num">${c.qty}</span>
+                    <button class="item-qty-btn" onclick="cartQty(${idx},1)">+</button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function removeCartItem(idx) { cart.splice(idx, 1); renderCart(); updateCartBar(); }
+function cartQty(idx, delta) {
+    cart[idx].qty += delta;
+    if (cart[idx].qty <= 0) cart.splice(idx, 1);
+    renderCart();
+    updateCartBar();
+}
+
+// Override showScreen to render cart when switching
+const _origShowScreen = showScreen;
+showScreen = function(id) {
+    _origShowScreen(id);
+    if (id === 'cartScreen') renderCart();
+};
+
+// ============================================================
+// PLACE ORDER
+// ============================================================
+async function placeOrder() {
+    if (cart.length === 0) return;
+
+    showLoading('Placing your order...');
+
+    try {
+        // Get daily order number
+        const dateStr = getISTDateString();
+        const counterRef = db.collection('qr_order_counters').doc(`${outletId}_${dateStr}`);
+        
+        let orderNumber = 1;
+        await db.runTransaction(async (tx) => {
+            const counterDoc = await tx.get(counterRef);
+            if (counterDoc.exists) {
+                orderNumber = (counterDoc.data().lastOrderNumber || 0) + 1;
+                tx.update(counterRef, { lastOrderNumber: orderNumber });
+            } else {
+                tx.set(counterRef, { lastOrderNumber: 1, dateString: dateStr, outletId: outletId });
+            }
+        });
+
+        // Build order items (with prices for cashier, but we'll strip in display)
+        const orderItems = cart.map(c => ({
+            itemId: c.itemId,
+            name: c.name,
+            vegType: c.vegType,
+            qty: c.qty,
+            price: c.price,
+            modifiers: c.modifiers,
+            specialInstructions: c.instructions
+        }));
+
+        // Calculate total (for cashier reference only)
+        const orderTotal = cart.reduce((sum, c) => {
+            const itemTotal = c.price + c.modifiers.reduce((ms, m) => ms + (m.extraPrice || 0), 0);
+            return sum + (itemTotal * c.qty);
+        }, 0);
+
+        // Create order document
+        const orderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        await db.collection('qr_orders').doc(orderId).set({
+            orderId: orderId,
+            sessionId: sessionId,
+            outletId: outletId,
+            tableId: tableId,
+            tableNumber: tableNumber,
+            tableName: tableName,
+            customerPhone: customerPhone,
+            items: orderItems,
+            orderTotal: Math.round(orderTotal),
+            itemCount: cart.reduce((s, c) => s + c.qty, 0),
+            status: 'new',
+            orderNumber: orderNumber,
+            dateString: dateStr,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAtIST: getISTTimeString(),
+            acceptedAt: null,
+            servedAt: null,
+            cancelledAt: null,
+            cancelReason: ''
+        });
+
+        // Update customer total orders
+        await db.collection('customers').doc(customerPhone).update({
+            totalOrders: firebase.firestore.Increment(1),
+            totalSpent: firebase.firestore.Increment(Math.round(orderTotal)),
+            lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => {}); // ignore if doc doesn't exist yet
+
+        // Clear cart
+        const placedItems = [...cart];
+        cart = [];
+        
+        hideLoading();
+
+        // Show confirmation
+        renderOrderConfirmation(orderNumber, placedItems);
+        showScreen('confirmScreen');
+
+    } catch (err) {
+        hideLoading();
+        console.error('Order placement error:', err);
+        alert('Failed to place order. Please try again.');
+    }
+}
+
+function renderOrderConfirmation(orderNumber, items) {
+    document.getElementById('confirmIcon').textContent = '✅';
+    document.getElementById('confirmTitle').textContent = 'Order Placed!';
+    document.getElementById('confirmSubtitle').textContent = `Order #${orderNumber} · ${tableName}\nOur staff will enter your order shortly.`;
+
+    // Show just-placed order (no prices)
+    const card = document.getElementById('confirmOrderCard');
+    card.innerHTML = `
+        <div class="confirm-order-header">Order #${orderNumber} · Just now</div>
+        ${items.map(c => `
+            <div class="confirm-order-item">
+                <span class="confirm-order-qty">${c.qty}×</span>
+                <span class="confirm-order-name">${c.name}</span>
+            </div>
+            ${c.modifiers.length ? `<div class="confirm-order-mods">${c.modifiers.map(m => m.option).join(', ')}</div>` : ''}
+            ${c.instructions ? `<div class="confirm-order-mods" style="color:#e94560;font-style:italic;">"${c.instructions}"</div>` : ''}
+        `).join('')}
+    `;
+}
+
+// ============================================================
+// SESSION HISTORY (real-time)
+// ============================================================
+async function startOrdersListener() {
+    if (ordersListener) ordersListener(); // unsubscribe previous
+    
+    ordersListener = db.collection('qr_orders')
+        .where('sessionId', '==', sessionId)
+        .orderBy('createdAt', 'desc')
+        .onSnapshot(snapshot => {
+            sessionOrders = snapshot.docs.map(d => d.data());
+            updateCartBar(); // show/hide history button
+            // If on confirm screen, re-render
+            if (document.getElementById('confirmScreen').classList.contains('active')) {
+                renderSessionHistory();
+            }
+        });
+}
+
+function renderSessionHistory() {
+    const container = document.getElementById('sessionHistory');
+    if (sessionOrders.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="session-history-title">Your Orders This Visit</div>
+        ${sessionOrders.map(order => {
+            const statusClass = 'status-' + order.status;
+            const statusText = order.status === 'new' ? 'Pending' : 
+                             order.status === 'accepted' ? 'Entered into POS' : 
+                             order.status === 'served' ? 'Served' : 
+                             order.status === 'cancelled' ? 'Cancelled' : order.status;
+            
+            return `
+            <div class="session-order">
+                <div class="session-order-header">
+                    <span class="session-order-num">Order #${order.orderNumber}</span>
+                    <span class="session-order-status ${statusClass}">${statusText}</span>
+                </div>
+                <div style="font-size:12px;color:#999;margin-bottom:8px;">${order.createdAtIST || ''}</div>
+                ${order.items.map(item => `
+                    <div class="confirm-order-item">
+                        <span class="confirm-order-qty">${item.qty}×</span>
+                        <span class="confirm-order-name">${item.name}</span>
+                    </div>
+                    ${item.modifiers && item.modifiers.length ? `<div class="confirm-order-mods">${item.modifiers.map(m => m.option).join(', ')}</div>` : ''}
+                    ${item.specialInstructions ? `<div class="confirm-order-mods" style="color:#e94560;font-style:italic;">"${item.specialInstructions}"</div>` : ''}
+                `).join('')}
+                ${order.status === 'cancelled' && order.cancelReason ? `<div style="font-size:12px;color:#c62828;margin-top:8px;">Reason: ${order.cancelReason}</div>` : ''}
+            </div>`;
+        }).join('')}
+    `;
+}
+
+// ============================================================
+// INIT ON LOAD
+// ============================================================
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
 
