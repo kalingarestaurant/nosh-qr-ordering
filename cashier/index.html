@@ -288,6 +288,39 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
+<!-- ===== MSG91 OTP Widget SDK ===== -->
+<script>
+var configuration = {
+    widgetId: "36637a6f3552313230313634",
+    tokenAuth: "493471TSZpd0kcaE69c5641fP1",
+    exposeMethods: true,
+    success: (data) => { console.log('MSG91 success:', data); },
+    failure: (error) => { console.log('MSG91 failure:', error); }
+};
+</script>
+<script>
+(function loadOtpScript(urls) {
+    let i = 0;
+    function attempt() {
+        const s = document.createElement('script');
+        s.src = urls[i];
+        s.async = true;
+        s.onload = () => {
+            if (typeof window.initSendOTP === 'function') {
+                window.initSendOTP(configuration);
+                console.log('MSG91 OTP SDK loaded');
+            }
+        };
+        s.onerror = () => { i++; if (i < urls.length) attempt(); };
+        document.head.appendChild(s);
+    }
+    attempt();
+})([
+    'https://verify.msg91.com/otp-provider.js',
+    'https://verify.phone91.com/otp-provider.js'
+]);
+</script>
+
 <script>
 // ============================================================
 // CONFIG
@@ -303,9 +336,6 @@ const FIREBASE_CONFIG = {
 
 firebase.initializeApp(FIREBASE_CONFIG);
 const db = firebase.firestore();
-
-const MSG91_WIDGET_ID = "36637a6f3552313230313634";
-const MSG91_AUTH_KEY = "493471A8DVB9KDG698b5d93P1";
 
 // IST Helpers
 function getIST() { return new Date(Date.now() + 5.5 * 60 * 60 * 1000); }
@@ -351,27 +381,29 @@ function sendStaffOTP() {
 
     document.getElementById('phoneInput').disabled = true;
 
-    fetch('https://control.msg91.com/api/v5/otp?otp_length=4&template_id=' + MSG91_WIDGET_ID + '&mobile=91' + phone + '&authkey=' + MSG91_AUTH_KEY + '&realTimeResponse=1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(r => r.json())
-    .then(data => {
+    if (typeof window.sendOtp !== 'function') {
         document.getElementById('phoneInput').disabled = false;
-        if (data.type === 'success') {
+        document.getElementById('phoneError').textContent = 'OTP system loading... try again in a moment.';
+        return;
+    }
+
+    window.sendOtp(
+        '91' + phone,
+        (data) => {
+            document.getElementById('phoneInput').disabled = false;
+            console.log('OTP sent:', data);
             document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
             document.getElementById('phoneStep').style.display = 'none';
             document.getElementById('otpStep').style.display = 'block';
             document.querySelector('#otpStep .otp-box[data-idx="0"]').focus();
             startResendTimer();
-        } else {
-            document.getElementById('phoneError').textContent = data.message || 'Failed to send OTP';
+        },
+        (error) => {
+            document.getElementById('phoneInput').disabled = false;
+            console.error('OTP send error:', error);
+            document.getElementById('phoneError').textContent = error?.message || 'Failed to send OTP';
         }
-    })
-    .catch(() => {
-        document.getElementById('phoneInput').disabled = false;
-        document.getElementById('phoneError').textContent = 'Network error';
-    });
+    );
 }
 
 function verifyStaffOTP() {
@@ -381,14 +413,15 @@ function verifyStaffOTP() {
     if (otp.length !== 4) { document.getElementById('otpError').textContent = 'Enter 4-digit OTP'; return; }
     document.getElementById('otpError').textContent = '';
 
-    const phone10 = staffPhone.replace('+91', '');
-    fetch('https://control.msg91.com/api/v5/otp/verify?mobile=91' + phone10 + '&otp=' + otp + '&authkey=' + MSG91_AUTH_KEY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(r => r.json())
-    .then(async data => {
-        if (data.type === 'success') {
+    if (typeof window.verifyOtp !== 'function') {
+        document.getElementById('otpError').textContent = 'OTP system not ready. Reload the page.';
+        return;
+    }
+
+    window.verifyOtp(
+        otp,
+        async (data) => {
+            console.log('OTP verified:', data);
                 // Check if this phone is a registered staff member
                 const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
                 if (!staffDoc.exists || !staffDoc.data().isActive) {
@@ -404,11 +437,12 @@ function verifyStaffOTP() {
                 }));
 
                 await showOutletSelection();
-            } else {
-                document.getElementById('otpError').textContent = data.message || 'Invalid OTP';
-            }
-        })
-        .catch(() => { document.getElementById('otpError').textContent = 'Verification failed'; });
+        },
+        (error) => {
+            console.error('OTP verify error:', error);
+            document.getElementById('otpError').textContent = error?.message || 'Invalid OTP';
+        }
+    );
 }
 
 async function showOutletSelection() {
