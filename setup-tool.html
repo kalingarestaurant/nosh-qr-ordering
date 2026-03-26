@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nosh QR — Firestore Setup Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #0f1117; color: #e8e8e8; min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 700px; margin: 0 auto; }
+        h1 { font-size: 24px; color: #e94560; margin-bottom: 8px; }
+        .subtitle { color: #888; font-size: 14px; margin-bottom: 30px; }
+        .warning { background: #ff6b6b15; border: 1px solid #ff6b6b30; border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 13px; color: #ff6b6b; }
+        .section { background: #1a1c2e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .section-desc { font-size: 13px; color: #888; margin-bottom: 14px; }
+        .input-group { margin-bottom: 12px; }
+        .input-label { font-size: 12px; color: #888; margin-bottom: 4px; display: block; }
+        .input-field { width: 100%; padding: 10px 14px; background: #0f1117; border: 1.5px solid #2a2d3e; border-radius: 8px; color: #fff; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; }
+        .input-field:focus { border-color: #e94560; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        .btn-primary { background: #e94560; color: #fff; }
+        .btn-primary:hover { background: #d63851; }
+        .btn-primary:disabled { background: #444; cursor: not-allowed; }
+        .btn-secondary { background: #2a2d3e; color: #e8e8e8; }
+        .log { background: #0a0b10; border-radius: 8px; padding: 14px; margin-top: 12px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.8; }
+        .log-line { margin-bottom: 2px; }
+        .log-success { color: #2ecc71; }
+        .log-error { color: #ff6b6b; }
+        .log-info { color: #3498db; }
+        .log-warn { color: #f39c12; }
+        .step-badge { background: #e94560; color: #fff; font-size: 12px; font-weight: 700; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+        .check { color: #2ecc71; font-size: 18px; }
+        .status { font-size: 13px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; }
+        .status-success { background: #2ecc7115; color: #2ecc71; }
+        .status-error { background: #ff6b6b15; color: #ff6b6b; }
+        .status-loading { background: #3498db15; color: #3498db; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔧 Nosh QR — Firestore Setup Tool</h1>
+    <div class="subtitle">This tool uploads your menu data, creates tables, and sets up the super admin. Run once.</div>
+    
+    <div class="warning">
+        ⚠️ This uploads to the <strong>TRIAL</strong> project: <strong>nosh-qr-ordering-trial</strong>. 
+        Your live waitlist system is NOT affected.
+    </div>
+
+    <!-- STEP 1: Super Admin Phone -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">1</span> Super Admin Phone Number</div>
+        <div class="section-desc">Your phone number — you'll use this to log into the cashier screen and menu admin.</div>
+        <div class="input-group">
+            <label class="input-label">Phone number (10 digits, without +91)</label>
+            <input type="tel" class="input-field" id="adminPhone" placeholder="9876543210" maxlength="10" inputmode="numeric">
+        </div>
+    </div>
+
+    <!-- STEP 2: Upload -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">2</span> Upload Everything to Firestore</div>
+        <div class="section-desc">This will create: 10 categories, 406 menu items, 10 tables, 1 outlet config, and your super admin account.</div>
+        <button class="btn btn-primary" id="uploadBtn" onclick="startUpload()">🚀 Start Upload</button>
+        <div id="uploadStatus"></div>
+        <div class="log" id="uploadLog" style="display:none;"></div>
+    </div>
+
+    <!-- STEP 3: Verify -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">3</span> Verify Upload</div>
+        <div class="section-desc">Click to check that everything was uploaded correctly.</div>
+        <button class="btn btn-secondary" onclick="verifyUpload()">✓ Verify Data</button>
+        <div id="verifyStatus"></div>
+        <div class="log" id="verifyLog" style="display:none;"></div>
+    </div>
+
+    <!-- STEP 4: Reset (if needed) -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">!</span> Reset (if needed)</div>
+        <div class="section-desc">If something goes wrong, this deletes ALL data and lets you start fresh. Use carefully.</div>
+        <button class="btn" style="background:#ff6b6b30;color:#ff6b6b;" onclick="confirmReset()">🗑️ Delete All & Reset</button>
+        <div id="resetStatus"></div>
+    </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG — Trial Project
+// ============================================================
+firebase.initializeApp({
+    apiKey: "AIzaSyBHmyK6NTVuSsKCh-969SElL1EEnq9Ln0M",
+    authDomain: "nosh-qr-ordering-trial.firebaseapp.com",
+    projectId: "nosh-qr-ordering-trial",
+    storageBucket: "nosh-qr-ordering-trial.firebasestorage.app",
+    messagingSenderId: "672306605373",
+    appId: "1:672306605373:web:c234755331d045142c6954"
+});
+const db = firebase.firestore();
+
+// ============================================================
+// LOGGING HELPERS
+// ============================================================
+function addLog(logId, msg, type) {
+    const log = document.getElementById(logId);
+    log.style.display = 'block';
+    const cls = type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : type === 'warn' ? 'log-warn' : 'log-info';
+    log.innerHTML += `<div class="log-line ${cls}">${msg}</div>`;
+    log.scrollTop = log.scrollHeight;
+}
+
+function setStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    el.innerHTML = `<div class="status status-${type}">${msg}</div>`;
+}
+
+// ============================================================
+// MENU DATA (embedded — parsed from DotPe Excel)
+// ============================================================
+// This is the full menu data. In a real scenario this would be
+// loaded from a file, but we embed it for zero-install simplicity.
+
+let MENU_DATA = null;
+
+async function loadMenuData() {
+    // We'll fetch the JSON from the same directory
+    // For the standalone version, the data is embedded below
+    if (MENU_DATA) return MENU_DATA;
+    
+    try {
+        const resp = await fetch('./firestore_menu_data.json');
+        if (resp.ok) {
+            MENU_DATA = await resp.json();
+            return MENU_DATA;
+        }
+    } catch(e) {}
+    
+    // If JSON file not found, show error
+    addLog('uploadLog', '❌ Could not load firestore_menu_data.json — make sure it is in the same folder as this HTML file', 'error');
+    return null;
+}
+
+// ============================================================
+// UPLOAD
+// ============================================================
+async function startUpload() {
+    const phone = document.getElementById('adminPhone').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        alert('Please enter a valid 10-digit phone number in Step 1');
+        return;
+    }
+    const fullPhone = '+91' + phone;
+    
+    document.getElementById('uploadBtn').disabled = true;
+    document.getElementById('uploadLog').innerHTML = '';
+    setStatus('uploadStatus', '⏳ Uploading... please wait, this takes about 30 seconds.', 'loading');
+    addLog('uploadLog', '🚀 Starting upload to nosh-qr-ordering-trial...', 'info');
+
+    try {
+        // Load menu data
+        addLog('uploadLog', '📁 Loading menu data...', 'info');
+        const data = await loadMenuData();
+        if (!data) {
+            setStatus('uploadStatus', '❌ Failed — could not load menu data.', 'error');
+            document.getElementById('uploadBtn').disabled = false;
+            return;
+        }
+        addLog('uploadLog', `✓ Menu data loaded: ${Object.keys(data.menu_categories).length} categories, ${Object.keys(data.menu_items).length} items`, 'success');
+
+        // 1. Upload Categories
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '📂 Uploading categories...', 'info');
+        let catCount = 0;
+        for (const [catId, catData] of Object.entries(data.menu_categories)) {
+            await db.collection('menu_categories').doc(catId).set({
+                id: catId,
+                name: catData.name,
+                sortOrder: catData.sortOrder,
+                isActive: true,
+                subcategories: catData.subcategories || [],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            catCount++;
+        }
+        addLog('uploadLog', `✓ ${catCount} categories uploaded`, 'success');
+
+        // 2. Upload Menu Items (in small batches to avoid quota issues)
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '🍽️ Uploading menu items... (this takes a moment)', 'info');
+        const itemEntries = Object.entries(data.menu_items);
+        let itemCount = 0;
+        const BATCH_SIZE = 50;
+
+        for (let i = 0; i < itemEntries.length; i += BATCH_SIZE) {
+            const batch = db.batch();
+            const chunk = itemEntries.slice(i, i + BATCH_SIZE);
+
+            for (const [itemId, itemData] of chunk) {
+                const ref = db.collection('menu_items').doc(itemId);
+                batch.set(ref, {
+                    id: itemId,
+                    name: itemData.name,
+                    categoryId: itemData.categoryId,
+                    subCategoryId: itemData.subCategoryId || '',
+                    price: itemData.price,
+                    description: itemData.description || '',
+                    vegType: itemData.vegType || 'Unknown',
+                    isActive: true,
+                    isAvailable: true,
+                    sortOrder: itemData.sortOrder || 0,
+                    modifierGroups: itemData.modifierGroups || [],
+                    imageUrl: itemData.imageUrl || '',
+                    outletSpecific: false,
+                    outletIds: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                itemCount++;
+            }
+
+            await batch.commit();
+            addLog('uploadLog', `  ✓ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${chunk.length} items uploaded (${itemCount} total)`, 'success');
+        }
+        addLog('uploadLog', `✓ ${itemCount} menu items uploaded`, 'success');
+
+        // 3. Create Outlet
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '🏪 Creating outlet...', 'info');
+        await db.collection('qr_outlets').doc('house_of_nosh').set({
+            id: 'house_of_nosh',
+            name: 'House Of Nosh',
+            isActive: true,
+            qrOrderingEnabled: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        addLog('uploadLog', '✓ Outlet created: House Of Nosh', 'success');
+
+        // 4. Create 10 Tables
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '🪑 Creating 10 tables...', 'info');
+        const tableBatch = db.batch();
+        for (let t = 1; t <= 10; t++) {
+            const tableId = `house_of_nosh_table_${t}`;
+            tableBatch.set(db.collection('qr_tables').doc(tableId), {
+                id: tableId,
+                outletId: 'house_of_nosh',
+                outletName: 'House Of Nosh',
+                tableNumber: t,
+                tableName: `Table ${t}`,
+                qrUrl: `https://order.houseofnosh.in?o=house_of_nosh&t=house_of_nosh_table_${t}`,
+                isActive: true,
+                currentSessionId: '',
+                capacity: 4,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        await tableBatch.commit();
+        addLog('uploadLog', '✓ 10 tables created (Table 1 to Table 10)', 'success');
+
+        // 5. Create Super Admin
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '👤 Creating super admin...', 'info');
+        await db.collection('qr_staff').doc(fullPhone).set({
+            phone: fullPhone,
+            name: 'Abhishek',
+            role: 'super_admin',
+            outletIds: ['all'],
+            isActive: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        addLog('uploadLog', `✓ Super admin created: ${fullPhone}`, 'success');
+
+        // DONE!
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '========================================', 'success');
+        addLog('uploadLog', '🎉 ALL DONE! Upload complete.', 'success');
+        addLog('uploadLog', '========================================', 'success');
+        addLog('uploadLog', `  Categories:  ${catCount}`, 'success');
+        addLog('uploadLog', `  Items:       ${itemCount}`, 'success');
+        addLog('uploadLog', `  Tables:      10`, 'success');
+        addLog('uploadLog', `  Outlet:      House Of Nosh`, 'success');
+        addLog('uploadLog', `  Super Admin: ${fullPhone}`, 'success');
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '👉 Next: Click "Verify Data" below to confirm everything is correct.', 'info');
+
+        setStatus('uploadStatus', '✅ Upload complete! All data is in Firestore.', 'success');
+
+    } catch (err) {
+        console.error('Upload error:', err);
+        addLog('uploadLog', `❌ ERROR: ${err.message}`, 'error');
+        addLog('uploadLog', 'Check that Firestore is in TEST MODE in Firebase Console.', 'warn');
+        setStatus('uploadStatus', '❌ Upload failed. Check the log above.', 'error');
+    }
+
+    document.getElementById('uploadBtn').disabled = false;
+}
+
+// ============================================================
+// VERIFY
+// ============================================================
+async function verifyUpload() {
+    document.getElementById('verifyLog').innerHTML = '';
+    setStatus('verifyStatus', '⏳ Checking...', 'loading');
+
+    try {
+        addLog('verifyLog', '🔍 Verifying Firestore data...', 'info');
+
+        // Check categories
+        const catSnap = await db.collection('menu_categories').get();
+        addLog('verifyLog', `📂 Categories: ${catSnap.size} documents`, catSnap.size > 0 ? 'success' : 'error');
+
+        // Check items
+        const itemSnap = await db.collection('menu_items').get();
+        addLog('verifyLog', `🍽️ Menu items: ${itemSnap.size} documents`, itemSnap.size > 0 ? 'success' : 'error');
+
+        // Check a sample item
+        if (itemSnap.size > 0) {
+            const sample = itemSnap.docs[0].data();
+            addLog('verifyLog', `  Sample item: "${sample.name}" — ₹${sample.price} — ${sample.vegType}`, 'info');
+        }
+
+        // Check outlet
+        const outletSnap = await db.collection('qr_outlets').get();
+        addLog('verifyLog', `🏪 Outlets: ${outletSnap.size} documents`, outletSnap.size > 0 ? 'success' : 'error');
+
+        // Check tables
+        const tableSnap = await db.collection('qr_tables').get();
+        addLog('verifyLog', `🪑 Tables: ${tableSnap.size} documents`, tableSnap.size > 0 ? 'success' : 'error');
+
+        // Check staff
+        const staffSnap = await db.collection('qr_staff').get();
+        addLog('verifyLog', `👤 Staff users: ${staffSnap.size} documents`, staffSnap.size > 0 ? 'success' : 'error');
+        if (staffSnap.size > 0) {
+            const admin = staffSnap.docs[0].data();
+            addLog('verifyLog', `  Super admin: ${admin.phone} (${admin.role})`, 'info');
+        }
+
+        // Items with modifiers
+        let modCount = 0;
+        itemSnap.docs.forEach(d => { if (d.data().modifierGroups && d.data().modifierGroups.length > 0) modCount++; });
+        addLog('verifyLog', `🔧 Items with modifiers: ${modCount}`, 'info');
+
+        // Veg/NonVeg breakdown
+        let vegCount = 0, nonvegCount = 0, eggCount = 0, unknownCount = 0;
+        itemSnap.docs.forEach(d => {
+            const v = d.data().vegType;
+            if (v === 'Veg') vegCount++;
+            else if (v === 'NonVeg') nonvegCount++;
+            else if (v === 'Egg') eggCount++;
+            else unknownCount++;
+        });
+        addLog('verifyLog', `🟢 Veg: ${vegCount} | 🔴 Non-Veg: ${nonvegCount} | 🟡 Egg: ${eggCount} | ❓ Unknown: ${unknownCount}`, 'info');
+
+        addLog('verifyLog', '', 'info');
+        const allGood = catSnap.size > 0 && itemSnap.size > 0 && outletSnap.size > 0 && tableSnap.size > 0 && staffSnap.size > 0;
+        if (allGood) {
+            addLog('verifyLog', '✅ Everything looks good! Your Firestore is ready.', 'success');
+            setStatus('verifyStatus', '✅ All data verified successfully!', 'success');
+        } else {
+            addLog('verifyLog', '⚠️ Some collections are missing. Try running the upload again.', 'warn');
+            setStatus('verifyStatus', '⚠️ Some data is missing. Check the log.', 'error');
+        }
+
+    } catch (err) {
+        addLog('verifyLog', `❌ Error: ${err.message}`, 'error');
+        setStatus('verifyStatus', '❌ Verification failed.', 'error');
+    }
+}
+
+// ============================================================
+// RESET
+// ============================================================
+async function confirmReset() {
+    if (!confirm('⚠️ This will DELETE ALL DATA in the trial Firestore.\n\nAre you absolutely sure?')) return;
+    if (!confirm('LAST CHANCE — this cannot be undone. Type OK to proceed.')) return;
+
+    setStatus('resetStatus', '⏳ Deleting all collections...', 'loading');
+
+    try {
+        const collections = ['menu_categories', 'menu_items', 'qr_tables', 'qr_outlets', 'qr_staff', 'qr_orders', 'qr_sessions', 'qr_order_counters', 'customers'];
+        
+        for (const col of collections) {
+            const snap = await db.collection(col).get();
+            if (snap.size > 0) {
+                // Delete in batches
+                const batches = [];
+                let batch = db.batch();
+                let count = 0;
+                snap.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                    count++;
+                    if (count >= 400) {
+                        batches.push(batch);
+                        batch = db.batch();
+                        count = 0;
+                    }
+                });
+                if (count > 0) batches.push(batch);
+                for (const b of batches) await b.commit();
+            }
+        }
+
+        setStatus('resetStatus', '✅ All data deleted. You can now run the upload again.', 'success');
+
+    } catch (err) {
+        setStatus('resetStatus', `❌ Reset failed: ${err.message}`, 'error');
+    }
+}
+</script>
+</body>
+</html>
