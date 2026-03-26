@@ -283,6 +283,47 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
+<!-- ===== MSG91 OTP Widget SDK ===== -->
+<script>
+var msg91OtpResolve = null;
+var msg91OtpReject = null;
+var configuration = {
+    widgetId: "36637a6f3552313230313634",
+    tokenAuth: "493471TSZpd0kcaE69c5641fP1",
+    exposeMethods: true,
+    success: (data) => {
+        console.log('MSG91 OTP success:', data);
+        if (msg91OtpResolve) msg91OtpResolve(data);
+    },
+    failure: (error) => {
+        console.log('MSG91 OTP failure:', error);
+        if (msg91OtpReject) msg91OtpReject(error);
+    }
+};
+</script>
+<script>
+(function loadOtpScript(urls) {
+    let i = 0;
+    function attempt() {
+        const s = document.createElement('script');
+        s.src = urls[i];
+        s.async = true;
+        s.onload = () => {
+            if (typeof window.initSendOTP === 'function') {
+                window.initSendOTP(configuration);
+                console.log('MSG91 OTP SDK loaded');
+            }
+        };
+        s.onerror = () => { i++; if (i < urls.length) attempt(); };
+        document.head.appendChild(s);
+    }
+    attempt();
+})([
+    'https://verify.msg91.com/otp-provider.js',
+    'https://verify.phone91.com/otp-provider.js'
+]);
+</script>
+
 <script>
 // ============================================================
 // CONFIGURATION
@@ -296,8 +337,6 @@ const FIREBASE_CONFIG = {
     appId: "1:672306605373:web:c234755331d045142c6954"
 };
 
-const MSG91_WIDGET_ID = "36637a6f3552313230313634";
-const MSG91_AUTH_KEY = "493471A8DVB9KDG698b5d93P1";
 const SESSION_DURATION_HOURS = 4;
 const CUSTOMER_PORTAL_URL = "https://order.houseofnosh.in";
 
@@ -543,7 +582,7 @@ async function createSession(phone) {
 }
 
 // ============================================================
-// OTP FLOW (MSG91 Widget)
+// OTP FLOW (MSG91 Widget SDK — exposeMethods)
 // ============================================================
 let otpResendTimer = null;
 
@@ -558,28 +597,31 @@ function sendOTP() {
     
     showLoading('Sending OTP...');
 
-    // MSG91 Send OTP
-    fetch('https://control.msg91.com/api/v5/otp?otp_length=4&template_id=' + MSG91_WIDGET_ID + '&mobile=91' + phone + '&authkey=' + MSG91_AUTH_KEY + '&realTimeResponse=1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(res => res.json())
-    .then(data => {
+    // Use MSG91 widget exposed method
+    if (typeof window.sendOtp !== 'function') {
         hideLoading();
-        if (data.type === 'success') {
+        document.getElementById('phoneError').textContent = 'OTP system loading... please try again in a moment.';
+        return;
+    }
+
+    window.sendOtp(
+        '91' + phone,
+        (data) => {
+            // Success — OTP sent
+            hideLoading();
+            console.log('OTP sent:', data);
             document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
             showScreen('otpScreen');
             document.querySelector('.otp-box[data-idx="0"]').focus();
             startResendTimer();
-        } else {
-            document.getElementById('phoneError').textContent = data.message || 'Failed to send OTP. Try again.';
+        },
+        (error) => {
+            // Failed to send
+            hideLoading();
+            console.error('OTP send error:', error);
+            document.getElementById('phoneError').textContent = error?.message || 'Failed to send OTP. Try again.';
         }
-    })
-    .catch(err => {
-        hideLoading();
-        console.error('OTP send error:', err);
-        document.getElementById('phoneError').textContent = 'Network error. Please try again.';
-    });
+    );
 }
 
 function verifyOTP() {
@@ -592,34 +634,32 @@ function verifyOTP() {
         return;
     }
     document.getElementById('otpError').textContent = '';
-
     showLoading('Verifying...');
 
-    const phone10 = customerPhone.replace('+91', '');
-    fetch('https://control.msg91.com/api/v5/otp/verify?mobile=91' + phone10 + '&otp=' + otp + '&authkey=' + MSG91_AUTH_KEY, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(res => res.json())
-    .then(async data => {
-        if (data.type === 'success') {
-            // OTP verified — create session and load menu
+    if (typeof window.verifyOtp !== 'function') {
+        hideLoading();
+        document.getElementById('otpError').textContent = 'OTP system not ready. Please reload the page.';
+        return;
+    }
+
+    window.verifyOtp(
+        otp,
+        async (data) => {
+            // Success — OTP verified
+            console.log('OTP verified:', data);
             sessionId = await createSession(customerPhone);
             await loadMenu();
             await startOrdersListener();
             hideLoading();
             updateAuthScreens();
             showScreen('menuScreen');
-        } else {
+        },
+        (error) => {
             hideLoading();
-            document.getElementById('otpError').textContent = data.message || 'Invalid OTP. Please try again.';
+            console.error('OTP verify error:', error);
+            document.getElementById('otpError').textContent = error?.message || 'Invalid OTP. Please try again.';
         }
-    })
-    .catch(err => {
-        hideLoading();
-        console.error('OTP verify error:', err);
-        document.getElementById('otpError').textContent = 'Verification failed. Please try again.';
-    });
+    );
 }
 
 // OTP input auto-advance (4 boxes)
@@ -629,7 +669,6 @@ document.querySelectorAll('.otp-box').forEach((box, idx) => {
         if (e.target.value && idx < 3) {
             document.querySelector(`.otp-box[data-idx="${idx + 1}"]`).focus();
         }
-        // Auto-submit when 4th digit entered
         if (idx === 3 && e.target.value) {
             verifyOTP();
         }
@@ -1258,4 +1297,3 @@ window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
-
