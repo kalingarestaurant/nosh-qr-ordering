@@ -723,7 +723,7 @@ function renderItemCard(item) {
         : `<button class="btn-add" onclick="event.stopPropagation();addItem('${item.id}')">ADD</button>`;
 
     return `
-    <div class="menu-item-card" onclick="addItem('${item.id}')">
+    <div class="menu-item-card" onclick="openItemDetail('${item.id}')">
         ${imgHtml}
         <div class="menu-item-info">
             <div>
@@ -749,62 +749,85 @@ function filterMenu() {
 // ============================================================
 // ADD TO CART / MODIFIER POPUP
 // ============================================================
+// Quick-add from card button (no popup)
 function addItem(itemId) {
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
 
     if (item.modifierGroups && item.modifierGroups.length > 0) {
-        openModifierPopup(item);
-    } else {
-        // No modifiers — add directly
-        cart.push({
-            itemId: item.id,
-            name: item.name,
-            vegType: item.vegType,
-            price: item.price,
-            qty: 1,
-            modifiers: [],
-            instructions: ''
-        });
-        updateCartBar();
-        renderMenuItems();
+        // Has modifiers — must go through detail popup
+        openItemDetail(itemId);
+        return;
     }
+
+    // Check if already in cart
+    const existing = cart.find(c => c.itemId === itemId && c.modifiers.length === 0);
+    if (existing) {
+        existing.qty += 1;
+    } else {
+        cart.push({
+            itemId: item.id, name: item.name, vegType: item.vegType,
+            price: item.price, qty: 1, modifiers: [], instructions: ''
+        });
+    }
+    updateCartBar();
+    renderMenuItems();
 }
 
-function openModifierPopup(item) {
+// Detail popup — shows photo, description, modifiers, qty, add
+function openItemDetail(itemId) {
+    const item = menuItems.find(i => i.id === itemId);
+    if (!item) return;
+
     const modal = document.getElementById('modifierModal');
     const content = document.getElementById('modifierModalContent');
+    const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
 
     let html = `
         <div class="modifier-header">
             <div>
-                <div class="modifier-item-name">${item.name}</div>
-                <div style="font-size:13px;color:#888;margin-top:2px;">₹${Math.round(item.price)}</div>
+                <div class="modifier-item-name" style="display:flex;align-items:center;gap:6px;">
+                    ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
+                    ${item.name}
+                </div>
+                <div style="font-size:14px;font-weight:600;color:#e94560;margin-top:4px;">₹${Math.round(item.price)}</div>
             </div>
             <button class="modifier-close" onclick="closeModifierPopup()">✕</button>
         </div>`;
 
-    // Modifier groups
-    item.modifierGroups.forEach((mg, gIdx) => {
-        const isRadio = mg.maxSelect === 1;
-        html += `<div class="modifier-group">
-            <div class="modifier-group-title">${mg.groupName}</div>
-            <div class="modifier-group-subtitle">${mg.required ? 'Required' : 'Optional'} · ${isRadio ? 'Select one' : `Select up to ${mg.maxSelect}`}</div>`;
-        
-        mg.options.forEach((opt, oIdx) => {
-            const elClass = isRadio ? 'modifier-radio' : 'modifier-check';
-            const priceText = opt.extraPrice > 0 ? `+₹${Math.round(opt.extraPrice)}` : '';
-            html += `
-            <div class="modifier-option" onclick="toggleModifier(${gIdx}, ${oIdx}, ${isRadio}, ${mg.maxSelect})">
-                <div class="modifier-option-left">
-                    <div class="${elClass}" id="mod_${gIdx}_${oIdx}"></div>
-                    <span class="modifier-option-name">${opt.name}</span>
-                </div>
-                ${priceText ? `<span class="modifier-option-price">${priceText}</span>` : ''}
-            </div>`;
+    // Large photo
+    if (item.imageUrl) {
+        html += `<div style="margin:-4px 0 12px;"><img src="${item.imageUrl}" alt="${item.name}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;"></div>`;
+    }
+
+    // Description
+    if (item.description) {
+        html += `<div style="font-size:13px;color:#666;line-height:1.5;margin-bottom:14px;padding:0 2px;">${item.description}</div>`;
+    }
+
+    // Modifier groups (if any)
+    if (item.modifierGroups && item.modifierGroups.length > 0) {
+        item.modifierGroups.forEach((mg, gIdx) => {
+            const isRadio = mg.maxSelect === 1;
+            html += `<div class="modifier-group">
+                <div class="modifier-group-title">${mg.groupName}</div>
+                <div class="modifier-group-subtitle">${mg.required ? 'Required' : 'Optional'} · ${isRadio ? 'Select one' : `Select up to ${mg.maxSelect}`}</div>`;
+            
+            mg.options.forEach((opt, oIdx) => {
+                const elClass = isRadio ? 'modifier-radio' : 'modifier-check';
+                const priceText = opt.extraPrice > 0 ? `+₹${Math.round(opt.extraPrice)}` : '';
+                html += `
+                <div class="modifier-option" onclick="toggleModifier(${gIdx}, ${oIdx}, ${isRadio}, ${mg.maxSelect})">
+                    <div class="modifier-option-left">
+                        <div class="${elClass}" id="mod_${gIdx}_${oIdx}"></div>
+                        <span class="modifier-option-name">${opt.name}</span>
+                    </div>
+                    ${priceText ? `<span class="modifier-option-price">${priceText}</span>` : ''}
+                </div>`;
+            });
+            html += '</div>';
         });
-        html += '</div>';
-    });
+    }
 
     // Special instructions
     html += `
@@ -827,17 +850,19 @@ function openModifierPopup(item) {
     content.innerHTML = html;
     modal.classList.add('active');
 
-    // Store current item for the popup
+    // Store state
     modal.dataset.itemId = item.id;
     modal.dataset.qty = '1';
     modal.dataset.selections = JSON.stringify({});
 
-    // Auto-select first option for required groups
-    item.modifierGroups.forEach((mg, gIdx) => {
-        if (mg.required && mg.options.length > 0) {
-            toggleModifier(gIdx, 0, mg.maxSelect === 1, mg.maxSelect);
-        }
-    });
+    // Auto-select first option for required modifier groups
+    if (item.modifierGroups) {
+        item.modifierGroups.forEach((mg, gIdx) => {
+            if (mg.required && mg.options.length > 0) {
+                toggleModifier(gIdx, 0, mg.maxSelect === 1, mg.maxSelect);
+            }
+        });
+    }
 }
 
 function closeModifierPopup() {
