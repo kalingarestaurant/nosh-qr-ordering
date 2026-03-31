@@ -123,27 +123,28 @@
 <div id="authScreen" class="auth-screen">
     <div class="auth-card">
         <div class="auth-logo">NOSH QR — Menu Admin</div>
-        <div id="phoneStep">
-            <div class="auth-error" id="phoneError"></div>
+        <div id="loginStep">
+            <div class="auth-error" id="loginError"></div>
             <div class="auth-input-group">
                 <span class="auth-prefix">+91</span>
-                <input type="tel" class="auth-input" id="phoneInput" placeholder="Phone number" maxlength="10" inputmode="numeric" onkeydown="if(event.key==='Enter')sendStaffOTP()">
+                <input type="tel" class="auth-input" id="phoneInput" placeholder="Phone number" maxlength="10" inputmode="numeric">
             </div>
-            <button class="btn btn-primary" onclick="sendStaffOTP()">Send OTP</button>
+            <div style="margin-bottom:12px;">
+                <input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
+            <button class="btn btn-primary" onclick="doLogin()">Login</button>
         </div>
-        <div id="otpStep" style="display:none;">
-            <div style="font-size:13px;color:#888;margin-bottom:12px;" id="otpSubtitle">OTP sent</div>
-            <div class="auth-error" id="otpError"></div>
-            <div class="otp-inputs">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="4">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="5">
+        <div id="changePinStep" style="display:none;">
+            <div style="font-size:14px;color:#888;margin-bottom:16px;text-align:center;">Set Your New PIN</div>
+            <div class="auth-error" id="changePinError"></div>
+            <div style="margin-bottom:12px;">
+                <input type="password" class="auth-input" id="newPinInput" placeholder="New PIN (4+ digits)" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;">
             </div>
-            <button class="btn btn-primary" onclick="verifyStaffOTP()">Verify</button>
-            <div class="auth-link" onclick="document.getElementById('otpStep').style.display='none';document.getElementById('phoneStep').style.display='block';">← Change number</div>
+            <div style="margin-bottom:12px;">
+                <input type="password" class="auth-input" id="confirmPinInput" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')saveNewPin()">
+            </div>
+            <button class="btn btn-primary" onclick="saveNewPin()">Save PIN & Continue</button>
+            <div class="auth-link" onclick="skipPinChange()">Skip for now</div>
         </div>
     </div>
 </div>
@@ -157,12 +158,14 @@
         </div>
         <div class="topbar-right">
             <span class="role-badge" id="dashRole">Admin</span>
+            <button class="btn-sm" style="background:#FFB800;color:#000;border-color:#FFB800;" onclick="showChangePinModal()">🔑 PIN</button>
             <button class="btn-sm" onclick="logout()">Logout</button>
         </div>
     </div>
     <div class="tabs" id="tabsBar">
         <button class="tab active" onclick="showTab('items')">🍽️ Menu Items</button>
         <button class="tab" onclick="showTab('categories')">📂 Categories</button>
+        <button class="tab" onclick="showTab('settings')" id="tabSettings" style="display:none;">⚙️ Settings</button>
         <button class="tab" onclick="showTab('staff')" id="tabStaff" style="display:none;">👥 Staff</button>
     </div>
     <div class="content">
@@ -187,6 +190,29 @@
                 <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="openCatModal()" id="btnAddCat">+ Add Category</button>
             </div>
             <div id="catsList"></div>
+        </div>
+        <!-- SETTINGS TAB -->
+        <div id="tab-settings" style="display:none;">
+            <div class="card">
+                <div class="card-title">⚙️ QR Ordering Settings</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div>
+                        <div style="font-size:14px;font-weight:600;">📱 OTP Verification</div>
+                        <div style="font-size:12px;color:#888;margin-top:4px;">When OFF, customers only enter phone number (no SMS). Use for testing.</div>
+                    </div>
+                    <div class="toggle" id="otpToggle" onclick="toggleOTPSetting()" style="width:50px;height:28px;"></div>
+                </div>
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div>
+                        <div style="font-size:14px;font-weight:600;">🏪 QR Ordering Active</div>
+                        <div style="font-size:12px;color:#888;margin-top:4px;">Master switch — when OFF, customers see "Ordering Unavailable" on scan.</div>
+                    </div>
+                    <div class="toggle on" id="orderingToggle" onclick="toggleOrderingSetting()" style="width:50px;height:28px;margin-top:8px;"></div>
+                </div>
+                <div style="padding:16px 0;font-size:12px;color:#666;">
+                    ⚠️ Remember to turn OTP back ON before going live with real customers.
+                </div>
+            </div>
         </div>
         <!-- STAFF TAB -->
         <div id="tab-staff" style="display:none;">
@@ -278,35 +304,23 @@
     </div>
 </div>
 
+<!-- Change PIN Modal -->
+<div class="modal-overlay" id="changePinModal">
+    <div class="modal" style="max-width:360px;">
+        <div class="modal-title"><span>🔑 Change PIN</span><button class="modal-close" onclick="closeModal('changePinModal')">✕</button></div>
+        <div class="auth-error" id="cpError"></div>
+        <div class="ff"><label>Current PIN</label><input type="password" class="fi" id="cpCurrent" placeholder="Current PIN" maxlength="6" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:6px;"></div>
+        <div class="ff"><label>New PIN</label><input type="password" class="fi" id="cpNew" placeholder="New PIN" maxlength="6" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:6px;"></div>
+        <div class="ff"><label>Confirm PIN</label><input type="password" class="fi" id="cpConfirm" placeholder="Confirm" maxlength="6" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:6px;"></div>
+        <button class="btn btn-primary" onclick="saveChangedPin()">Save PIN</button>
+    </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-<!-- MSG91 OTP -->
-<script>
-var configuration = {
-    widgetId: "366278704a57303934373930",
-    tokenAuth: "493471T68i0srho699dd45cP1",
-    exposeMethods: true,
-    success: (data) => { console.log('MSG91 success:', data); },
-    failure: (error) => { console.log('MSG91 failure:', error); }
-};
-</script>
-<script>
-(function loadOtpScript(urls) {
-    let i = 0;
-    function attempt() {
-        const s = document.createElement('script');
-        s.src = urls[i]; s.async = true;
-        s.onload = () => { if (typeof window.initSendOTP === 'function') { window.initSendOTP(configuration); console.log('MSG91 SDK loaded'); } };
-        s.onerror = () => { i++; if (i < urls.length) attempt(); };
-        document.head.appendChild(s);
-    }
-    attempt();
-})(['https://verify.msg91.com/otp-provider.js','https://verify.phone91.com/otp-provider.js']);
-</script>
 
 <script>
 // ============================================================
@@ -336,73 +350,87 @@ function toast(msg, type='ok') {
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
 // ============================================================
-// AUTH — OTP Login
+// AUTH — PIN Login
 // ============================================================
-function sendStaffOTP() {
+async function doLogin() {
     const phone = document.getElementById('phoneInput').value.trim();
-    if (!/^\d{10}$/.test(phone)) { document.getElementById('phoneError').textContent = 'Enter 10-digit number'; return; }
-    document.getElementById('phoneError').textContent = '';
+    const pin = document.getElementById('pinInput').value.trim();
+    
+    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
+    if (!pin) { document.getElementById('loginError').textContent = 'Enter your PIN'; return; }
+    document.getElementById('loginError').textContent = '';
+    
     staffPhone = '+91' + phone;
-
-    if (typeof window.sendOtp !== 'function') {
-        document.getElementById('phoneError').textContent = 'OTP loading... try again.';
-        return;
-    }
-
-    window.sendOtp('91' + phone,
-        (data) => {
-            console.log('OTP sent:', data);
-            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone;
-            document.getElementById('phoneStep').style.display = 'none';
-            document.getElementById('otpStep').style.display = 'block';
-            document.querySelector('#otpStep .otp-box[data-idx="0"]').focus();
-        },
-        (err) => {
-            document.getElementById('phoneError').textContent = err?.message || 'Failed to send OTP';
+    
+    try {
+        const doc = await db.collection('qr_staff').doc(staffPhone).get();
+        if (!doc.exists) { document.getElementById('loginError').textContent = 'User not found'; return; }
+        
+        const data = doc.data();
+        if (!data.isActive) { document.getElementById('loginError').textContent = 'Account disabled'; return; }
+        
+        const expectedPin = data.pin || '1234';
+        if (pin !== expectedPin) { document.getElementById('loginError').textContent = 'Wrong PIN'; return; }
+        
+        staffData = data;
+        staffRole = data.role;
+        localStorage.setItem('nosh_menu_login', JSON.stringify({ phone: staffPhone, loginAt: Date.now() }));
+        
+        // Force PIN change on first login
+        if (!data.pin || data.pin === '1234') {
+            document.getElementById('loginStep').style.display = 'none';
+            document.getElementById('changePinStep').style.display = 'block';
+            document.getElementById('newPinInput').focus();
+            return;
         }
-    );
+        
+        await startDashboard();
+    } catch (e) {
+        document.getElementById('loginError').textContent = 'Error: ' + e.message;
+    }
 }
 
-function verifyStaffOTP() {
-    const boxes = document.querySelectorAll('#otpStep .otp-box');
-    let otp = ''; boxes.forEach(b => otp += b.value);
-    if (otp.length !== 6) { document.getElementById('otpError').textContent = 'Enter 6-digit OTP'; return; }
-
-    if (typeof window.verifyOtp !== 'function') {
-        document.getElementById('otpError').textContent = 'OTP system not ready';
-        return;
-    }
-
-    window.verifyOtp(otp,
-        async (data) => {
-            console.log('OTP verified:', data);
-            const doc = await db.collection('qr_staff').doc(staffPhone).get();
-            if (!doc.exists || !doc.data().isActive) {
-                document.getElementById('otpError').textContent = 'Not authorized. Contact admin.';
-                return;
-            }
-            staffData = doc.data();
-            staffRole = staffData.role;
-            localStorage.setItem('nosh_menu_login', JSON.stringify({ phone: staffPhone, loginAt: Date.now() }));
-            await startDashboard();
-        },
-        (err) => {
-            document.getElementById('otpError').textContent = err?.message || 'Invalid OTP';
-        }
-    );
+async function saveNewPin() {
+    const newPin = document.getElementById('newPinInput').value.trim();
+    const confirmPin = document.getElementById('confirmPinInput').value.trim();
+    if (newPin.length < 4) { document.getElementById('changePinError').textContent = 'PIN must be 4+ digits'; return; }
+    if (newPin !== confirmPin) { document.getElementById('changePinError').textContent = 'PINs do not match'; return; }
+    if (newPin === '1234') { document.getElementById('changePinError').textContent = 'Choose a different PIN'; return; }
+    
+    try {
+        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
+        toast('✅ PIN saved!');
+        await startDashboard();
+    } catch (e) { document.getElementById('changePinError').textContent = 'Error: ' + e.message; }
 }
 
-// OTP auto-advance
-document.querySelectorAll('#otpStep .otp-box').forEach((box, idx) => {
-    box.addEventListener('input', e => {
-        e.target.value = e.target.value.replace(/\D/g, '');
-        if (e.target.value && idx < 5) document.querySelector(`#otpStep .otp-box[data-idx="${idx+1}"]`).focus();
-        if (idx === 5 && e.target.value) verifyStaffOTP();
-    });
-    box.addEventListener('keydown', e => {
-        if (e.key === 'Backspace' && !e.target.value && idx > 0) document.querySelector(`#otpStep .otp-box[data-idx="${idx-1}"]`).focus();
-    });
-});
+async function skipPinChange() { await startDashboard(); }
+
+function showChangePinModal() {
+    document.getElementById('cpCurrent').value = '';
+    document.getElementById('cpNew').value = '';
+    document.getElementById('cpConfirm').value = '';
+    document.getElementById('cpError').textContent = '';
+    document.getElementById('changePinModal').classList.add('active');
+}
+
+async function saveChangedPin() {
+    const current = document.getElementById('cpCurrent').value.trim();
+    const newPin = document.getElementById('cpNew').value.trim();
+    const confirm = document.getElementById('cpConfirm').value.trim();
+    
+    const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
+    const currentPin = staffDoc.data()?.pin || '1234';
+    if (current !== currentPin) { document.getElementById('cpError').textContent = 'Current PIN is wrong'; return; }
+    if (newPin.length < 4) { document.getElementById('cpError').textContent = 'New PIN must be 4+ digits'; return; }
+    if (newPin !== confirm) { document.getElementById('cpError').textContent = 'PINs do not match'; return; }
+    
+    try {
+        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
+        toast('✅ PIN changed!');
+        closeModal('changePinModal');
+    } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
 
 // Auto-login
 async function checkAutoLogin() {
@@ -420,10 +448,7 @@ async function checkAutoLogin() {
     } catch (e) { console.error(e); }
 }
 
-function logout() {
-    localStorage.removeItem('nosh_menu_login');
-    location.reload();
-}
+function logout() { localStorage.removeItem('nosh_menu_login'); location.reload(); }
 
 // ============================================================
 // DASHBOARD
@@ -437,6 +462,7 @@ async function startDashboard() {
     // Show/hide tabs based on role
     if (staffRole === 'super_admin') {
         document.getElementById('tabStaff').style.display = 'inline-block';
+        document.getElementById('tabSettings').style.display = 'inline-block';
         document.getElementById('btnAddItem').style.display = 'inline-block';
         document.getElementById('btnAddCat').style.display = 'inline-block';
     } else {
@@ -473,12 +499,14 @@ async function loadData() {
 // TABS
 // ============================================================
 function showTab(name) {
-    ['items', 'categories', 'staff'].forEach(t => {
-        document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+    ['items', 'categories', 'settings', 'staff'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.style.display = t === name ? 'block' : 'none';
     });
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
     if (name === 'staff') loadStaff();
+    if (name === 'settings') loadSettings();
 }
 
 // ============================================================
@@ -895,6 +923,58 @@ async function deleteStaff(docId, name) {
         toast('🗑️ Deleted');
         loadStaff();
     } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+async function loadSettings() {
+    try {
+        const doc = await db.collection('qr_settings').doc('config').get();
+        const data = doc.exists ? doc.data() : {};
+        
+        const otpOn = data.otpEnabled !== false; // default true
+        const orderingOn = data.qrOrderingActive !== false; // default true
+        
+        document.getElementById('otpToggle').className = 'toggle' + (otpOn ? ' on' : '');
+        document.getElementById('orderingToggle').className = 'toggle' + (orderingOn ? ' on' : '');
+    } catch(e) {
+        console.error('Load settings error:', e);
+    }
+}
+
+async function toggleOTPSetting() {
+    const toggle = document.getElementById('otpToggle');
+    const isOn = toggle.classList.contains('on');
+    const newValue = !isOn;
+    
+    try {
+        await db.collection('qr_settings').doc('config').set({
+            otpEnabled: newValue
+        }, { merge: true });
+        
+        toggle.className = 'toggle' + (newValue ? ' on' : '');
+        toast(newValue ? '✅ OTP enabled — customers will receive SMS' : '🔓 OTP disabled — testing mode (phone only, no SMS)');
+    } catch(e) {
+        toast('Error: ' + e.message, 'err');
+    }
+}
+
+async function toggleOrderingSetting() {
+    const toggle = document.getElementById('orderingToggle');
+    const isOn = toggle.classList.contains('on');
+    const newValue = !isOn;
+    
+    try {
+        await db.collection('qr_settings').doc('config').set({
+            qrOrderingActive: newValue
+        }, { merge: true });
+        
+        toggle.className = 'toggle' + (newValue ? ' on' : '');
+        toast(newValue ? '✅ QR Ordering active' : '🚫 QR Ordering disabled — customers see "Unavailable"');
+    } catch(e) {
+        toast('Error: ' + e.message, 'err');
+    }
 }
 
 // ============================================================
