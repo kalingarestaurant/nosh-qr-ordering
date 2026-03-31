@@ -64,7 +64,48 @@
         .col-accepted .column-title { color: #4ecdc4; } .col-accepted .column-count { background: #4ecdc420; color: #4ecdc4; }
         .column-body { flex: 1; padding: 12px; overflow-y: auto; }
 
-        /* ===== ORDER CARD ===== */
+        /* ===== ORDER TILE (compact) ===== */
+        .order-tile { background: #1a1c2e; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border-left: 4px solid transparent; cursor: pointer; transition: all 0.2s; }
+        .order-tile:hover { background: #22243a; }
+        .order-tile.status-new { border-left-color: #ff6b6b; }
+        .order-tile.status-accepted { border-left-color: #4ecdc4; }
+        .order-tile.status-cancelled { border-left-color: #666; opacity: 0.5; }
+        .order-tile.status-new.pulse { animation: pulse 1.5s ease-in-out infinite; }
+        .tile-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .tile-order-num { font-size: 18px; font-weight: 800; color: #fff; }
+        .tile-table { font-size: 12px; font-weight: 600; color: #e94560; background: #e9456015; padding: 3px 8px; border-radius: 6px; }
+        .tile-row2 { display: flex; justify-content: space-between; align-items: center; }
+        .tile-time { font-size: 12px; color: #666; }
+        .tile-items { font-size: 12px; color: #888; }
+        .tile-phone { font-size: 11px; color: #555; }
+
+        /* ===== ORDER DETAIL MODAL ===== */
+        .od-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .od-title { font-size: 22px; font-weight: 800; color: #fff; }
+        .od-close { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; }
+        .od-badge { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 16px; }
+        .od-badge-new { background: #ff6b6b20; color: #ff6b6b; }
+        .od-badge-done { background: #4ecdc420; color: #4ecdc4; }
+        .od-badge-cancelled { background: #66666630; color: #888; }
+        .od-info { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; color: #888; }
+        .od-items { border-top: 1px solid #252840; padding-top: 12px; }
+        .od-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e2030; }
+        .od-item-qty { font-size: 15px; font-weight: 700; color: #e94560; min-width: 35px; }
+        .od-item-details { flex: 1; }
+        .od-item-name { font-size: 14px; font-weight: 600; color: #e8e8e8; display: flex; align-items: center; gap: 6px; }
+        .od-item-mods { font-size: 12px; color: #f0a500; margin-top: 3px; }
+        .od-item-instr { font-size: 12px; color: #e94560; font-style: italic; margin-top: 3px; }
+        .od-item-price { font-size: 13px; color: #888; white-space: nowrap; padding-top: 2px; }
+        .od-total { display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid #252840; margin-top: 8px; }
+        .od-total-label { font-size: 14px; color: #888; }
+        .od-total-value { font-size: 18px; font-weight: 800; color: #fff; }
+        .od-actions { display: flex; gap: 10px; margin-top: 16px; }
+        .od-btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        .od-btn-accept { background: #2ecc71; color: #fff; }
+        .od-btn-accept:hover { background: #27ae60; }
+        .od-btn-cancel { background: #1e2030; color: #ff6b6b; border: 1px solid #ff6b6b30; }
+
+        /* ===== ORDER CARD (old - remove) ===== */
         .order-card { background: #1a1c2e; border-radius: 12px; padding: 14px; margin-bottom: 12px; border-left: 4px solid transparent; transition: all 0.3s; }
         .order-card.status-new { border-left-color: #ff6b6b; }
         .order-card.status-accepted { border-left-color: #ffd93d; }
@@ -302,6 +343,13 @@
         <span style="font-size:13px;color:#888;">Clear Table:</span>
         <select class="clear-table-select" id="clearTableSelect"></select>
         <button class="btn-clear-table" onclick="clearTable()">Clear & End Session</button>
+    </div>
+</div>
+
+<!-- ===== ORDER DETAIL MODAL ===== -->
+<div class="modal-overlay" id="orderDetailModal">
+    <div style="background:#1a1c2e;border-radius:16px;padding:20px;width:95%;max-width:480px;max-height:85vh;overflow-y:auto;">
+        <div id="orderDetailContent"></div>
     </div>
 </div>
 
@@ -728,15 +776,39 @@ function renderOrders() {
 
 function renderOrderCard(order) {
     const pulse = order.status === 'new' ? ' pulse' : '';
-    
-    let actionsHtml = '';
-    if (order.status === 'new') {
-        actionsHtml = `
-            <div class="order-actions">
-                <button class="btn-action btn-accept" onclick="acceptOrder('${order.docId}')">✓ Entered into POS</button>
-                <button class="btn-action btn-cancel" onclick="openCancelModal('${order.docId}', ${order.orderNumber})">Cancel</button>
-            </div>`;
-    }
+    const itemCount = order.itemCount || (order.items || []).reduce((s,i) => s + i.qty, 0);
+    const itemNames = (order.items || []).slice(0, 3).map(i => i.qty + '× ' + i.name).join(', ');
+    const more = (order.items || []).length > 3 ? ' +' + ((order.items || []).length - 3) + ' more' : '';
+
+    return `
+    <div class="order-tile status-${order.status}${pulse}" onclick="openOrderDetail('${order.docId}')">
+        <div class="tile-row1">
+            <span class="tile-order-num">#${order.orderNumber}</span>
+            <span class="tile-table">${order.tableName || 'Table ' + order.tableNumber}</span>
+        </div>
+        <div style="font-size:12px;color:#aaa;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${itemNames}${more}</div>
+        <div class="tile-row2">
+            <span class="tile-time">${order.createdAtIST || ''}</span>
+            <span class="tile-items">${itemCount} item${itemCount > 1 ? 's' : ''}</span>
+        </div>
+        ${order.status === 'cancelled' ? '<div style="font-size:10px;color:#ff6b6b;margin-top:4px;">Cancelled</div>' : ''}
+    </div>`;
+}
+
+// ============================================================
+// ORDER DETAIL MODAL
+// ============================================================
+function openOrderDetail(docId) {
+    const order = allOrders.find(o => o.docId === docId);
+    if (!order) return;
+
+    const isNew = order.status === 'new';
+    const isCancelled = order.status === 'cancelled';
+    const badgeClass = isNew ? 'od-badge-new' : isCancelled ? 'od-badge-cancelled' : 'od-badge-done';
+    const badgeText = isNew ? '🔴 New Order' : isCancelled ? '❌ Cancelled' : '✅ Entered into POS';
+
+    const phone = order.customerPhone ? order.customerPhone.replace('+91', '') : '';
+    const displayPhone = phone ? phone.replace(/(\d{5})(\d{5})/, '$1 $2') : '';
 
     const itemsHtml = (order.items || []).map(item => {
         const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
@@ -744,42 +816,53 @@ function renderOrderCard(order) {
         const itemPrice = item.price + (item.modifiers || []).reduce((s, m) => s + (m.extraPrice || 0), 0);
         
         return `
-        <div class="order-item">
-            <div class="order-item-qty">${item.qty}×</div>
-            <div class="order-item-details">
-                <div class="order-item-name">
+        <div class="od-item">
+            <div class="od-item-qty">${item.qty}×</div>
+            <div class="od-item-details">
+                <div class="od-item-name">
                     ${vegClass ? `<span class="veg-dot ${vegClass}"></span>` : ''}
                     ${item.name}
                 </div>
-                ${modsText ? `<div class="order-item-mods">↳ ${modsText}</div>` : ''}
-                ${item.specialInstructions ? `<div class="order-item-instr">"${item.specialInstructions}"</div>` : ''}
+                ${modsText ? `<div class="od-item-mods">↳ ${modsText}</div>` : ''}
+                ${item.specialInstructions ? `<div class="od-item-instr">"${item.specialInstructions}"</div>` : ''}
             </div>
-            <div class="order-item-price">₹${Math.round(itemPrice * item.qty)}</div>
+            <div class="od-item-price">₹${Math.round(itemPrice * item.qty)}</div>
         </div>`;
     }).join('');
 
-    const phone = order.customerPhone ? order.customerPhone.replace('+91', '') : '';
-    const displayPhone = phone ? phone.replace(/(\d{5})(\d{5})/, '$1 $2') : '';
+    const actionsHtml = isNew ? `
+        <div class="od-actions">
+            <button class="od-btn od-btn-accept" onclick="acceptOrder('${order.docId}')">✓ Entered into POS</button>
+            <button class="od-btn od-btn-cancel" onclick="closeModal('orderDetailModal');openCancelModal('${order.docId}', ${order.orderNumber})">Cancel</button>
+        </div>` : '';
 
-    return `
-    <div class="order-card status-${order.status}${pulse}">
-        <div class="order-header">
-            <span class="order-number">#${order.orderNumber}</span>
-            <span class="order-table">${order.tableName || 'Table ' + order.tableNumber}</span>
+    document.getElementById('orderDetailContent').innerHTML = `
+        <div class="od-header">
+            <div class="od-title">Order #${order.orderNumber}</div>
+            <button class="od-close" onclick="closeModal('orderDetailModal')">✕</button>
         </div>
-        <div class="order-meta">
-            <span>${order.createdAtIST || ''}</span>
-            ${displayPhone ? `<span class="order-phone">📱 ${displayPhone}</span>` : ''}
-            <span>${order.itemCount || 0} item${(order.itemCount || 0) > 1 ? 's' : ''}</span>
+        <div class="od-badge ${badgeClass}">${badgeText}</div>
+        <div class="od-info">
+            <span>🪑 ${order.tableName || 'Table ' + order.tableNumber}</span>
+            <span>🕐 ${order.createdAtIST || ''}</span>
+            ${displayPhone ? `<span>📱 ${displayPhone}</span>` : ''}
         </div>
-        <div class="order-items">${itemsHtml}</div>
-        <div class="order-total">
-            <span class="order-total-label">Total (reference)</span>
-            <span class="order-total-value">₹${Math.round(order.orderTotal || 0)}</span>
+        <div class="od-items">${itemsHtml}</div>
+        <div class="od-total">
+            <span class="od-total-label">Total (reference)</span>
+            <span class="od-total-value">₹${Math.round(order.orderTotal || 0)}</span>
         </div>
-        ${order.status === 'cancelled' && order.cancelReason ? `<div style="font-size:12px;color:#ff6b6b;margin-top:8px;">Cancelled: ${order.cancelReason}</div>` : ''}
+        ${isCancelled && order.cancelReason ? `<div style="font-size:13px;color:#ff6b6b;margin-top:12px;padding:10px;background:#ff6b6b10;border-radius:8px;">Cancelled: ${order.cancelReason}</div>` : ''}
         ${actionsHtml}
-    </div>`;
+    `;
+
+    document.getElementById('orderDetailModal').classList.add('active');
+}
+
+// Close order detail on overlay click
+document.getElementById('orderDetailModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+});
 }
 
 // ============================================================
@@ -791,6 +874,7 @@ async function acceptOrder(docId) {
             status: 'accepted',
             acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        closeModal('orderDetailModal');
         stopAlert();
     } catch (e) {
         console.error('Accept error:', e);
@@ -904,16 +988,12 @@ async function toggleAvailability(docId, newValue) {
 async function loadTables() {
     const snap = await db.collection('qr_tables')
         .where('outletId', '==', selectedOutletId)
-        .where('isActive', '==', true)
-        .orderBy('tableNumber')
         .get();
 
+    const tables = snap.docs.map(d => d.data()).filter(t => t.isActive).sort((a,b) => a.tableNumber - b.tableNumber);
     const select = document.getElementById('clearTableSelect');
     select.innerHTML = '<option value="">Select table...</option>' +
-        snap.docs.map(d => {
-            const t = d.data();
-            return `<option value="${t.id}">${t.tableName}</option>`;
-        }).join('');
+        tables.map(t => `<option value="${t.id}">${t.tableName}</option>`).join('');
 }
 
 async function clearTable() {
