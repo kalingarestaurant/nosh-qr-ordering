@@ -1352,9 +1352,9 @@ function renderSessionHistory() {
         <div class="session-history-title">Your Orders This Visit</div>
         ${sessionOrders.map(order => {
             const statusClass = 'status-' + order.status;
-            const statusText = order.status === 'new' ? 'Pending' : 
-                             order.status === 'accepted' ? 'Entered into POS' : 
-                             order.status === 'served' ? 'Served' : 
+            const statusText = order.status === 'new' ? 'Sent to kitchen' : 
+                             order.status === 'accepted' ? 'Confirmed ✓' : 
+                             order.status === 'served' ? 'Confirmed ✓' : 
                              order.status === 'cancelled' ? 'Cancelled' : order.status;
             
             return `
