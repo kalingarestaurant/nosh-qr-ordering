@@ -156,11 +156,22 @@
             <div class="stat-box"><div class="stat-num" id="sNew">0</div><div class="stat-lbl">New</div></div>
             <div class="stat-box"><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Today</div></div>
             <button class="sound-btn on" id="soundBtn" onclick="toggleSound()">🔔</button>
+            <select id="alarmSelect" onchange="changeAlarm()" style="background:#1e2030;border:1px solid #2a2d3e;border-radius:6px;padding:5px 8px;color:#fff;font-size:10px;font-family:'Poppins',sans-serif;outline:none;cursor:pointer;">
+                <option value="bell">🔔 Bell</option>
+                <option value="chime">🎵 Chime</option>
+                <option value="urgent">🚨 Urgent</option>
+                <option value="ding">✨ Ding</option>
+                <option value="doorbell">🚪 Doorbell</option>
+            </select>
+            <button class="tbtn" style="font-size:9px;" onclick="previewAlarm()">▶ Test</button>
             <button class="tbtn" onclick="openAvail()">86 Items</button>
             <button class="tbtn tbtn-gold" onclick="openM('changePinModal')">🔑</button>
             <span style="font-size:11px;color:#666;" id="dTime"></span>
             <button class="tbtn" onclick="doLogout()">Logout</button>
         </div>
+    </div>
+    <div style="padding:8px 16px;background:#161822;border-bottom:1px solid #1e2030;">
+        <input type="text" id="orderSearch" placeholder="🔍 Search by table number or item name..." oninput="render()" style="width:100%;padding:9px 14px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:13px;font-family:'Poppins',sans-serif;outline:none;">
     </div>
     <div class="cols">
         <div class="col col-new"><div class="col-head"><span class="col-title">🔴 New Orders</span><span class="col-cnt" id="cntNew">0</span></div><div class="col-body" id="colNew"></div></div>
@@ -174,7 +185,6 @@
 </div>
 
 <div id="toast"></div>
-<audio id="alertAudio" preload="auto"><source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH+Jj4+JgHZsakBYYHGBjpKOhHlxZFtTUl9vjJGQioB4a2FXU1licICNk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbYKOk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbQ==" type="audio/wav"></audio>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -250,7 +260,7 @@ function startDash(){
     document.getElementById('authWrap').style.display='none';document.getElementById('dash').classList.add('on');
     document.getElementById('dOutlet').textContent=selectedOutletName;localStorage.setItem('nosh_cashier_outlet',selectedOutletId);
     setInterval(()=>{document.getElementById('dTime').textContent=getISTTime();},1000);document.getElementById('dTime').textContent=getISTTime();
-    loadMenuItems();loadTables();startListener();
+    loadAlarmPref();loadMenuItems();loadTables();startListener();
 }
 function startListener(){
     ordersListener=db.collection('qr_orders').where('outletId','==',selectedOutletId).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
@@ -258,11 +268,25 @@ function startListener(){
         const nc=allOrders.filter(o=>o.status==='new').length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;});
 }
 function render(){
-    const nw=allOrders.filter(o=>o.status==='new'),dn=allOrders.filter(o=>o.status!=='new');
+    const q=(document.getElementById('orderSearch').value||'').toLowerCase().trim();
+    let filtered=allOrders;
+    if(q){
+        filtered=allOrders.filter(o=>{
+            // Search by table number
+            if(String(o.tableNumber).includes(q))return true;
+            if((o.tableName||'').toLowerCase().includes(q))return true;
+            // Search by item name
+            if((o.items||[]).some(i=>i.name.toLowerCase().includes(q)))return true;
+            // Search by order number
+            if(String(o.orderNumber).includes(q))return true;
+            return false;
+        });
+    }
+    const nw=filtered.filter(o=>o.status==='new'),dn=filtered.filter(o=>o.status!=='new');
     document.getElementById('cntNew').textContent=nw.length;document.getElementById('cntDone').textContent=dn.length;
-    document.getElementById('sNew').textContent=nw.length;document.getElementById('sTotal').textContent=allOrders.length;
-    document.getElementById('colNew').innerHTML=nw.length?nw.map(o=>tile(o,'new')).join(''):'<div class="empty"><span class="ei">✨</span>No new orders</div>';
-    document.getElementById('colDone').innerHTML=dn.length?dn.slice(0,30).map(o=>tile(o,o.status==='cancelled'?'cancelled':'done')).join(''):'<div class="empty"><span class="ei">📋</span>No orders yet</div>';
+    document.getElementById('sNew').textContent=allOrders.filter(o=>o.status==='new').length;document.getElementById('sTotal').textContent=allOrders.length;
+    document.getElementById('colNew').innerHTML=nw.length?nw.map(o=>tile(o,'new')).join(''):'<div class="empty"><span class="ei">✨</span>'+(q?'No matching orders':'No new orders')+'</div>';
+    document.getElementById('colDone').innerHTML=dn.length?dn.slice(0,30).map(o=>tile(o,o.status==='cancelled'?'cancelled':'done')).join(''):'<div class="empty"><span class="ei">📋</span>'+(q?'No matching orders':'No orders yet')+'</div>';
 }
 function tile(o,cls){
     const items=(o.items||[]).slice(0,3).map(i=>i.qty+'× '+i.name).join(', ');
@@ -301,7 +325,63 @@ function openCancel(id,num){cancelDocId=id;document.getElementById('cancelInfo')
 async function confirmCancel(){const r=document.getElementById('cancelReason').value.trim();if(!r){alert('Enter reason');return;}try{await db.collection('qr_orders').doc(cancelDocId).update({status:'cancelled',cancelledAt:firebase.firestore.FieldValue.serverTimestamp(),cancelReason:r});closeM('cancelModal');stopAlert();toast('Order cancelled');}catch(e){alert('Error: '+e.message);}}
 
 function toggleSound(){soundEnabled=!soundEnabled;const b=document.getElementById('soundBtn');b.textContent=soundEnabled?'🔔':'🔕';b.classList.toggle('on',soundEnabled);if(!soundEnabled)stopAlert();}
-function playAlert(){if(!soundEnabled)return;stopAlert();try{document.getElementById('alertAudio').play().catch(()=>{});}catch(e){}alertInt=setInterval(()=>{try{document.getElementById('alertAudio').play().catch(()=>{});}catch(e){}},8000);}
+
+// ═══════ ALARM SYSTEM (Web Audio API) ═══════
+let audioCtx=null;
+function getAudioCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+
+const ALARMS={
+    bell:function(){
+        const ctx=getAudioCtx();const t=ctx.currentTime;
+        [800,1000,800,1000].forEach((f,i)=>{
+            const o=ctx.createOscillator();const g=ctx.createGain();
+            o.type='sine';o.frequency.value=f;
+            g.gain.setValueAtTime(0.3,t+i*0.15);g.gain.exponentialRampToValueAtTime(0.01,t+i*0.15+0.14);
+            o.connect(g);g.connect(ctx.destination);o.start(t+i*0.15);o.stop(t+i*0.15+0.15);
+        });
+    },
+    chime:function(){
+        const ctx=getAudioCtx();const t=ctx.currentTime;
+        [523,659,784,1047].forEach((f,i)=>{
+            const o=ctx.createOscillator();const g=ctx.createGain();
+            o.type='sine';o.frequency.value=f;
+            g.gain.setValueAtTime(0.25,t+i*0.2);g.gain.exponentialRampToValueAtTime(0.01,t+i*0.2+0.4);
+            o.connect(g);g.connect(ctx.destination);o.start(t+i*0.2);o.stop(t+i*0.2+0.45);
+        });
+    },
+    urgent:function(){
+        const ctx=getAudioCtx();const t=ctx.currentTime;
+        for(let i=0;i<6;i++){
+            const o=ctx.createOscillator();const g=ctx.createGain();
+            o.type='square';o.frequency.value=i%2===0?880:660;
+            g.gain.setValueAtTime(0.2,t+i*0.12);g.gain.exponentialRampToValueAtTime(0.01,t+i*0.12+0.1);
+            o.connect(g);g.connect(ctx.destination);o.start(t+i*0.12);o.stop(t+i*0.12+0.11);
+        }
+    },
+    ding:function(){
+        const ctx=getAudioCtx();const t=ctx.currentTime;
+        const o=ctx.createOscillator();const g=ctx.createGain();
+        o.type='sine';o.frequency.value=1200;
+        g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.8);
+        o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.85);
+    },
+    doorbell:function(){
+        const ctx=getAudioCtx();const t=ctx.currentTime;
+        [659,523].forEach((f,i)=>{
+            const o=ctx.createOscillator();const g=ctx.createGain();
+            o.type='sine';o.frequency.value=f;
+            g.gain.setValueAtTime(0.3,t+i*0.4);g.gain.exponentialRampToValueAtTime(0.01,t+i*0.4+0.35);
+            o.connect(g);g.connect(ctx.destination);o.start(t+i*0.4);o.stop(t+i*0.4+0.4);
+        });
+    }
+};
+
+let selectedAlarm='bell';
+function changeAlarm(){selectedAlarm=document.getElementById('alarmSelect').value;localStorage.setItem('nosh_alarm',selectedAlarm);}
+function previewAlarm(){try{ALARMS[selectedAlarm]();}catch(e){console.error(e);}}
+function loadAlarmPref(){const s=localStorage.getItem('nosh_alarm');if(s&&ALARMS[s]){selectedAlarm=s;document.getElementById('alarmSelect').value=s;}}
+
+function playAlert(){if(!soundEnabled)return;stopAlert();try{ALARMS[selectedAlarm]();}catch(e){}alertInt=setInterval(()=>{try{ALARMS[selectedAlarm]();}catch(e){}},8000);}
 function stopAlert(){if(alertInt){clearInterval(alertInt);alertInt=null;}}
 
 async function loadMenuItems(){const s=await db.collection('menu_items').where('isActive','==',true).get();allMenuItems=s.docs.map(d=>({docId:d.id,...d.data()}));allMenuItems.sort((a,b)=>a.name.localeCompare(b.name));}
