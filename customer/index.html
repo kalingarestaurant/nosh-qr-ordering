@@ -182,43 +182,6 @@
     <div class="error-subtitle" id="errorSubtitle">Please scan the QR code on your table to start ordering.</div>
 </div>
 
-<!-- ===== SCREEN: WELCOME (phone input) ===== -->
-<div id="welcomeScreen" class="screen auth-screen">
-    <div class="auth-card">
-        <div class="auth-logo">N</div>
-        <div class="auth-title" id="welcomeOutletName">House Of Nosh</div>
-        <div class="auth-subtitle">Scan. Order. Enjoy.</div>
-        <div class="auth-table-badge" id="welcomeTableName">Table 1</div>
-        <div class="auth-error" id="phoneError"></div>
-        <div class="auth-input-group">
-            <span class="auth-prefix">+91</span>
-            <input type="tel" class="auth-input" id="phoneInput" placeholder="Enter phone number" maxlength="10" inputmode="numeric" autocomplete="tel">
-        </div>
-        <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
-    </div>
-</div>
-
-<!-- ===== SCREEN: OTP VERIFICATION ===== -->
-<div id="otpScreen" class="screen auth-screen">
-    <div class="auth-card">
-        <div class="auth-logo">N</div>
-        <div class="auth-title">Verify OTP</div>
-        <div class="auth-subtitle" id="otpSubtitle">OTP sent to +91 98765 43210</div>
-        <div class="auth-table-badge" id="otpTableName">Table 1</div>
-        <div class="auth-error" id="otpError"></div>
-        <div class="otp-inputs">
-            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
-            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
-            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
-            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
-            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="4">
-            <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="5">
-        </div>
-        <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOTP()">Verify & Start Ordering</button>
-        <div class="auth-link" id="resendLink">Resend OTP in <span id="resendTimer">30</span>s</div>
-    </div>
-</div>
-
 <!-- ===== SCREEN: MENU ===== -->
 <div id="menuScreen" class="screen menu-screen">
     <div class="menu-header">
@@ -430,6 +393,7 @@ let cart = []; // { itemId, name, vegType, qty, modifiers: [{group, option, extr
 let activeCategory = '';
 let searchTerm = '';
 let ordersListener = null; // Firestore listener for session orders
+let sessionListener = null; // Firestore listener for session deactivation
 
 // ============================================================
 // SCREEN MANAGEMENT
@@ -519,9 +483,6 @@ async function init() {
 }
 
 function updateAuthScreens() {
-    document.getElementById('welcomeOutletName').textContent = outletName;
-    document.getElementById('welcomeTableName').textContent = tableName;
-    document.getElementById('otpTableName').textContent = tableName;
     document.getElementById('menuOutletName').textContent = outletName;
     document.getElementById('menuTableBadge').textContent = tableName;
 }
@@ -645,11 +606,8 @@ async function createSession(phone) {
 }
 
 // ============================================================
-// (OTP flow is now handled by the OTP Modal — see placeOrder)
+// (OTP flow is handled by the OTP Modal — see placeOrder)
 // ============================================================
-
-// Phone input — enter key (for old screens, kept for safety)
-// document.getElementById('phoneInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') sendOTP(); });
 
 // ============================================================
 // MENU LOADING
@@ -1366,6 +1324,27 @@ async function startOrdersListener() {
             // If on confirm screen, re-render
             if (document.getElementById('confirmScreen').classList.contains('active')) {
                 renderSessionHistory();
+            }
+        });
+
+    // Also listen for session deactivation (cashier cleared table)
+    if (sessionListener) sessionListener();
+    sessionListener = db.collection('qr_sessions').doc(sessionId)
+        .onSnapshot(doc => {
+            if (doc.exists && doc.data().isActive === false) {
+                // Session was deactivated by cashier
+                if (ordersListener) { ordersListener(); ordersListener = null; }
+                if (sessionListener) { sessionListener(); sessionListener = null; }
+                sessionId = '';
+                sessionOrders = [];
+                customerPhone = '';
+                customerName = '';
+                localStorage.removeItem('nosh_qr_session');
+                updateCartBar();
+                // If on confirm screen, go back to menu
+                if (document.getElementById('confirmScreen').classList.contains('active')) {
+                    showScreen('menuScreen');
+                }
             }
         });
 }
