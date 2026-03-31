@@ -124,25 +124,42 @@
     <div class="auth-card">
         <div class="auth-logo">NOSH QR — Menu Admin</div>
         <div id="loginStep">
+            <div style="display:flex;gap:0;margin-bottom:16px;border:1.5px solid #2a2d3e;border-radius:8px;overflow:hidden;">
+                <button id="modePinBtn" onclick="setLoginMode('pin')" style="flex:1;padding:10px;border:none;background:#e94560;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">🔑 PIN</button>
+                <button id="modeOtpBtn" onclick="setLoginMode('otp')" style="flex:1;padding:10px;border:none;background:#1e2030;color:#888;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">📱 OTP</button>
+            </div>
             <div class="auth-error" id="loginError"></div>
             <div class="auth-input-group">
                 <span class="auth-prefix">+91</span>
                 <input type="tel" class="auth-input" id="phoneInput" placeholder="Phone number" maxlength="10" inputmode="numeric">
             </div>
-            <div style="margin-bottom:12px;">
-                <input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()">
+            <div id="pinFields">
+                <div style="margin-bottom:12px;"><input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()"></div>
+                <button class="btn btn-primary" onclick="doLogin()">Login</button>
             </div>
-            <button class="btn btn-primary" onclick="doLogin()">Login</button>
+            <div id="otpFields" style="display:none;">
+                <button class="btn btn-primary" id="sendOtpBtn" onclick="sendStaffOTP()">Send OTP</button>
+            </div>
+        </div>
+        <div id="otpVerifyStep" style="display:none;">
+            <div style="font-size:13px;color:#888;margin-bottom:12px;" id="otpSubtitle">OTP sent</div>
+            <div class="auth-error" id="otpError"></div>
+            <div class="otp-inputs">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="4">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="5">
+            </div>
+            <button class="btn btn-primary" onclick="verifyStaffOTP()">Verify</button>
+            <div class="auth-link" onclick="document.getElementById('otpVerifyStep').style.display='none';document.getElementById('loginStep').style.display='block';">← Back</div>
         </div>
         <div id="changePinStep" style="display:none;">
             <div style="font-size:14px;color:#888;margin-bottom:16px;text-align:center;">Set Your New PIN</div>
             <div class="auth-error" id="changePinError"></div>
-            <div style="margin-bottom:12px;">
-                <input type="password" class="auth-input" id="newPinInput" placeholder="New PIN (4+ digits)" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;">
-            </div>
-            <div style="margin-bottom:12px;">
-                <input type="password" class="auth-input" id="confirmPinInput" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')saveNewPin()">
-            </div>
+            <div style="margin-bottom:12px;"><input type="password" class="auth-input" id="newPinInput" placeholder="New PIN (4+ digits)" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;"></div>
+            <div style="margin-bottom:12px;"><input type="password" class="auth-input" id="confirmPinInput" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')saveNewPin()"></div>
             <button class="btn btn-primary" onclick="saveNewPin()">Save PIN & Continue</button>
             <div class="auth-link" onclick="skipPinChange()">Skip for now</div>
         </div>
@@ -271,6 +288,19 @@
         </div>
         <div class="ff"><label>Description</label><textarea class="fi" id="imDesc" placeholder="Short description..."></textarea></div>
 
+        <!-- Photo Upload -->
+        <div class="ff">
+            <label>Item Photo</label>
+            <div id="imPhotoPreview" style="margin-bottom:8px;"></div>
+            <input type="file" id="imPhotoFile" accept="image/*" style="display:none;" onchange="previewItemPhoto(event)">
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" style="padding:6px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="document.getElementById('imPhotoFile').click()">📷 Choose Photo</button>
+                <span id="imPhotoStatus" style="font-size:11px;color:#666;"></span>
+                <button type="button" id="imRemovePhoto" style="display:none;padding:4px 10px;background:#ff6b6b20;border:1px solid #ff6b6b30;border-radius:6px;color:#ff6b6b;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="removeItemPhoto()">✕ Remove</button>
+            </div>
+            <div style="font-size:10px;color:#555;margin-top:4px;">Max 2MB. Recommended: 600×400px, JPEG.</div>
+        </div>
+
         <!-- Modifier Groups -->
         <div class="ff">
             <label>Modifier Groups</label>
@@ -321,6 +351,31 @@
 <!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+<!-- MSG91 OTP SDK -->
+<script>
+var configuration = {
+    widgetId: "366278704a57303934373930",
+    tokenAuth: "493471T68i0srho699dd45cP1",
+    exposeMethods: true,
+    success: (data) => { console.log('MSG91 success:', data); },
+    failure: (error) => { console.log('MSG91 failure:', error); }
+};
+</script>
+<script>
+(function loadOtpScript(urls) {
+    let i = 0;
+    function attempt() {
+        const s = document.createElement('script');
+        s.src = urls[i]; s.async = true;
+        s.onload = () => { if (typeof window.initSendOTP === 'function') window.initSendOTP(configuration); };
+        s.onerror = () => { i++; if (i < urls.length) attempt(); };
+        document.head.appendChild(s);
+    }
+    attempt();
+})(['https://verify.msg91.com/otp-provider.js','https://verify.phone91.com/otp-provider.js']);
+</script>
 
 <script>
 // ============================================================
@@ -335,12 +390,14 @@ firebase.initializeApp({
     appId: "1:672306605373:web:c234755331d045142c6954"
 });
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 // ============================================================
 // STATE
 // ============================================================
 let staffPhone = '', staffRole = '', staffData = null;
 let categories = [], items = [], outlets = [];
+let loginMode = 'pin';
 
 function toast(msg, type='ok') {
     const t = document.getElementById('toast');
@@ -350,8 +407,19 @@ function toast(msg, type='ok') {
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
 // ============================================================
-// AUTH — PIN Login
+// AUTH — PIN + OTP Login
 // ============================================================
+function setLoginMode(mode) {
+    loginMode = mode;
+    document.getElementById('modePinBtn').style.background = mode === 'pin' ? '#e94560' : '#1e2030';
+    document.getElementById('modePinBtn').style.color = mode === 'pin' ? '#fff' : '#888';
+    document.getElementById('modeOtpBtn').style.background = mode === 'otp' ? '#e94560' : '#1e2030';
+    document.getElementById('modeOtpBtn').style.color = mode === 'otp' ? '#fff' : '#888';
+    document.getElementById('pinFields').style.display = mode === 'pin' ? 'block' : 'none';
+    document.getElementById('otpFields').style.display = mode === 'otp' ? 'block' : 'none';
+}
+
+// PIN Login
 async function doLogin() {
     const phone = document.getElementById('phoneInput').value.trim();
     const pin = document.getElementById('pinInput').value.trim();
@@ -431,6 +499,66 @@ async function saveChangedPin() {
         closeModal('changePinModal');
     } catch (e) { toast('Error: ' + e.message, 'err'); }
 }
+
+// OTP Login
+function sendStaffOTP() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
+    document.getElementById('loginError').textContent = '';
+    staffPhone = '+91' + phone;
+
+    if (typeof window.sendOtp !== 'function') { document.getElementById('loginError').textContent = 'OTP loading...'; return; }
+    document.getElementById('sendOtpBtn').disabled = true;
+    document.getElementById('sendOtpBtn').textContent = 'Sending...';
+
+    window.sendOtp('91' + phone,
+        (data) => {
+            document.getElementById('sendOtpBtn').disabled = false;
+            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
+            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone;
+            document.getElementById('loginStep').style.display = 'none';
+            document.getElementById('otpVerifyStep').style.display = 'block';
+            document.querySelector('#otpVerifyStep .otp-box[data-idx="0"]').focus();
+        },
+        (err) => {
+            document.getElementById('sendOtpBtn').disabled = false;
+            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
+            document.getElementById('loginError').textContent = err?.message || 'Failed to send OTP';
+        }
+    );
+}
+
+function verifyStaffOTP() {
+    const boxes = document.querySelectorAll('#otpVerifyStep .otp-box');
+    let otp = ''; boxes.forEach(b => otp += b.value);
+    if (otp.length !== 6) { document.getElementById('otpError').textContent = 'Enter 6-digit OTP'; return; }
+
+    if (typeof window.verifyOtp !== 'function') { document.getElementById('otpError').textContent = 'Not ready'; return; }
+
+    window.verifyOtp(otp,
+        async (data) => {
+            const doc = await db.collection('qr_staff').doc(staffPhone).get();
+            if (!doc.exists || !doc.data().isActive) { document.getElementById('otpError').textContent = 'Not authorized'; return; }
+            staffData = doc.data();
+            staffRole = staffData.role;
+            localStorage.setItem('nosh_menu_login', JSON.stringify({ phone: staffPhone, loginAt: Date.now() }));
+            await startDashboard();
+        },
+        (err) => { document.getElementById('otpError').textContent = err?.message || 'Invalid OTP'; }
+    );
+}
+
+// OTP auto-advance
+document.querySelectorAll('#otpVerifyStep .otp-box').forEach((box, idx) => {
+    box.addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+        if (e.target.value && idx < 5) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx+1}"]`).focus();
+        if (idx === 5 && e.target.value) verifyStaffOTP();
+    });
+    box.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx-1}"]`).focus();
+    });
+});
 
 // Auto-login
 async function checkAutoLogin() {
@@ -703,6 +831,41 @@ function collectModGroups() {
         if (options.length > 0) groups.push({ groupName: name, required, maxSelect, options });
     });
     return groups;
+}
+
+// Photo management
+let pendingPhotoFile = null;
+let pendingPhotoRemove = false;
+
+function previewItemPhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast('Photo must be under 2MB', 'err'); event.target.value = ''; return; }
+    pendingPhotoFile = file;
+    pendingPhotoRemove = false;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('imPhotoPreview').innerHTML = `<img src="${e.target.result}" style="max-width:200px;max-height:120px;border-radius:8px;border:1px solid #2a2d3e;">`;
+        document.getElementById('imPhotoStatus').textContent = file.name;
+        document.getElementById('imRemovePhoto').style.display = 'inline-block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeItemPhoto() {
+    pendingPhotoFile = null;
+    pendingPhotoRemove = true;
+    document.getElementById('imPhotoPreview').innerHTML = '';
+    document.getElementById('imPhotoFile').value = '';
+    document.getElementById('imPhotoStatus').textContent = 'Photo removed';
+    document.getElementById('imRemovePhoto').style.display = 'none';
+}
+
+async function uploadItemPhoto(itemId) {
+    if (!pendingPhotoFile) return null;
+    const fileRef = storage.ref('menu-images/' + itemId + '/' + pendingPhotoFile.name);
+    await fileRef.put(pendingPhotoFile);
+    return await fileRef.getDownloadURL();
 }
 
 async function saveItem() {
