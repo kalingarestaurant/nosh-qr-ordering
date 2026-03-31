@@ -275,13 +275,16 @@
         <div id="otpModalPhone">
             <div style="text-align:center;margin-bottom:20px;">
                 <div style="font-size:36px;margin-bottom:8px;">📱</div>
-                <div style="font-size:18px;font-weight:700;color:#1a1a1a;">Verify your number</div>
-                <div style="font-size:13px;color:#888;margin-top:4px;">Enter your phone to confirm the order</div>
+                <div style="font-size:18px;font-weight:700;color:#1a1a1a;">Confirm your details</div>
+                <div style="font-size:13px;color:#888;margin-top:4px;">Enter your details to place the order</div>
             </div>
             <div class="auth-error" id="otpModalPhoneError" style="color:#e94560;font-size:13px;min-height:18px;text-align:center;margin-bottom:8px;"></div>
-            <div style="display:flex;gap:0;margin-bottom:16px;">
+            <div style="display:flex;gap:0;margin-bottom:12px;">
                 <span style="background:#f0f0f0;border:1.5px solid #e0e0e0;border-right:none;border-radius:10px 0 0 10px;padding:14px 12px;font-size:15px;color:#666;font-weight:500;">+91</span>
-                <input type="tel" id="otpModalPhoneInput" placeholder="Enter phone number" maxlength="10" inputmode="numeric" style="flex:1;border:1.5px solid #e0e0e0;border-radius:0 10px 10px 0;padding:14px 16px;font-size:16px;color:#1a1a1a;outline:none;font-family:'Poppins',sans-serif;" onkeydown="if(event.key==='Enter')otpModalSendOTP()">
+                <input type="tel" id="otpModalPhoneInput" placeholder="Enter phone number" maxlength="10" inputmode="numeric" style="flex:1;border:1.5px solid #e0e0e0;border-radius:0 10px 10px 0;padding:14px 16px;font-size:16px;color:#1a1a1a;outline:none;font-family:'Poppins',sans-serif;" onblur="autoFillName()">
+            </div>
+            <div style="margin-bottom:16px;">
+                <input type="text" id="otpModalNameInput" placeholder="Your name" maxlength="50" style="width:100%;border:1.5px solid #e0e0e0;border-radius:10px;padding:14px 16px;font-size:16px;color:#1a1a1a;outline:none;font-family:'Poppins',sans-serif;" onkeydown="if(event.key==='Enter')otpModalSendOTP()">
             </div>
             <button class="btn btn-primary" id="otpModalSendBtn" onclick="otpModalSendOTP()" style="width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;background:#e94560;color:#fff;font-family:'Poppins',sans-serif;">Send OTP</button>
             <div style="text-align:center;margin-top:12px;">
@@ -418,6 +421,7 @@ let outletName = '';
 let tableName = '';
 let tableNumber = 0;
 let customerPhone = '';
+let customerName = '';
 let sessionId = '';
 let sessionOrders = []; // orders in this session
 let menuCategories = [];
@@ -615,14 +619,19 @@ async function createSession(phone) {
     const custRef = db.collection('customers').doc(phone);
     const custDoc = await custRef.get();
     if (custDoc.exists) {
-        await custRef.update({
+        const updateData = {
             lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastOutletId: outletId
-        });
+        };
+        // Update name if provided and current name is empty
+        if (customerName && (!custDoc.data().name || custDoc.data().name !== customerName)) {
+            updateData.name = customerName;
+        }
+        await custRef.update(updateData);
     } else {
         await custRef.set({
             phone: phone,
-            name: '',
+            name: customerName || '',
             firstSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
             totalOrders: 0,
@@ -1084,9 +1093,10 @@ function showOTPModal() {
     document.getElementById('otpModalPhone').style.display = 'block';
     document.getElementById('otpModalVerify').style.display = 'none';
     document.getElementById('otpModalPhoneInput').value = '';
+    document.getElementById('otpModalNameInput').value = '';
     document.getElementById('otpModalPhoneError').textContent = '';
     // Update button text based on OTP mode
-    document.getElementById('otpModalSendBtn').textContent = otpEnabled ? 'Send OTP' : 'Continue';
+    document.getElementById('otpModalSendBtn').textContent = otpEnabled ? 'Send OTP' : 'Place Order';
     setTimeout(() => document.getElementById('otpModalPhoneInput').focus(), 200);
 }
 
@@ -1094,14 +1104,32 @@ function closeOTPModal() {
     document.getElementById('otpModalOverlay').classList.remove('active');
 }
 
+// Auto-fill name for repeat customers
+async function autoFillName() {
+    const phone = document.getElementById('otpModalPhoneInput').value.trim();
+    if (!/^\d{10}$/.test(phone)) return;
+    try {
+        const custDoc = await db.collection('customers').doc('+91' + phone).get();
+        if (custDoc.exists && custDoc.data().name) {
+            document.getElementById('otpModalNameInput').value = custDoc.data().name;
+        }
+    } catch(e) { console.log('Auto-fill lookup failed:', e); }
+}
+
 function otpModalSendOTP() {
     const phone = document.getElementById('otpModalPhoneInput').value.trim();
+    const name = document.getElementById('otpModalNameInput').value.trim();
     if (!/^\d{10}$/.test(phone)) {
         document.getElementById('otpModalPhoneError').textContent = 'Enter a valid 10-digit number';
         return;
     }
+    if (!name) {
+        document.getElementById('otpModalPhoneError').textContent = 'Please enter your name';
+        return;
+    }
     document.getElementById('otpModalPhoneError').textContent = '';
     customerPhone = '+91' + phone;
+    customerName = name;
 
     // If OTP is disabled (testing mode), skip OTP and go straight to order
     if (!otpEnabled) {
@@ -1264,6 +1292,7 @@ async function submitOrder() {
             tableNumber: tableNumber,
             tableName: tableName,
             customerPhone: customerPhone,
+            customerName: customerName,
             items: orderItems,
             orderTotal: Math.round(orderTotal),
             itemCount: cart.reduce((s, c) => s + c.qty, 0),
