@@ -261,6 +261,104 @@ function startDash(){
     document.getElementById('dOutlet').textContent=selectedOutletName;localStorage.setItem('nosh_cashier_outlet',selectedOutletId);
     setInterval(()=>{document.getElementById('dTime').textContent=getISTTime();},1000);document.getElementById('dTime').textContent=getISTTime();
     loadAlarmPref();loadMenuItems();loadTables();startListener();
+    // Run daily reset check now and every 5 minutes
+    dailyResetCheck();
+    setInterval(dailyResetCheck, 5*60*1000);
+}
+
+// ═══════ DAILY RESET (configurable per outlet) ═══════
+async function dailyResetCheck(){
+    const ist=getIST();
+    const hour=ist.getUTCHours();
+    const todayStr=getISTDate();
+    const lastReset=localStorage.getItem('nosh_last_reset_'+selectedOutletId);
+
+    // Get outlet's reset hour (default 6 AM)
+    let resetHour=6;
+    try{
+        const outDoc=await db.collection('qr_outlets').doc(selectedOutletId).get();
+        if(outDoc.exists && outDoc.data().resetHour!==undefined) resetHour=outDoc.data().resetHour;
+    }catch(e){}
+
+    if(hour<resetHour) return; // before reset hour
+    if(lastReset===todayStr) return; // already reset today
+
+    console.log('Running daily reset (hour '+resetHour+') for '+selectedOutletName);
+
+    try{
+        // 1. Clear ALL stale table sessions (any date before today's reset)
+        const tablesSnap=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();
+        const batch=db.batch();
+
+        for(const d of tablesSnap.docs){
+            const data=d.data();
+            if(!data.currentSessionId) continue;
+            const sessDoc=await db.collection('qr_sessions').doc(data.currentSessionId).get();
+            if(!sessDoc.exists){
+                batch.update(d.ref,{currentSessionId:''});
+                continue;
+            }
+            const sessData=sessDoc.data();
+            // Clear if session was created before today's reset hour
+            const sessCreated=sessData.verifiedAt||0;
+            const resetTimestamp=getTodayResetTimestamp(resetHour);
+            if(sessCreated<resetTimestamp){
+                batch.update(d.ref,{currentSessionId:''});
+                if(sessData.isActive) batch.update(sessDoc.ref,{isActive:false});
+            }
+        }
+        await batch.commit();
+
+        // 2. Mark ALL processed orders (accepted/served/cancelled) as cleared
+        //    regardless of date — catches 12AM-5AM orders for late-night restaurants
+        //    Only keeps NEW orders visible
+        const allOrdersSnap=await db.collection('qr_orders')
+            .where('outletId','==',selectedOutletId)
+            .where('cleared','==',false)
+            .get()
+            .catch(()=>null); // field might not exist on old orders
+
+        // Fallback: get recent orders without cleared filter
+        const recentSnap=allOrdersSnap||await db.collection('qr_orders')
+            .where('outletId','==',selectedOutletId)
+            .where('dateString','>=',getYesterdayISTDate())
+            .get();
+
+        if(recentSnap&&recentSnap.size>0){
+            // Firestore batch limit is 500
+            let batchOps=db.batch();
+            let count=0;
+            recentSnap.docs.forEach(d=>{
+                const data=d.data();
+                if(data.cleared) return; // already cleared
+                if(data.status==='new') return; // keep new orders visible
+                batchOps.update(d.ref,{cleared:true});
+                count++;
+                if(count>=450){batchOps.commit();batchOps=db.batch();count=0;}
+            });
+            if(count>0) await batchOps.commit();
+        }
+
+        localStorage.setItem('nosh_last_reset_'+selectedOutletId, todayStr);
+        loadTables();
+        toast('🌅 Daily reset — old orders and tables cleared');
+        console.log('Daily reset complete');
+    }catch(e){
+        console.error('Daily reset error:',e);
+    }
+}
+
+function getTodayResetTimestamp(resetHour){
+    // Get today's date in IST, set to resetHour:00:00, return as ms timestamp
+    const ist=getIST();
+    const y=ist.getUTCFullYear(),m=ist.getUTCMonth(),d=ist.getUTCDate();
+    // Create IST date at resetHour, convert back to UTC timestamp
+    return Date.UTC(y,m,d,resetHour,0,0) - (5.5*60*60*1000);
+}
+
+function getYesterdayISTDate(){
+    const d=new Date(Date.now()+5.5*60*60*1000 - 24*60*60*1000);
+    return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
 }
 function startListener(){
     ordersListener=db.collection('qr_orders').where('outletId','==',selectedOutletId).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
