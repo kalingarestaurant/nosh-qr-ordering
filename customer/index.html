@@ -471,6 +471,14 @@ async function init() {
         }
         outletName = outletDoc.data().name;
 
+        // 1b. Check OTP setting
+        try {
+            const settingsDoc = await db.collection('qr_settings').doc('config').get();
+            if (settingsDoc.exists) {
+                otpEnabled = settingsDoc.data().otpEnabled !== false; // default true
+            }
+        } catch(e) { console.log('Settings not found, OTP enabled by default'); }
+
         // 2. Verify table exists
         const tableDoc = await db.collection('qr_tables').doc(tableId).get();
         if (!tableDoc.exists || !tableDoc.data().isActive) {
@@ -1069,12 +1077,16 @@ async function placeOrder() {
 }
 
 // Show the OTP modal (phone + verify)
+let otpEnabled = true; // loaded from Firestore settings
+
 function showOTPModal() {
     document.getElementById('otpModalOverlay').classList.add('active');
     document.getElementById('otpModalPhone').style.display = 'block';
     document.getElementById('otpModalVerify').style.display = 'none';
     document.getElementById('otpModalPhoneInput').value = '';
     document.getElementById('otpModalPhoneError').textContent = '';
+    // Update button text based on OTP mode
+    document.getElementById('otpModalSendBtn').textContent = otpEnabled ? 'Send OTP' : 'Continue';
     setTimeout(() => document.getElementById('otpModalPhoneInput').focus(), 200);
 }
 
@@ -1091,6 +1103,22 @@ function otpModalSendOTP() {
     document.getElementById('otpModalPhoneError').textContent = '';
     customerPhone = '+91' + phone;
 
+    // If OTP is disabled (testing mode), skip OTP and go straight to order
+    if (!otpEnabled) {
+        closeOTPModal();
+        showLoading('Placing your order...');
+        createSession(customerPhone).then(sid => {
+            sessionId = sid;
+            startOrdersListener();
+            submitOrder();
+        }).catch(err => {
+            hideLoading();
+            alert('Error: ' + err.message);
+        });
+        return;
+    }
+
+    // OTP is enabled — send OTP as normal
     const btn = document.getElementById('otpModalSendBtn');
     btn.disabled = true;
     btn.textContent = 'Sending...';
