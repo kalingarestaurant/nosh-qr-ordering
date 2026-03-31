@@ -273,12 +273,10 @@ function render(){
     if(q){
         filtered=allOrders.filter(o=>{
             // Search by table number
-            if(String(o.tableNumber).includes(q))return true;
+            if(String(o.tableNumber)===q)return true;
             if((o.tableName||'').toLowerCase().includes(q))return true;
             // Search by item name
             if((o.items||[]).some(i=>i.name.toLowerCase().includes(q)))return true;
-            // Search by order number
-            if(String(o.orderNumber).includes(q))return true;
             return false;
         });
     }
