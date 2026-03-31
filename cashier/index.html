@@ -61,8 +61,7 @@
         .column-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
         .column-count { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
         .col-new .column-title { color: #ff6b6b; } .col-new .column-count { background: #ff6b6b20; color: #ff6b6b; }
-        .col-accepted .column-title { color: #ffd93d; } .col-accepted .column-count { background: #ffd93d20; color: #ffd93d; }
-        .col-served .column-title { color: #4ecdc4; } .col-served .column-count { background: #4ecdc420; color: #4ecdc4; }
+        .col-accepted .column-title { color: #4ecdc4; } .col-accepted .column-count { background: #4ecdc420; color: #4ecdc4; }
         .column-body { flex: 1; padding: 12px; overflow-y: auto; }
 
         /* ===== ORDER CARD ===== */
@@ -159,15 +158,43 @@
         <div id="loginStep">
             <div class="auth-logo">NOSH QR</div>
             <div class="auth-subtitle">Cashier Login</div>
+            <!-- Login Mode Toggle -->
+            <div style="display:flex;gap:0;margin-bottom:16px;border:1.5px solid #2a2d3e;border-radius:8px;overflow:hidden;">
+                <button id="modePinBtn" onclick="setLoginMode('pin')" style="flex:1;padding:10px;border:none;background:#e94560;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">🔑 PIN</button>
+                <button id="modeOtpBtn" onclick="setLoginMode('otp')" style="flex:1;padding:10px;border:none;background:#1e2030;color:#888;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">📱 OTP</button>
+            </div>
             <div class="auth-error" id="loginError"></div>
             <div class="auth-input-group">
                 <span class="auth-prefix">+91</span>
                 <input type="tel" class="auth-input" id="phoneInput" placeholder="Phone number" maxlength="10" inputmode="numeric">
             </div>
-            <div style="margin-bottom:12px;">
-                <input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()">
+            <!-- PIN fields -->
+            <div id="pinFields">
+                <div style="margin-bottom:12px;">
+                    <input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()">
+                </div>
+                <button class="btn btn-primary" onclick="doLogin()">Login</button>
             </div>
-            <button class="btn btn-primary" onclick="doLogin()">Login</button>
+            <!-- OTP fields -->
+            <div id="otpFields" style="display:none;">
+                <button class="btn btn-primary" id="sendOtpBtn" onclick="sendStaffOTP()">Send OTP</button>
+            </div>
+        </div>
+        <!-- OTP Verify step -->
+        <div id="otpVerifyStep" style="display:none;">
+            <div class="auth-logo">NOSH QR</div>
+            <div style="font-size:13px;color:#888;margin-bottom:12px;" id="otpSubtitle">OTP sent</div>
+            <div class="auth-error" id="otpError"></div>
+            <div class="otp-inputs">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="4">
+                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="5">
+            </div>
+            <button class="btn btn-primary" onclick="verifyStaffOTP()">Verify</button>
+            <div class="auth-link" onclick="document.getElementById('otpVerifyStep').style.display='none';document.getElementById('loginStep').style.display='block';">← Back</div>
         </div>
         <!-- Change PIN step -->
         <div id="changePinStep" style="display:none;">
@@ -260,21 +287,13 @@
             </div>
             <div class="column-body" id="newOrders"></div>
         </div>
-        <!-- ACCEPTED (Entered into POS) -->
+        <!-- DONE (Entered into POS) -->
         <div class="column col-accepted">
             <div class="column-header">
-                <span class="column-title">🟡 Entered into POS</span>
+                <span class="column-title">🟢 Entered into POS</span>
                 <span class="column-count" id="acceptedCount">0</span>
             </div>
             <div class="column-body" id="acceptedOrders"></div>
-        </div>
-        <!-- SERVED -->
-        <div class="column col-served">
-            <div class="column-header">
-                <span class="column-title">🟢 Served / Done</span>
-                <span class="column-count" id="servedCount">0</span>
-            </div>
-            <div class="column-body" id="servedOrders"></div>
         </div>
     </div>
 
@@ -319,6 +338,31 @@
 <!-- ===== FIREBASE ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+<!-- MSG91 OTP SDK (for OTP login mode) -->
+<script>
+var configuration = {
+    widgetId: "366278704a57303934373930",
+    tokenAuth: "493471T68i0srho699dd45cP1",
+    exposeMethods: true,
+    success: (data) => { console.log('MSG91 success:', data); },
+    failure: (error) => { console.log('MSG91 failure:', error); }
+};
+</script>
+<script>
+(function loadOtpScript(urls) {
+    let i = 0;
+    function attempt() {
+        const s = document.createElement('script');
+        s.src = urls[i]; s.async = true;
+        s.onload = () => { if (typeof window.initSendOTP === 'function') window.initSendOTP(configuration); };
+        s.onerror = () => { i++; if (i < urls.length) attempt(); };
+        document.head.appendChild(s);
+    }
+    attempt();
+})(['https://verify.msg91.com/otp-provider.js','https://verify.phone91.com/otp-provider.js']);
+</script>
 
 <script>
 // ============================================================
@@ -367,8 +411,21 @@ let alertInterval = null;
 let cancelOrderId = '';
 
 // ============================================================
-// AUTH — PIN Login (no OTP needed for staff)
+// AUTH — PIN + OTP Login
 // ============================================================
+let loginMode = 'pin'; // 'pin' or 'otp'
+
+function setLoginMode(mode) {
+    loginMode = mode;
+    document.getElementById('modePinBtn').style.background = mode === 'pin' ? '#e94560' : '#1e2030';
+    document.getElementById('modePinBtn').style.color = mode === 'pin' ? '#fff' : '#888';
+    document.getElementById('modeOtpBtn').style.background = mode === 'otp' ? '#e94560' : '#1e2030';
+    document.getElementById('modeOtpBtn').style.color = mode === 'otp' ? '#fff' : '#888';
+    document.getElementById('pinFields').style.display = mode === 'pin' ? 'block' : 'none';
+    document.getElementById('otpFields').style.display = mode === 'otp' ? 'block' : 'none';
+}
+
+// PIN Login
 async function doLogin() {
     const phone = document.getElementById('phoneInput').value.trim();
     const pin = document.getElementById('pinInput').value.trim();
@@ -434,6 +491,81 @@ async function saveNewPin() {
 async function skipPinChange() {
     await showOutletSelection();
 }
+
+// OTP Login
+function sendStaffOTP() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
+    document.getElementById('loginError').textContent = '';
+    staffPhone = '+91' + phone;
+
+    if (typeof window.sendOtp !== 'function') {
+        document.getElementById('loginError').textContent = 'OTP loading... try again.';
+        return;
+    }
+
+    document.getElementById('sendOtpBtn').disabled = true;
+    document.getElementById('sendOtpBtn').textContent = 'Sending...';
+
+    window.sendOtp('91' + phone,
+        (data) => {
+            document.getElementById('sendOtpBtn').disabled = false;
+            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
+            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone;
+            document.getElementById('loginStep').style.display = 'none';
+            document.getElementById('otpVerifyStep').style.display = 'block';
+            document.querySelector('#otpVerifyStep .otp-box[data-idx="0"]').focus();
+        },
+        (err) => {
+            document.getElementById('sendOtpBtn').disabled = false;
+            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
+            document.getElementById('loginError').textContent = err?.message || 'Failed to send OTP';
+        }
+    );
+}
+
+function verifyStaffOTP() {
+    const boxes = document.querySelectorAll('#otpVerifyStep .otp-box');
+    let otp = ''; boxes.forEach(b => otp += b.value);
+    if (otp.length !== 6) { document.getElementById('otpError').textContent = 'Enter 6-digit OTP'; return; }
+    document.getElementById('otpError').textContent = '';
+
+    if (typeof window.verifyOtp !== 'function') {
+        document.getElementById('otpError').textContent = 'OTP system not ready';
+        return;
+    }
+
+    window.verifyOtp(otp,
+        async (data) => {
+            const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
+            if (!staffDoc.exists || !staffDoc.data().isActive) {
+                document.getElementById('otpError').textContent = 'Not authorized. Contact admin.';
+                return;
+            }
+            staffRole = staffDoc.data().role;
+            staffOutletIds = staffDoc.data().outletIds || [];
+            localStorage.setItem('nosh_cashier_login', JSON.stringify({
+                phone: staffPhone, role: staffRole, outletIds: staffOutletIds, loginAt: Date.now()
+            }));
+            await showOutletSelection();
+        },
+        (err) => {
+            document.getElementById('otpError').textContent = err?.message || 'Invalid OTP';
+        }
+    );
+}
+
+// OTP auto-advance (6 digits)
+document.querySelectorAll('#otpVerifyStep .otp-box').forEach((box, idx) => {
+    box.addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+        if (e.target.value && idx < 5) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx+1}"]`).focus();
+        if (idx === 5 && e.target.value) verifyStaffOTP();
+    });
+    box.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx-1}"]`).focus();
+    });
+});
 
 async function saveChangedPin() {
     const current = document.getElementById('cpCurrentPin').value.trim();
@@ -577,12 +709,8 @@ function startOrdersListener() {
 
 function renderOrders() {
     const newOrders = allOrders.filter(o => o.status === 'new');
-    const acceptedOrders = allOrders.filter(o => o.status === 'accepted');
-    const servedOrders = allOrders.filter(o => o.status === 'served' || o.status === 'cancelled');
 
     document.getElementById('newCount').textContent = newOrders.length;
-    document.getElementById('acceptedCount').textContent = acceptedOrders.length;
-    document.getElementById('servedCount').textContent = servedOrders.length;
     document.getElementById('statNew').textContent = newOrders.length;
     document.getElementById('statTotal').textContent = allOrders.length;
 
@@ -590,13 +718,12 @@ function renderOrders() {
         ? newOrders.map(o => renderOrderCard(o)).join('')
         : '<div class="empty-state"><div class="empty-state-icon">✨</div><div class="empty-state-text">No new orders</div></div>';
 
-    document.getElementById('acceptedOrders').innerHTML = acceptedOrders.length
-        ? acceptedOrders.map(o => renderOrderCard(o)).join('')
-        : '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">No orders being prepared</div></div>';
+    const doneOrders = allOrders.filter(o => o.status === 'accepted' || o.status === 'served' || o.status === 'cancelled');
+    document.getElementById('acceptedCount').textContent = doneOrders.length;
 
-    document.getElementById('servedOrders').innerHTML = servedOrders.length
-        ? servedOrders.slice(0, 20).map(o => renderOrderCard(o)).join('')
-        : '<div class="empty-state"><div class="empty-state-icon">🍽️</div><div class="empty-state-text">No served orders yet</div></div>';
+    document.getElementById('acceptedOrders').innerHTML = doneOrders.length
+        ? doneOrders.slice(0, 30).map(o => renderOrderCard(o)).join('')
+        : '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">No orders processed yet</div></div>';
 }
 
 function renderOrderCard(order) {
@@ -608,11 +735,6 @@ function renderOrderCard(order) {
             <div class="order-actions">
                 <button class="btn-action btn-accept" onclick="acceptOrder('${order.docId}')">✓ Entered into POS</button>
                 <button class="btn-action btn-cancel" onclick="openCancelModal('${order.docId}', ${order.orderNumber})">Cancel</button>
-            </div>`;
-    } else if (order.status === 'accepted') {
-        actionsHtml = `
-            <div class="order-actions">
-                <button class="btn-action btn-served" onclick="markServed('${order.docId}')">✓ Mark Served</button>
             </div>`;
     }
 
@@ -673,18 +795,6 @@ async function acceptOrder(docId) {
     } catch (e) {
         console.error('Accept error:', e);
         alert('Failed to accept order. Try again.');
-    }
-}
-
-async function markServed(docId) {
-    try {
-        await db.collection('qr_orders').doc(docId).update({
-            status: 'served',
-            servedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    } catch (e) {
-        console.error('Served error:', e);
-        alert('Failed to mark served.');
     }
 }
 
