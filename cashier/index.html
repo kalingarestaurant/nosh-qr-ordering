@@ -155,39 +155,68 @@
 <!-- ===== AUTH SCREEN ===== -->
 <div id="authScreen" class="auth-screen">
     <div class="auth-card" id="authCard">
-        <!-- Phone step -->
-        <div id="phoneStep">
+        <!-- Login step -->
+        <div id="loginStep">
             <div class="auth-logo">NOSH QR</div>
             <div class="auth-subtitle">Cashier Login</div>
-            <div class="auth-error" id="phoneError"></div>
+            <div class="auth-error" id="loginError"></div>
             <div class="auth-input-group">
                 <span class="auth-prefix">+91</span>
-                <input type="tel" class="auth-input" id="phoneInput" placeholder="Enter your phone number" maxlength="10" inputmode="numeric">
+                <input type="tel" class="auth-input" id="phoneInput" placeholder="Phone number" maxlength="10" inputmode="numeric">
             </div>
-            <button class="btn btn-primary" onclick="sendStaffOTP()">Send OTP</button>
-        </div>
-        <!-- OTP step -->
-        <div id="otpStep" style="display:none;">
-            <div class="auth-logo">NOSH QR</div>
-            <div class="auth-subtitle" id="otpSubtitle">OTP sent to +91 XXXXX XXXXX</div>
-            <div class="auth-error" id="otpError"></div>
-            <div class="otp-inputs">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="4">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="5">
+            <div style="margin-bottom:12px;">
+                <input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()">
             </div>
-            <button class="btn btn-primary" onclick="verifyStaffOTP()">Verify</button>
-            <div class="auth-link" id="resendLink">Resend OTP in <span id="resendTimer">30</span>s</div>
+            <button class="btn btn-primary" onclick="doLogin()">Login</button>
         </div>
-        <!-- Outlet selection step -->
-        <div id="outletStep" style="display:none;">
-            <div class="auth-logo">NOSH QR</div>
-            <div class="auth-subtitle">Select your outlet</div>
-            <select class="outlet-select" id="outletSelect"></select>
-            <button class="btn btn-primary" onclick="enterDashboard()">Enter Dashboard</button>
+        <!-- Change PIN step -->
+        <div id="changePinStep" style="display:none;">
+            <div class="auth-logo">🔑</div>
+            <div class="auth-subtitle" id="changePinTitle">Set Your New PIN</div>
+            <div class="auth-error" id="changePinError"></div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:10px;color:#888;display:block;margin-bottom:6px;">New PIN (4+ digits)</label>
+                <input type="password" class="auth-input" id="newPinInput" placeholder="New PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:10px;color:#888;display:block;margin-bottom:6px;">Confirm PIN</label>
+                <input type="password" class="auth-input" id="confirmPinInput" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')saveNewPin()">
+            </div>
+            <button class="btn btn-primary" onclick="saveNewPin()">Save PIN & Continue</button>
+            <div class="auth-link" id="skipPinLink" onclick="skipPinChange()">Skip for now</div>
+        </div>
+    </div>
+</div>
+
+<!-- Outlet Selection Modal -->
+<div id="outletModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;justify-content:center;align-items:center;">
+    <div style="background:#1a1c2e;border-radius:16px;padding:24px;width:90%;max-width:360px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#e94560;margin-bottom:16px;">Select Outlet</div>
+        <select class="outlet-select" id="outletSelect" style="width:100%;background:#1e2030;border:1.5px solid #2a2d3e;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:'Poppins',sans-serif;margin-bottom:12px;"></select>
+        <button class="btn btn-primary" onclick="enterDashboard()" style="width:100%;">Enter Dashboard</button>
+    </div>
+</div>
+
+<!-- Change PIN Modal -->
+<div class="modal-overlay" id="changePinModal">
+    <div style="background:#1a1c2e;border-radius:16px;padding:24px;width:90%;max-width:360px;">
+        <div style="font-size:18px;font-weight:700;color:#e94560;margin-bottom:16px;">🔑 Change PIN</div>
+        <div class="auth-error" id="changePinModalError"></div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">Current PIN</label>
+            <input type="password" id="cpCurrentPin" placeholder="Current PIN" maxlength="6" inputmode="numeric" style="width:100%;padding:10px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:16px;text-align:center;letter-spacing:6px;font-family:'Poppins',sans-serif;outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">New PIN</label>
+            <input type="password" id="cpNewPin" placeholder="New PIN" maxlength="6" inputmode="numeric" style="width:100%;padding:10px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:16px;text-align:center;letter-spacing:6px;font-family:'Poppins',sans-serif;outline:none;">
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">Confirm New PIN</label>
+            <input type="password" id="cpConfirmPin" placeholder="Confirm" maxlength="6" inputmode="numeric" style="width:100%;padding:10px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:16px;text-align:center;letter-spacing:6px;font-family:'Poppins',sans-serif;outline:none;">
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button style="flex:1;padding:10px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="document.getElementById('changePinModal').classList.remove('active')">Cancel</button>
+            <button style="flex:1;padding:10px;background:#e94560;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="saveChangedPin()">Save</button>
         </div>
     </div>
 </div>
@@ -215,6 +244,7 @@
             </div>
             <button class="sound-toggle active" id="soundToggle" onclick="toggleSound()" title="Toggle sound">🔔</button>
             <button class="btn-logout" onclick="openAvailabilityModal()">86 Items</button>
+            <button class="btn-logout" style="background:#FFB800;color:#000;border-color:#FFB800;" onclick="document.getElementById('changePinModal').classList.add('active')">🔑 PIN</button>
             <span class="topbar-time" id="dashTime"></span>
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
@@ -290,39 +320,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-<!-- ===== MSG91 OTP Widget SDK ===== -->
-<script>
-var configuration = {
-    widgetId: "366278704a57303934373930",
-    tokenAuth: "493471T68i0srho699dd45cP1",
-    exposeMethods: true,
-    success: (data) => { console.log('MSG91 success:', data); },
-    failure: (error) => { console.log('MSG91 failure:', error); }
-};
-</script>
-<script>
-(function loadOtpScript(urls) {
-    let i = 0;
-    function attempt() {
-        const s = document.createElement('script');
-        s.src = urls[i];
-        s.async = true;
-        s.onload = () => {
-            if (typeof window.initSendOTP === 'function') {
-                window.initSendOTP(configuration);
-                console.log('MSG91 OTP SDK loaded');
-            }
-        };
-        s.onerror = () => { i++; if (i < urls.length) attempt(); };
-        document.head.appendChild(s);
-    }
-    attempt();
-})([
-    'https://verify.msg91.com/otp-provider.js',
-    'https://verify.phone91.com/otp-provider.js'
-]);
-</script>
-
 <script>
 // ============================================================
 // CONFIG
@@ -370,85 +367,97 @@ let alertInterval = null;
 let cancelOrderId = '';
 
 // ============================================================
-// AUTH — Staff Login
+// AUTH — PIN Login (no OTP needed for staff)
 // ============================================================
-function sendStaffOTP() {
+async function doLogin() {
     const phone = document.getElementById('phoneInput').value.trim();
-    if (!/^\d{10}$/.test(phone)) {
-        document.getElementById('phoneError').textContent = 'Enter a valid 10-digit number';
-        return;
-    }
-    document.getElementById('phoneError').textContent = '';
+    const pin = document.getElementById('pinInput').value.trim();
+    
+    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
+    if (!pin) { document.getElementById('loginError').textContent = 'Enter your PIN'; return; }
+    document.getElementById('loginError').textContent = '';
+    
     staffPhone = '+91' + phone;
-
-    document.getElementById('phoneInput').disabled = true;
-
-    if (typeof window.sendOtp !== 'function') {
-        document.getElementById('phoneInput').disabled = false;
-        document.getElementById('phoneError').textContent = 'OTP system loading... try again in a moment.';
-        return;
-    }
-
-    window.sendOtp(
-        '91' + phone,
-        (data) => {
-            document.getElementById('phoneInput').disabled = false;
-            console.log('OTP sent:', data);
-            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone.replace(/(\d{5})(\d{5})/, '$1 $2');
-            document.getElementById('phoneStep').style.display = 'none';
-            document.getElementById('otpStep').style.display = 'block';
-            document.querySelector('#otpStep .otp-box[data-idx="0"]').focus();
-            startResendTimer();
-        },
-        (error) => {
-            document.getElementById('phoneInput').disabled = false;
-            console.error('OTP send error:', error);
-            document.getElementById('phoneError').textContent = error?.message || 'Failed to send OTP';
+    
+    try {
+        const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
+        if (!staffDoc.exists) { document.getElementById('loginError').textContent = 'User not found'; return; }
+        
+        const data = staffDoc.data();
+        if (!data.isActive) { document.getElementById('loginError').textContent = 'Account disabled'; return; }
+        
+        const expectedPin = data.pin || '1234';
+        if (pin !== expectedPin) { document.getElementById('loginError').textContent = 'Wrong PIN'; return; }
+        
+        staffRole = data.role;
+        staffOutletIds = data.outletIds || [];
+        
+        // Save login
+        localStorage.setItem('nosh_cashier_login', JSON.stringify({
+            phone: staffPhone, role: staffRole, outletIds: staffOutletIds, loginAt: Date.now()
+        }));
+        
+        // If first login (default PIN), force PIN change
+        if (!data.pin || data.pin === '1234') {
+            document.getElementById('loginStep').style.display = 'none';
+            document.getElementById('changePinStep').style.display = 'block';
+            document.getElementById('changePinTitle').textContent = 'Set Your New PIN';
+            document.getElementById('skipPinLink').style.display = 'block';
+            document.getElementById('newPinInput').focus();
+            return;
         }
-    );
+        
+        await showOutletSelection();
+    } catch (e) {
+        document.getElementById('loginError').textContent = 'Error: ' + e.message;
+    }
 }
 
-function verifyStaffOTP() {
-    const boxes = document.querySelectorAll('#otpStep .otp-box');
-    let otp = '';
-    boxes.forEach(b => otp += b.value);
-    if (otp.length !== 6) { document.getElementById('otpError').textContent = 'Enter 6-digit OTP'; return; }
-    document.getElementById('otpError').textContent = '';
-
-    if (typeof window.verifyOtp !== 'function') {
-        document.getElementById('otpError').textContent = 'OTP system not ready. Reload the page.';
-        return;
+async function saveNewPin() {
+    const newPin = document.getElementById('newPinInput').value.trim();
+    const confirmPin = document.getElementById('confirmPinInput').value.trim();
+    
+    if (newPin.length < 4) { document.getElementById('changePinError').textContent = 'PIN must be 4+ digits'; return; }
+    if (newPin !== confirmPin) { document.getElementById('changePinError').textContent = 'PINs do not match'; return; }
+    if (newPin === '1234') { document.getElementById('changePinError').textContent = 'Choose a different PIN'; return; }
+    document.getElementById('changePinError').textContent = '';
+    
+    try {
+        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
+        toast('✅ PIN saved!');
+        await showOutletSelection();
+    } catch (e) {
+        document.getElementById('changePinError').textContent = 'Error: ' + e.message;
     }
+}
 
-    window.verifyOtp(
-        otp,
-        async (data) => {
-            console.log('OTP verified:', data);
-                // Check if this phone is a registered staff member
-                const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
-                if (!staffDoc.exists || !staffDoc.data().isActive) {
-                    document.getElementById('otpError').textContent = 'You are not authorized. Contact admin.';
-                    return;
-                }
-                staffRole = staffDoc.data().role;
-                staffOutletIds = staffDoc.data().outletIds || [];
+async function skipPinChange() {
+    await showOutletSelection();
+}
 
-                // Save login
-                localStorage.setItem('nosh_cashier_login', JSON.stringify({
-                    phone: staffPhone, role: staffRole, outletIds: staffOutletIds, loginAt: Date.now()
-                }));
-
-                await showOutletSelection();
-        },
-        (error) => {
-            console.error('OTP verify error:', error);
-            document.getElementById('otpError').textContent = error?.message || 'Invalid OTP';
-        }
-    );
+async function saveChangedPin() {
+    const current = document.getElementById('cpCurrentPin').value.trim();
+    const newPin = document.getElementById('cpNewPin').value.trim();
+    const confirm = document.getElementById('cpConfirmPin').value.trim();
+    
+    if (!current) { document.getElementById('changePinModalError').textContent = 'Enter current PIN'; return; }
+    
+    // Verify current PIN
+    const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
+    const currentPin = staffDoc.data()?.pin || '1234';
+    if (current !== currentPin) { document.getElementById('changePinModalError').textContent = 'Current PIN is wrong'; return; }
+    if (newPin.length < 4) { document.getElementById('changePinModalError').textContent = 'New PIN must be 4+ digits'; return; }
+    if (newPin !== confirm) { document.getElementById('changePinModalError').textContent = 'PINs do not match'; return; }
+    document.getElementById('changePinModalError').textContent = '';
+    
+    try {
+        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
+        toast('✅ PIN changed!');
+        document.getElementById('changePinModal').classList.remove('active');
+    } catch (e) { toast('Error: ' + e.message, 'err'); }
 }
 
 async function showOutletSelection() {
-    // Load outlets this staff can access
     let outlets = [];
     if (staffOutletIds.includes('all')) {
         const snap = await db.collection('qr_outlets').where('isActive', '==', true).get();
@@ -460,74 +469,40 @@ async function showOutletSelection() {
         }
     }
 
-    if (outlets.length === 0) {
-        document.getElementById('otpError').textContent = 'No active outlets assigned to you.';
-        return;
-    }
-
+    if (outlets.length === 0) { document.getElementById('loginError').textContent = 'No outlets assigned'; return; }
     if (outlets.length === 1) {
-        // Auto-select single outlet
         selectedOutletId = outlets[0].id;
         selectedOutletName = outlets[0].name;
         startDashboard();
         return;
     }
 
-    // Multiple outlets — show selector
     const select = document.getElementById('outletSelect');
     select.innerHTML = outlets.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-    document.getElementById('otpStep').style.display = 'none';
-    document.getElementById('outletStep').style.display = 'block';
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('outletModal').style.display = 'flex';
 }
 
 function enterDashboard() {
     const select = document.getElementById('outletSelect');
     selectedOutletId = select.value;
     selectedOutletName = select.options[select.selectedIndex].text;
+    document.getElementById('outletModal').style.display = 'none';
     startDashboard();
 }
 
-// OTP input helpers (6 digits)
-document.querySelectorAll('#otpStep .otp-box').forEach((box, idx) => {
-    box.addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); if (e.target.value && idx < 5) document.querySelector(`#otpStep .otp-box[data-idx="${idx+1}"]`).focus(); if (idx === 5 && e.target.value) verifyStaffOTP(); });
-    box.addEventListener('keydown', e => { if (e.key === 'Backspace' && !e.target.value && idx > 0) document.querySelector(`#otpStep .otp-box[data-idx="${idx-1}"]`).focus(); });
-});
-document.getElementById('phoneInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendStaffOTP(); });
-
-let resendTimerInterval = null;
-function startResendTimer() {
-    let s = 30;
-    const el = document.getElementById('resendTimer');
-    const link = document.getElementById('resendLink');
-    link.classList.remove('active-link'); link.onclick = null;
-    if (resendTimerInterval) clearInterval(resendTimerInterval);
-    resendTimerInterval = setInterval(() => {
-        s--;
-        el.textContent = s;
-        if (s <= 0) { clearInterval(resendTimerInterval); link.textContent = 'Resend OTP'; link.classList.add('active-link'); link.onclick = () => { link.textContent = 'Resending...'; sendStaffOTP(); }; }
-    }, 1000);
-}
-
-// Auto-login check
+// Auto-login
 async function checkAutoLogin() {
     const stored = localStorage.getItem('nosh_cashier_login');
     if (!stored) return;
     try {
         const login = JSON.parse(stored);
-        // Login valid for 12 hours
-        if (Date.now() - login.loginAt > 12 * 60 * 60 * 1000) {
-            localStorage.removeItem('nosh_cashier_login');
-            return;
-        }
-        // Verify staff still exists
+        if (Date.now() - login.loginAt > 12 * 60 * 60 * 1000) { localStorage.removeItem('nosh_cashier_login'); return; }
         const doc = await db.collection('qr_staff').doc(login.phone).get();
         if (!doc.exists || !doc.data().isActive) { localStorage.removeItem('nosh_cashier_login'); return; }
-
         staffPhone = login.phone;
         staffRole = doc.data().role;
         staffOutletIds = doc.data().outletIds || [];
-
-        // Check stored outlet
         const lastOutlet = localStorage.getItem('nosh_cashier_outlet');
         if (lastOutlet) {
             const outletDoc = await db.collection('qr_outlets').doc(lastOutlet).get();
@@ -539,11 +514,7 @@ async function checkAutoLogin() {
             }
         }
         await showOutletSelection();
-        document.getElementById('phoneStep').style.display = 'none';
-        document.getElementById('outletStep').style.display = 'block';
-    } catch (e) {
-        console.error('Auto-login failed:', e);
-    }
+    } catch (e) { console.error('Auto-login failed:', e); }
 }
 
 function logout() {
