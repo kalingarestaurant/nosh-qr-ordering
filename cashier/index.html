@@ -265,24 +265,23 @@ function startDash(){
 function startListener(){
     ordersListener=db.collection('qr_orders').where('outletId','==',selectedOutletId).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
         .onSnapshot(snap=>{allOrders=snap.docs.map(d=>({docId:d.id,...d.data()}));render();
-        const nc=allOrders.filter(o=>o.status==='new').length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;});
+        const nc=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;});
 }
 function render(){
     const q=(document.getElementById('orderSearch').value||'').toLowerCase().trim();
-    let filtered=allOrders;
+    // Filter out cleared orders (table was cleared by cashier)
+    let visible=allOrders.filter(o=>!o.cleared);
     if(q){
-        filtered=allOrders.filter(o=>{
-            // Search by table number
+        visible=visible.filter(o=>{
             if(String(o.tableNumber)===q)return true;
             if((o.tableName||'').toLowerCase().includes(q))return true;
-            // Search by item name
             if((o.items||[]).some(i=>i.name.toLowerCase().includes(q)))return true;
             return false;
         });
     }
-    const nw=filtered.filter(o=>o.status==='new'),dn=filtered.filter(o=>o.status!=='new');
+    const nw=visible.filter(o=>o.status==='new'),dn=visible.filter(o=>o.status!=='new');
     document.getElementById('cntNew').textContent=nw.length;document.getElementById('cntDone').textContent=dn.length;
-    document.getElementById('sNew').textContent=allOrders.filter(o=>o.status==='new').length;document.getElementById('sTotal').textContent=allOrders.length;
+    document.getElementById('sNew').textContent=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;document.getElementById('sTotal').textContent=allOrders.filter(o=>!o.cleared).length;
     document.getElementById('colNew').innerHTML=nw.length?nw.map(o=>tile(o,'new')).join(''):'<div class="empty"><span class="ei">✨</span>'+(q?'No matching orders':'No new orders')+'</div>';
     document.getElementById('colDone').innerHTML=dn.length?dn.slice(0,30).map(o=>tile(o,o.status==='cancelled'?'cancelled':'done')).join(''):'<div class="empty"><span class="ei">📋</span>'+(q?'No matching orders':'No orders yet')+'</div>';
 }
@@ -387,8 +386,33 @@ function openAvail(){filterAvail();document.getElementById('availSearch').value=
 function filterAvail(){const q=(document.getElementById('availSearch').value||'').toLowerCase();let items=allMenuItems;if(q)items=items.filter(i=>i.name.toLowerCase().includes(q));document.getElementById('availList').innerHTML=items.slice(0,50).map(i=>`<div class="avail-item"><span class="avail-name">${i.name}</span><div class="atgl ${i.isAvailable?'on':''}" onclick="toggleAvail('${i.docId}',${!i.isAvailable})"></div></div>`).join('');}
 async function toggleAvail(id,v){try{await db.collection('menu_items').doc(id).update({isAvailable:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});const i=allMenuItems.find(x=>x.docId===id);if(i)i.isAvailable=v;filterAvail();toast(v?'✅ Available':'🚫 86\'d');}catch(e){toast('Error','err');}}
 
-async function loadTables(){const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();const t=s.docs.map(d=>d.data()).filter(t=>t.isActive).sort((a,b)=>a.tableNumber-b.tableNumber);document.getElementById('clearSelect').innerHTML='<option value="">Select...</option>'+t.map(t=>`<option value="${t.id}">${t.tableName}</option>`).join('');}
-async function clearTable(){const id=document.getElementById('clearSelect').value;if(!id){alert('Select a table');return;}if(!confirm('Clear table and end session?'))return;try{const td=await db.collection('qr_tables').doc(id).get();const sid=td.data()?.currentSessionId;if(sid)await db.collection('qr_sessions').doc(sid).update({isActive:false}).catch(()=>{});await db.collection('qr_tables').doc(id).update({currentSessionId:''});document.getElementById('clearSelect').value='';toast('✅ Table cleared!');}catch(e){alert('Error: '+e.message);}}
+async function loadTables(){
+    const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();
+    const t=s.docs.map(d=>d.data()).filter(t=>t.isActive && t.currentSessionId).sort((a,b)=>a.tableNumber-b.tableNumber);
+    document.getElementById('clearSelect').innerHTML='<option value="">Select...</option>'+t.map(t=>`<option value="${t.id}">${t.tableName}</option>`).join('');
+}
+async function clearTable(){
+    const id=document.getElementById('clearSelect').value;
+    if(!id){alert('Select a table');return;}
+    if(!confirm('Clear table and end session?'))return;
+    try{
+        const td=await db.collection('qr_tables').doc(id).get();
+        const sid=td.data()?.currentSessionId;
+        const tblName=td.data()?.tableName||'';
+        if(sid){
+            await db.collection('qr_sessions').doc(sid).update({isActive:false}).catch(()=>{});
+            // Mark all orders for this session as cleared (hide from cashier)
+            const orderSnap=await db.collection('qr_orders').where('sessionId','==',sid).get();
+            const batch=db.batch();
+            orderSnap.docs.forEach(d=>{batch.update(d.ref,{cleared:true});});
+            await batch.commit();
+        }
+        await db.collection('qr_tables').doc(id).update({currentSessionId:''});
+        document.getElementById('clearSelect').value='';
+        loadTables(); // refresh dropdown to remove cleared table
+        toast('✅ '+tblName+' cleared!');
+    }catch(e){alert('Error: '+e.message);}
+}
 
 ['availModal','cancelModal','changePinModal','outletModal'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeM(id);});});
 window.addEventListener('DOMContentLoaded',checkAutoLogin);
