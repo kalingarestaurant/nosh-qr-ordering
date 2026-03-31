@@ -716,6 +716,16 @@ function openItemModal(editId) {
     document.getElementById('imEditId').value = editId || '';
     document.getElementById('itemModalTitle').textContent = editId ? 'Edit Item' : 'Add Item';
 
+    // RESET photo state
+    pendingPhotoFile = null;
+    pendingPhotoRemove = false;
+    document.getElementById('imPhotoFile').value = '';
+    document.getElementById('imPhotoPreview').innerHTML = '';
+    const removeBtn = document.getElementById('imRemovePhoto');
+    if (removeBtn) removeBtn.style.display = 'none';
+    const statusEl = document.getElementById('imPhotoStatus');
+    if (statusEl) statusEl.textContent = '';
+
     // Populate category dropdown
     const catSel = document.getElementById('imCategory');
     catSel.innerHTML = '<option value="">Select...</option>' + categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -733,6 +743,11 @@ function openItemModal(editId) {
         document.getElementById('imSort').value = item.sortOrder || '';
         document.getElementById('imDesc').value = item.description || '';
         renderModGroups(item.modifierGroups || []);
+        // Show existing photo if any
+        if (item.imageUrl) {
+            document.getElementById('imPhotoPreview').innerHTML = `<img src="${item.imageUrl}" style="max-width:200px;max-height:120px;border-radius:8px;border:1px solid #2a2d3e;">`;
+            if (removeBtn) removeBtn.style.display = 'inline-block';
+        }
     } else {
         document.getElementById('imName').value = '';
         document.getElementById('imPrice').value = '';
@@ -883,21 +898,36 @@ async function saveItem() {
     if (isNaN(price)) { toast('Enter valid price', 'err'); return; }
     if (!categoryId) { toast('Select category', 'err'); return; }
 
-    const data = {
-        name, price, categoryId, subCategoryId, vegType, sortOrder, description,
-        modifierGroups, isActive: true, isAvailable: true,
-        imageUrl: '', outletSpecific: false, outletIds: [],
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
     try {
+        // Handle photo upload/removal
+        let imageUrl = null; // null means "don't change"
+        if (pendingPhotoFile) {
+            toast('Uploading photo...', 'ok');
+            imageUrl = await uploadItemPhoto(editId || name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50) + '_' + Date.now());
+        } else if (pendingPhotoRemove) {
+            imageUrl = ''; // explicitly clear
+        }
+
         if (editId) {
-            await db.collection('menu_items').doc(editId).update(data);
+            // EDIT — only update changed fields, preserve imageUrl & isAvailable
+            const updateData = {
+                name, price, categoryId, subCategoryId, vegType, sortOrder, description,
+                modifierGroups,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            if (imageUrl !== null) updateData.imageUrl = imageUrl;
+            await db.collection('menu_items').doc(editId).update(updateData);
             toast('✅ Item updated');
         } else {
+            // NEW — set all fields
             const id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50) + '_' + Date.now();
-            data.id = id;
-            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            const data = {
+                id, name, price, categoryId, subCategoryId, vegType, sortOrder, description,
+                modifierGroups, isActive: true, isAvailable: true,
+                imageUrl: imageUrl || '', outletSpecific: false, outletIds: [],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
             await db.collection('menu_items').doc(id).set(data);
             toast('✅ Item added');
         }
