@@ -76,7 +76,30 @@
         <div class="log" id="verifyLog" style="display:none;"></div>
     </div>
 
-    <!-- STEP 4: Reset (if needed) -->
+    <!-- STEP 4: OTP Toggle -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">4</span> OTP Toggle (Testing Mode)</div>
+        <div class="section-desc">Turn OTP OFF for testing — customers only enter phone number, no SMS sent. Turn ON before going live.</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;">
+            <button class="btn" style="background:#2ecc71;color:#fff;flex:1;" onclick="setOTP(false)">🔓 Turn OTP OFF (Testing)</button>
+            <button class="btn" style="background:#e94560;color:#fff;flex:1;" onclick="setOTP(true)">🔒 Turn OTP ON (Live)</button>
+        </div>
+        <div id="otpStatus" style="font-size:13px;margin-top:8px;"></div>
+    </div>
+
+    <!-- STEP 5: Reset Admin PIN -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">5</span> Reset Admin PIN</div>
+        <div class="section-desc">Reset your super admin PIN to <strong>1234</strong>. Use if you forgot your PIN or just set up the system.</div>
+        <div class="input-group">
+            <label class="input-label">Phone number (same as Step 1)</label>
+            <input type="tel" class="input-field" id="resetPinPhone" placeholder="9876543210" maxlength="10" inputmode="numeric">
+        </div>
+        <button class="btn" style="background:#FFB800;color:#000;" onclick="resetAdminPin()">🔑 Reset PIN to 1234</button>
+        <div id="resetPinStatus" style="font-size:13px;margin-top:8px;"></div>
+    </div>
+
+    <!-- STEP 5: Reset (if needed) -->
     <div class="section">
         <div class="section-title"><span class="step-badge">!</span> Reset (if needed)</div>
         <div class="section-desc">If something goes wrong, this deletes ALL data and lets you start fresh. Use carefully.</div>
@@ -272,9 +295,10 @@ async function startUpload() {
             role: 'super_admin',
             outletIds: ['all'],
             isActive: true,
+            pin: '1234',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        addLog('uploadLog', `✓ Super admin created: ${fullPhone}`, 'success');
+        addLog('uploadLog', `✓ Super admin created: ${fullPhone} (default PIN: 1234)`, 'success');
 
         // DONE!
         addLog('uploadLog', '', 'info');
@@ -370,6 +394,61 @@ async function verifyUpload() {
     } catch (err) {
         addLog('verifyLog', `❌ Error: ${err.message}`, 'error');
         setStatus('verifyStatus', '❌ Verification failed.', 'error');
+    }
+}
+
+// ============================================================
+// OTP TOGGLE
+// ============================================================
+async function setOTP(enabled) {
+    try {
+        await db.collection('qr_settings').doc('config').set({
+            otpEnabled: enabled
+        }, { merge: true });
+        
+        const statusEl = document.getElementById('otpStatus');
+        if (enabled) {
+            statusEl.innerHTML = '<div class="status status-success">🔒 OTP is ON — customers will receive SMS verification</div>';
+        } else {
+            statusEl.innerHTML = '<div class="status status-success">🔓 OTP is OFF — testing mode. Customers enter phone only, no SMS.</div>';
+        }
+    } catch(e) {
+        document.getElementById('otpStatus').innerHTML = '<div class="status status-error">Error: ' + e.message + '</div>';
+    }
+}
+
+// Check current OTP status on load
+async function checkOTPStatus() {
+    try {
+        const doc = await db.collection('qr_settings').doc('config').get();
+        const enabled = doc.exists ? doc.data().otpEnabled !== false : true;
+        document.getElementById('otpStatus').innerHTML = enabled 
+            ? '<div class="status status-loading">Current: 🔒 OTP is ON</div>'
+            : '<div class="status status-loading">Current: 🔓 OTP is OFF (testing mode)</div>';
+    } catch(e) {}
+}
+setTimeout(checkOTPStatus, 1500);
+
+// ============================================================
+// RESET ADMIN PIN
+// ============================================================
+async function resetAdminPin() {
+    const phone = document.getElementById('resetPinPhone').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        document.getElementById('resetPinStatus').innerHTML = '<div class="status status-error">Enter a valid 10-digit phone number</div>';
+        return;
+    }
+    const fullPhone = '+91' + phone;
+    try {
+        const doc = await db.collection('qr_staff').doc(fullPhone).get();
+        if (!doc.exists) {
+            document.getElementById('resetPinStatus').innerHTML = '<div class="status status-error">User not found. Run upload first.</div>';
+            return;
+        }
+        await db.collection('qr_staff').doc(fullPhone).update({ pin: '1234' });
+        document.getElementById('resetPinStatus').innerHTML = '<div class="status status-success">✅ PIN reset to 1234 for ' + fullPhone + '. Login with this PIN, you will be asked to change it.</div>';
+    } catch(e) {
+        document.getElementById('resetPinStatus').innerHTML = '<div class="status status-error">Error: ' + e.message + '</div>';
     }
 }
 
