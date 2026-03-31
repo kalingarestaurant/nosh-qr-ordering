@@ -3,1040 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nosh QR — Cashier Screen</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <title>Nosh QR — Cashier</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Poppins', sans-serif; background: #0f1117; color: #e8e8e8; min-height: 100vh; }
-
-        /* ===== AUTH SCREEN ===== */
-        .auth-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #0f1117 0%, #1a1a2e 100%); }
-        .auth-card { width: 360px; text-align: center; }
-        .auth-logo { font-size: 28px; font-weight: 800; color: #e94560; margin-bottom: 8px; }
-        .auth-subtitle { font-size: 14px; color: #888; margin-bottom: 28px; }
-        .auth-input-group { display: flex; gap: 0; margin-bottom: 12px; }
-        .auth-prefix { background: #1e2030; border: 1.5px solid #2a2d3e; border-right: none; border-radius: 8px 0 0 8px; padding: 12px; font-size: 14px; color: #888; }
-        .auth-input { flex: 1; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 0 8px 8px 0; padding: 12px 14px; font-size: 15px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
-        .auth-input:focus { border-color: #e94560; }
-        .otp-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
-        .otp-box { width: 48px; height: 52px; text-align: center; font-size: 20px; font-weight: 600; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 8px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
-        .otp-box:focus { border-color: #e94560; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
-        .btn-primary { background: #e94560; color: #fff; }
-        .btn-primary:disabled { background: #444; cursor: not-allowed; }
-        .auth-error { color: #ff6b6b; font-size: 13px; margin-bottom: 10px; min-height: 18px; }
-        .auth-link { color: #666; font-size: 12px; margin-top: 10px; cursor: pointer; }
-        .auth-link.active-link { color: #e94560; }
-        .outlet-select { width: 100%; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 8px; padding: 12px 14px; font-size: 14px; color: #fff; font-family: 'Poppins', sans-serif; outline: none; margin-bottom: 12px; appearance: none; cursor: pointer; }
-        .outlet-select option { background: #1e2030; color: #fff; }
-
-        /* ===== MAIN DASHBOARD ===== */
-        .dashboard { display: none; flex-direction: column; min-height: 100vh; }
-        .dashboard.active { display: flex; }
-
-        /* Top Bar */
-        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #161822; border-bottom: 1px solid #1e2030; }
-        .topbar-left { display: flex; align-items: center; gap: 12px; }
-        .topbar-title { font-size: 16px; font-weight: 700; color: #e94560; }
-        .topbar-outlet { font-size: 13px; color: #888; }
-        .topbar-right { display: flex; align-items: center; gap: 16px; }
-        .topbar-stats { display: flex; gap: 16px; }
-        .stat-item { text-align: center; }
-        .stat-num { font-size: 20px; font-weight: 800; color: #fff; }
-        .stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
-        .topbar-time { font-size: 13px; color: #666; }
-        .btn-logout { padding: 6px 14px; border: 1px solid #333; border-radius: 6px; background: none; color: #888; font-size: 12px; cursor: pointer; font-family: 'Poppins', sans-serif; }
-        .btn-logout:hover { border-color: #e94560; color: #e94560; }
-
-        /* Sound toggle */
-        .sound-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #333; background: none; color: #888; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .sound-toggle.active { border-color: #e94560; color: #e94560; }
-
-        /* ===== ORDER COLUMNS ===== */
-        .columns-container { display: flex; flex: 1; overflow: hidden; }
-        .column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #1e2030; overflow-y: auto; }
-        .column:last-child { border-right: none; }
-        .column-header { padding: 12px 16px; background: #161822; border-bottom: 1px solid #1e2030; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
-        .column-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-        .column-count { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
-        .col-new .column-title { color: #ff6b6b; } .col-new .column-count { background: #ff6b6b20; color: #ff6b6b; }
-        .col-accepted .column-title { color: #4ecdc4; } .col-accepted .column-count { background: #4ecdc420; color: #4ecdc4; }
-        .column-body { flex: 1; padding: 12px; overflow-y: auto; }
-
-        /* ===== ORDER TILE (compact) ===== */
-        .order-tile { background: #1a1c2e; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border-left: 4px solid transparent; cursor: pointer; transition: all 0.2s; }
-        .order-tile:hover { background: #22243a; }
-        .order-tile.status-new { border-left-color: #ff6b6b; }
-        .order-tile.status-accepted { border-left-color: #4ecdc4; }
-        .order-tile.status-cancelled { border-left-color: #666; opacity: 0.5; }
-        .order-tile.status-new.pulse { animation: pulse 1.5s ease-in-out infinite; }
-        .tile-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .tile-order-num { font-size: 18px; font-weight: 800; color: #fff; }
-        .tile-table { font-size: 12px; font-weight: 600; color: #e94560; background: #e9456015; padding: 3px 8px; border-radius: 6px; }
-        .tile-row2 { display: flex; justify-content: space-between; align-items: center; }
-        .tile-time { font-size: 12px; color: #666; }
-        .tile-items { font-size: 12px; color: #888; }
-        .tile-phone { font-size: 11px; color: #555; }
-
-        /* ===== ORDER DETAIL MODAL ===== */
-        .od-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .od-title { font-size: 22px; font-weight: 800; color: #fff; }
-        .od-close { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; }
-        .od-badge { display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 16px; }
-        .od-badge-new { background: #ff6b6b20; color: #ff6b6b; }
-        .od-badge-done { background: #4ecdc420; color: #4ecdc4; }
-        .od-badge-cancelled { background: #66666630; color: #888; }
-        .od-info { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; color: #888; }
-        .od-items { border-top: 1px solid #252840; padding-top: 12px; }
-        .od-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e2030; }
-        .od-item-qty { font-size: 15px; font-weight: 700; color: #e94560; min-width: 35px; }
-        .od-item-details { flex: 1; }
-        .od-item-name { font-size: 14px; font-weight: 600; color: #e8e8e8; display: flex; align-items: center; gap: 6px; }
-        .od-item-mods { font-size: 12px; color: #f0a500; margin-top: 3px; }
-        .od-item-instr { font-size: 12px; color: #e94560; font-style: italic; margin-top: 3px; }
-        .od-item-price { font-size: 13px; color: #888; white-space: nowrap; padding-top: 2px; }
-        .od-total { display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid #252840; margin-top: 8px; }
-        .od-total-label { font-size: 14px; color: #888; }
-        .od-total-value { font-size: 18px; font-weight: 800; color: #fff; }
-        .od-actions { display: flex; gap: 10px; margin-top: 16px; }
-        .od-btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif; }
-        .od-btn-accept { background: #2ecc71; color: #fff; }
-        .od-btn-accept:hover { background: #27ae60; }
-        .od-btn-cancel { background: #1e2030; color: #ff6b6b; border: 1px solid #ff6b6b30; }
-
-        /* ===== ORDER CARD (old - remove) ===== */
-        .order-card { background: #1a1c2e; border-radius: 12px; padding: 14px; margin-bottom: 12px; border-left: 4px solid transparent; transition: all 0.3s; }
-        .order-card.status-new { border-left-color: #ff6b6b; }
-        .order-card.status-accepted { border-left-color: #ffd93d; }
-        .order-card.status-served { border-left-color: #4ecdc4; opacity: 0.6; }
-        .order-card.status-cancelled { border-left-color: #666; opacity: 0.4; }
-
-        /* New order pulse animation */
-        .order-card.status-new.pulse { animation: pulse 1.5s ease-in-out infinite; }
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
-            50% { box-shadow: 0 0 20px 4px rgba(255, 107, 107, 0.3); }
-        }
-
-        .order-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-        .order-number { font-size: 18px; font-weight: 800; color: #fff; }
-        .order-table { font-size: 13px; font-weight: 600; color: #e94560; background: #e9456015; padding: 3px 10px; border-radius: 6px; }
-        .order-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 12px; color: #666; }
-        .order-phone { color: #888; }
-
-        /* Order Items */
-        .order-items { border-top: 1px solid #252840; padding-top: 10px; }
-        .order-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; }
-        .order-item-qty { font-size: 14px; font-weight: 700; color: #e94560; min-width: 30px; }
-        .order-item-details { flex: 1; }
-        .order-item-name { font-size: 14px; font-weight: 600; color: #e8e8e8; display: flex; align-items: center; gap: 6px; }
-        .order-item-price { font-size: 13px; color: #888; margin-left: auto; white-space: nowrap; }
-        .order-item-mods { font-size: 12px; color: #f0a500; margin-top: 2px; }
-        .order-item-instr { font-size: 12px; color: #e94560; font-style: italic; margin-top: 2px; }
-        .veg-dot { width: 12px; height: 12px; border: 1.5px solid; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .veg-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; }
-        .veg-dot.veg { border-color: #0a8f0a; } .veg-dot.veg::after { background: #0a8f0a; }
-        .veg-dot.nonveg { border-color: #ff4444; } .veg-dot.nonveg::after { background: #ff4444; }
-        .veg-dot.egg { border-color: #f9a825; } .veg-dot.egg::after { background: #f9a825; }
-
-        .order-total { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #252840; padding-top: 10px; margin-top: 8px; }
-        .order-total-label { font-size: 13px; color: #888; }
-        .order-total-value { font-size: 16px; font-weight: 700; color: #fff; }
-
-        /* Action Buttons */
-        .order-actions { display: flex; gap: 8px; margin-top: 12px; }
-        .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; transition: all 0.2s; }
-        .btn-accept { background: #2ecc71; color: #fff; }
-        .btn-accept:hover { background: #27ae60; }
-        .btn-served { background: #3498db; color: #fff; }
-        .btn-served:hover { background: #2980b9; }
-        .btn-cancel { background: #1e2030; color: #ff6b6b; border: 1px solid #ff6b6b30; }
-        .btn-cancel:hover { background: #ff6b6b15; }
-
-        /* ===== 86 ITEM MODAL ===== */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
-        .modal-overlay.active { display: flex; }
-        .modal { background: #1a1c2e; border-radius: 16px; padding: 24px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
-        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-close { background: none; border: none; color: #888; font-size: 22px; cursor: pointer; }
-        .modal-search { width: 100%; padding: 10px 14px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px; color: #fff; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; margin-bottom: 12px; }
-        .modal-search:focus { border-color: #e94560; }
-        .avail-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2030; }
-        .avail-item-name { font-size: 14px; color: #e8e8e8; }
-        .avail-toggle { position: relative; width: 44px; height: 24px; background: #333; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
-        .avail-toggle.on { background: #2ecc71; }
-        .avail-toggle::after { content: ''; position: absolute; width: 20px; height: 20px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
-        .avail-toggle.on::after { transform: translateX(20px); }
-
-        /* Cancel reason modal */
-        .cancel-modal textarea { width: 100%; padding: 10px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px; color: #fff; font-size: 14px; font-family: 'Poppins', sans-serif; resize: none; height: 80px; outline: none; margin-bottom: 12px; }
-        .cancel-modal textarea:focus { border-color: #e94560; }
-
-        /* ===== CLEAR TABLE DROPDOWN ===== */
-        .clear-table-bar { padding: 10px 20px; background: #161822; border-top: 1px solid #1e2030; display: flex; align-items: center; gap: 12px; }
-        .clear-table-select { background: #1e2030; border: 1px solid #2a2d3e; border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 13px; font-family: 'Poppins', sans-serif; outline: none; cursor: pointer; }
-        .btn-clear-table { padding: 8px 16px; background: #e94560; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
-
-        /* ===== EMPTY STATE ===== */
-        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: #444; }
-        .empty-state-icon { font-size: 40px; margin-bottom: 8px; }
-        .empty-state-text { font-size: 13px; }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 900px) {
-            .columns-container { flex-direction: column; }
-            .column { border-right: none; border-bottom: 1px solid #1e2030; max-height: 40vh; }
-        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Poppins',sans-serif;background:#0f1117;color:#e8e8e8;min-height:100vh;}
+        .auth-wrap{display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg,#0f1117,#1a1a2e);}
+        .auth-box{width:360px;text-align:center;}
+        .auth-logo{font-size:24px;font-weight:800;color:#e94560;margin-bottom:20px;}
+        .auth-err{color:#ff6b6b;font-size:13px;min-height:18px;margin-bottom:8px;}
+        .auth-group{display:flex;gap:0;margin-bottom:12px;}
+        .auth-pre{background:#1e2030;border:1.5px solid #2a2d3e;border-right:none;border-radius:8px 0 0 8px;padding:12px;font-size:14px;color:#888;}
+        .auth-inp{flex:1;background:#1e2030;border:1.5px solid #2a2d3e;border-radius:0 8px 8px 0;padding:12px;font-size:15px;color:#fff;outline:none;font-family:'Poppins',sans-serif;}
+        .auth-inp:focus{border-color:#e94560;}
+        .auth-pin{width:100%;background:#1e2030;border:1.5px solid #2a2d3e;border-radius:8px;padding:12px;font-size:20px;color:#fff;outline:none;font-family:'Poppins',sans-serif;text-align:center;letter-spacing:8px;margin-bottom:12px;}
+        .auth-pin:focus{border-color:#e94560;}
+        .btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
+        .btn-red{background:#e94560;color:#fff;}
+        .auth-link{color:#666;font-size:12px;margin-top:10px;cursor:pointer;}
+        .dash{display:none;flex-direction:column;min-height:100vh;}
+        .dash.on{display:flex;}
+        .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#161822;border-bottom:1px solid #1e2030;flex-shrink:0;}
+        .t-title{font-size:15px;font-weight:700;color:#e94560;}
+        .t-outlet{font-size:11px;color:#666;}
+        .topbar-right{display:flex;align-items:center;gap:8px;}
+        .stat-box{text-align:center;}
+        .stat-num{font-size:18px;font-weight:800;color:#fff;}
+        .stat-lbl{font-size:9px;color:#666;text-transform:uppercase;}
+        .tbtn{padding:5px 10px;border:1px solid #333;border-radius:6px;background:none;color:#888;font-size:10px;cursor:pointer;font-family:'Poppins',sans-serif;}
+        .tbtn:hover{border-color:#e94560;color:#e94560;}
+        .tbtn-gold{background:#FFB800;color:#000;border-color:#FFB800;}
+        .sound-btn{width:32px;height:32px;border-radius:50%;border:1px solid #333;background:none;color:#888;font-size:16px;cursor:pointer;}
+        .sound-btn.on{border-color:#e94560;color:#e94560;}
+        .cols{display:flex;flex:1;overflow:hidden;}
+        .col{flex:1;display:flex;flex-direction:column;border-right:1px solid #1e2030;overflow-y:auto;}
+        .col:last-child{border-right:none;}
+        .col-head{padding:10px 14px;background:#161822;border-bottom:1px solid #1e2030;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;}
+        .col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+        .col-cnt{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;}
+        .col-new .col-title{color:#ff6b6b;}.col-new .col-cnt{background:#ff6b6b20;color:#ff6b6b;}
+        .col-done .col-title{color:#4ecdc4;}.col-done .col-cnt{background:#4ecdc420;color:#4ecdc4;}
+        .col-body{flex:1;padding:10px;overflow-y:auto;}
+        @media(max-width:900px){.cols{flex-direction:column;}.col{max-height:45vh;border-right:none;border-bottom:1px solid #1e2030;}}
+        .tile{background:#1a1c2e;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid transparent;cursor:pointer;transition:background 0.2s;}
+        .tile:hover{background:#22243a;}
+        .tile.new{border-left-color:#ff6b6b;}
+        .tile.done{border-left-color:#4ecdc4;}
+        .tile.cancelled{border-left-color:#666;opacity:0.5;}
+        .tile.new.pulse{animation:pulse 1.5s ease-in-out infinite;}
+        @keyframes pulse{0%,100%{box-shadow:none;}50%{box-shadow:0 0 20px 4px rgba(255,107,107,0.3);}}
+        .tile-r1{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+        .tile-num{font-size:17px;font-weight:800;color:#fff;}
+        .tile-tbl{font-size:11px;font-weight:600;color:#e94560;background:#e9456015;padding:2px 8px;border-radius:6px;}
+        .tile-items{font-size:11px;color:#999;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        .tile-r2{display:flex;justify-content:space-between;font-size:11px;color:#666;}
+        .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;justify-content:center;align-items:center;}
+        .modal-bg.on{display:flex;}
+        .modal-box{background:#1a1c2e;border-radius:16px;padding:20px;width:95%;max-width:480px;max-height:85vh;overflow-y:auto;}
+        .od-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+        .od-title{font-size:20px;font-weight:800;color:#fff;}
+        .od-x{background:none;border:none;color:#888;font-size:22px;cursor:pointer;}
+        .od-info{display:flex;gap:14px;margin-bottom:14px;font-size:12px;color:#888;flex-wrap:wrap;}
+        .od-items{border-top:1px solid #252840;padding-top:10px;}
+        .od-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #1e2030;}
+        .od-qty{font-size:14px;font-weight:700;color:#e94560;min-width:32px;}
+        .od-det{flex:1;}
+        .od-name{font-size:13px;font-weight:600;color:#e8e8e8;display:flex;align-items:center;gap:5px;}
+        .od-mods{font-size:11px;color:#f0a500;margin-top:2px;}
+        .od-instr{font-size:11px;color:#e94560;font-style:italic;margin-top:2px;}
+        .od-price{font-size:12px;color:#888;}
+        .vd{width:12px;height:12px;border:1.5px solid;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+        .vd::after{content:'';width:6px;height:6px;border-radius:50%;}
+        .vd.veg{border-color:#0a8f0a;}.vd.veg::after{background:#0a8f0a;}
+        .vd.nonveg{border-color:#ff4444;}.vd.nonveg::after{background:#ff4444;}
+        .vd.egg{border-color:#f9a825;}.vd.egg::after{background:#f9a825;}
+        .od-total{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #252840;margin-top:6px;}
+        .od-actions{display:flex;gap:10px;margin-top:14px;}
+        .od-btn{flex:1;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;}
+        .od-accept{background:#2ecc71;color:#fff;}
+        .od-cancel{background:#1e2030;color:#ff6b6b;border:1px solid #ff6b6b30;}
+        .bottom-bar{padding:8px 16px;background:#161822;border-top:1px solid #1e2030;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .bb-select{background:#1e2030;border:1px solid #2a2d3e;border-radius:6px;padding:7px 10px;color:#fff;font-size:12px;font-family:'Poppins',sans-serif;outline:none;}
+        .bb-btn{padding:7px 14px;background:#e94560;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;}
+        .avail-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1e2030;}
+        .avail-name{font-size:13px;color:#e8e8e8;}
+        .atgl{position:relative;width:40px;height:22px;background:#333;border-radius:11px;cursor:pointer;transition:background 0.2s;}
+        .atgl.on{background:#2ecc71;}
+        .atgl::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform 0.2s;}
+        .atgl.on::after{transform:translateX(18px);}
+        .empty{text-align:center;padding:30px;color:#444;font-size:13px;}
+        .empty .ei{font-size:36px;display:block;margin-bottom:6px;}
+        #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:all 0.25s;pointer-events:none;}
+        #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+        #toast.ok{background:#2ecc71;color:#fff;}
+        #toast.err{background:#ff6b6b;color:#fff;}
     </style>
 </head>
 <body>
 
-<!-- ===== AUTH SCREEN ===== -->
-<div id="authScreen" class="auth-screen">
-    <div class="auth-card" id="authCard">
-        <!-- Login step -->
-        <div id="loginStep">
-            <div class="auth-logo">NOSH QR</div>
-            <div class="auth-subtitle">Cashier Login</div>
-            <!-- Login Mode Toggle -->
-            <div style="display:flex;gap:0;margin-bottom:16px;border:1.5px solid #2a2d3e;border-radius:8px;overflow:hidden;">
-                <button id="modePinBtn" onclick="setLoginMode('pin')" style="flex:1;padding:10px;border:none;background:#e94560;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">🔑 PIN</button>
-                <button id="modeOtpBtn" onclick="setLoginMode('otp')" style="flex:1;padding:10px;border:none;background:#1e2030;color:#888;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">📱 OTP</button>
-            </div>
-            <div class="auth-error" id="loginError"></div>
-            <div class="auth-input-group">
-                <span class="auth-prefix">+91</span>
-                <input type="tel" class="auth-input" id="phoneInput" placeholder="Phone number" maxlength="10" inputmode="numeric">
-            </div>
-            <!-- PIN fields -->
-            <div id="pinFields">
-                <div style="margin-bottom:12px;">
-                    <input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()">
-                </div>
-                <button class="btn btn-primary" onclick="doLogin()">Login</button>
-            </div>
-            <!-- OTP fields -->
-            <div id="otpFields" style="display:none;">
-                <button class="btn btn-primary" id="sendOtpBtn" onclick="sendStaffOTP()">Send OTP</button>
-            </div>
-        </div>
-        <!-- OTP Verify step -->
-        <div id="otpVerifyStep" style="display:none;">
-            <div class="auth-logo">NOSH QR</div>
-            <div style="font-size:13px;color:#888;margin-bottom:12px;" id="otpSubtitle">OTP sent</div>
-            <div class="auth-error" id="otpError"></div>
-            <div class="otp-inputs">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="4">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="5">
-            </div>
-            <button class="btn btn-primary" onclick="verifyStaffOTP()">Verify</button>
-            <div class="auth-link" onclick="document.getElementById('otpVerifyStep').style.display='none';document.getElementById('loginStep').style.display='block';">← Back</div>
-        </div>
-        <!-- Change PIN step -->
-        <div id="changePinStep" style="display:none;">
-            <div class="auth-logo">🔑</div>
-            <div class="auth-subtitle" id="changePinTitle">Set Your New PIN</div>
-            <div class="auth-error" id="changePinError"></div>
-            <div style="margin-bottom:12px;">
-                <label style="font-size:10px;color:#888;display:block;margin-bottom:6px;">New PIN (4+ digits)</label>
-                <input type="password" class="auth-input" id="newPinInput" placeholder="New PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;">
-            </div>
-            <div style="margin-bottom:12px;">
-                <label style="font-size:10px;color:#888;display:block;margin-bottom:6px;">Confirm PIN</label>
-                <input type="password" class="auth-input" id="confirmPinInput" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')saveNewPin()">
-            </div>
-            <button class="btn btn-primary" onclick="saveNewPin()">Save PIN & Continue</button>
-            <div class="auth-link" id="skipPinLink" onclick="skipPinChange()">Skip for now</div>
-        </div>
+<div id="authWrap" class="auth-wrap"><div class="auth-box">
+    <div class="auth-logo">NOSH QR — Cashier</div>
+    <div id="loginStep">
+        <div class="auth-err" id="loginErr"></div>
+        <div class="auth-group"><span class="auth-pre">+91</span><input type="tel" class="auth-inp" id="inpPhone" placeholder="Phone number" maxlength="10" inputmode="numeric"></div>
+        <input type="password" class="auth-pin" id="inpPin" placeholder="PIN" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="btn btn-red" onclick="doLogin()">Login</button>
     </div>
-</div>
-
-<!-- Outlet Selection Modal -->
-<div id="outletModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;justify-content:center;align-items:center;">
-    <div style="background:#1a1c2e;border-radius:16px;padding:24px;width:90%;max-width:360px;text-align:center;">
-        <div style="font-size:20px;font-weight:700;color:#e94560;margin-bottom:16px;">Select Outlet</div>
-        <select class="outlet-select" id="outletSelect" style="width:100%;background:#1e2030;border:1.5px solid #2a2d3e;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:'Poppins',sans-serif;margin-bottom:12px;"></select>
-        <button class="btn btn-primary" onclick="enterDashboard()" style="width:100%;">Enter Dashboard</button>
+    <div id="setPinStep" style="display:none;">
+        <div style="font-size:14px;color:#888;margin-bottom:12px;">Set Your New PIN</div>
+        <div class="auth-err" id="setPinErr"></div>
+        <input type="password" class="auth-pin" id="inpNewPin" placeholder="New PIN (4+ digits)" maxlength="6" inputmode="numeric">
+        <input type="password" class="auth-pin" id="inpConfirmPin" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')saveNewPin()">
+        <button class="btn btn-red" onclick="saveNewPin()">Save PIN & Continue</button>
+        <div class="auth-link" onclick="skipPin()">Skip for now</div>
     </div>
-</div>
+</div></div>
 
-<!-- Change PIN Modal -->
-<div class="modal-overlay" id="changePinModal">
-    <div style="background:#1a1c2e;border-radius:16px;padding:24px;width:90%;max-width:360px;">
-        <div style="font-size:18px;font-weight:700;color:#e94560;margin-bottom:16px;">🔑 Change PIN</div>
-        <div class="auth-error" id="changePinModalError"></div>
-        <div style="margin-bottom:12px;">
-            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">Current PIN</label>
-            <input type="password" id="cpCurrentPin" placeholder="Current PIN" maxlength="6" inputmode="numeric" style="width:100%;padding:10px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:16px;text-align:center;letter-spacing:6px;font-family:'Poppins',sans-serif;outline:none;">
-        </div>
-        <div style="margin-bottom:12px;">
-            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">New PIN</label>
-            <input type="password" id="cpNewPin" placeholder="New PIN" maxlength="6" inputmode="numeric" style="width:100%;padding:10px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:16px;text-align:center;letter-spacing:6px;font-family:'Poppins',sans-serif;outline:none;">
-        </div>
-        <div style="margin-bottom:16px;">
-            <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">Confirm New PIN</label>
-            <input type="password" id="cpConfirmPin" placeholder="Confirm" maxlength="6" inputmode="numeric" style="width:100%;padding:10px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:16px;text-align:center;letter-spacing:6px;font-family:'Poppins',sans-serif;outline:none;">
-        </div>
-        <div style="display:flex;gap:8px;">
-            <button style="flex:1;padding:10px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="document.getElementById('changePinModal').classList.remove('active')">Cancel</button>
-            <button style="flex:1;padding:10px;background:#e94560;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="saveChangedPin()">Save</button>
-        </div>
-    </div>
-</div>
+<div id="outletModal" class="modal-bg"><div class="modal-box" style="max-width:360px;text-align:center;">
+    <div style="font-size:18px;font-weight:700;color:#e94560;margin-bottom:14px;">Select Outlet</div>
+    <select id="outletSelect" style="width:100%;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-family:'Poppins',sans-serif;margin-bottom:12px;outline:none;"></select>
+    <button class="btn btn-red" onclick="enterDash()">Enter Dashboard</button>
+</div></div>
 
-<!-- ===== MAIN DASHBOARD ===== -->
-<div id="dashboard" class="dashboard">
-    <!-- Top Bar -->
+<div id="changePinModal" class="modal-bg"><div class="modal-box" style="max-width:360px;">
+    <div class="od-head"><span class="od-title">🔑 Change PIN</span><button class="od-x" onclick="closeM('changePinModal')">✕</button></div>
+    <div class="auth-err" id="cpErr"></div>
+    <input type="password" class="auth-pin" id="cpCurrent" placeholder="Current PIN" maxlength="6" inputmode="numeric">
+    <input type="password" class="auth-pin" id="cpNew" placeholder="New PIN" maxlength="6" inputmode="numeric">
+    <input type="password" class="auth-pin" id="cpConfirm" placeholder="Confirm" maxlength="6" inputmode="numeric">
+    <button class="btn btn-red" onclick="saveChangedPin()">Save PIN</button>
+</div></div>
+
+<div id="detailModal" class="modal-bg"><div class="modal-box" id="detailContent"></div></div>
+
+<div id="availModal" class="modal-bg"><div class="modal-box">
+    <div class="od-head"><span>86 — Item Availability</span><button class="od-x" onclick="closeM('availModal')">✕</button></div>
+    <input type="text" id="availSearch" placeholder="Search items..." oninput="filterAvail()" style="width:100%;padding:10px;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;color:#fff;font-size:13px;font-family:'Poppins',sans-serif;outline:none;margin-bottom:10px;">
+    <div id="availList"></div>
+</div></div>
+
+<div id="cancelModal" class="modal-bg"><div class="modal-box" style="max-width:400px;">
+    <div class="od-head"><span>Cancel Order</span><button class="od-x" onclick="closeM('cancelModal')">✕</button></div>
+    <div style="font-size:13px;color:#888;margin-bottom:10px;" id="cancelInfo"></div>
+    <textarea id="cancelReason" placeholder="Reason for cancellation..." style="width:100%;padding:10px;background:#0f1117;border:1px solid #2a2d3e;border-radius:8px;color:#fff;font-size:13px;font-family:'Poppins',sans-serif;resize:none;height:70px;outline:none;margin-bottom:10px;"></textarea>
+    <button class="btn btn-red" style="background:#ff6b6b;" onclick="confirmCancel()">Cancel Order</button>
+</div></div>
+
+<div id="dash" class="dash">
     <div class="topbar">
-        <div class="topbar-left">
-            <div>
-                <div class="topbar-title">NOSH QR ORDERS</div>
-                <div class="topbar-outlet" id="dashOutletName">House Of Nosh</div>
-            </div>
-        </div>
+        <div><div class="t-title">NOSH QR ORDERS</div><div class="t-outlet" id="dOutlet">-</div></div>
         <div class="topbar-right">
-            <div class="topbar-stats">
-                <div class="stat-item">
-                    <div class="stat-num" id="statNew">0</div>
-                    <div class="stat-label">New</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-num" id="statTotal">0</div>
-                    <div class="stat-label">Today</div>
-                </div>
-            </div>
-            <button class="sound-toggle active" id="soundToggle" onclick="toggleSound()" title="Toggle sound">🔔</button>
-            <button class="btn-logout" onclick="openAvailabilityModal()">86 Items</button>
-            <button class="btn-logout" style="background:#FFB800;color:#000;border-color:#FFB800;" onclick="document.getElementById('changePinModal').classList.add('active')">🔑 PIN</button>
-            <span class="topbar-time" id="dashTime"></span>
-            <button class="btn-logout" onclick="logout()">Logout</button>
+            <div class="stat-box"><div class="stat-num" id="sNew">0</div><div class="stat-lbl">New</div></div>
+            <div class="stat-box"><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Today</div></div>
+            <button class="sound-btn on" id="soundBtn" onclick="toggleSound()">🔔</button>
+            <button class="tbtn" onclick="openAvail()">86 Items</button>
+            <button class="tbtn tbtn-gold" onclick="openM('changePinModal')">🔑</button>
+            <span style="font-size:11px;color:#666;" id="dTime"></span>
+            <button class="tbtn" onclick="doLogout()">Logout</button>
         </div>
     </div>
-
-    <!-- Order Columns -->
-    <div class="columns-container">
-        <!-- NEW ORDERS -->
-        <div class="column col-new">
-            <div class="column-header">
-                <span class="column-title">🔴 New Orders</span>
-                <span class="column-count" id="newCount">0</span>
-            </div>
-            <div class="column-body" id="newOrders"></div>
-        </div>
-        <!-- DONE (Entered into POS) -->
-        <div class="column col-accepted">
-            <div class="column-header">
-                <span class="column-title">🟢 Entered into POS</span>
-                <span class="column-count" id="acceptedCount">0</span>
-            </div>
-            <div class="column-body" id="acceptedOrders"></div>
-        </div>
+    <div class="cols">
+        <div class="col col-new"><div class="col-head"><span class="col-title">🔴 New Orders</span><span class="col-cnt" id="cntNew">0</span></div><div class="col-body" id="colNew"></div></div>
+        <div class="col col-done"><div class="col-head"><span class="col-title">🟢 Entered into POS</span><span class="col-cnt" id="cntDone">0</span></div><div class="col-body" id="colDone"></div></div>
     </div>
-
-    <!-- Clear Table Bar -->
-    <div class="clear-table-bar">
-        <span style="font-size:13px;color:#888;">Clear Table:</span>
-        <select class="clear-table-select" id="clearTableSelect"></select>
-        <button class="btn-clear-table" onclick="clearTable()">Clear & End Session</button>
+    <div class="bottom-bar">
+        <span style="font-size:12px;color:#888;">Clear Table:</span>
+        <select id="clearSelect" class="bb-select"></select>
+        <button class="bb-btn" onclick="clearTable()">Clear & End Session</button>
     </div>
 </div>
 
-<!-- ===== ORDER DETAIL MODAL ===== -->
-<div class="modal-overlay" id="orderDetailModal">
-    <div style="background:#1a1c2e;border-radius:16px;padding:20px;width:95%;max-width:480px;max-height:85vh;overflow-y:auto;">
-        <div id="orderDetailContent"></div>
-    </div>
-</div>
+<div id="toast"></div>
+<audio id="alertAudio" preload="auto"><source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH+Jj4+JgHZsakBYYHGBjpKOhHlxZFtTUl9vjJGQioB4a2FXU1licICNk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbYKOk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbQ==" type="audio/wav"></audio>
 
-<!-- ===== 86 ITEM AVAILABILITY MODAL ===== -->
-<div class="modal-overlay" id="availModal">
-    <div class="modal">
-        <div class="modal-title">
-            <span>86 — Item Availability</span>
-            <button class="modal-close" onclick="closeModal('availModal')">✕</button>
-        </div>
-        <input type="text" class="modal-search" id="availSearch" placeholder="Search items..." oninput="filterAvailItems()">
-        <div id="availItemsList"></div>
-    </div>
-</div>
-
-<!-- ===== CANCEL REASON MODAL ===== -->
-<div class="modal-overlay cancel-modal" id="cancelModal">
-    <div class="modal" style="max-width:400px;">
-        <div class="modal-title">
-            <span>Cancel Order</span>
-            <button class="modal-close" onclick="closeModal('cancelModal')">✕</button>
-        </div>
-        <div style="font-size:13px;color:#888;margin-bottom:12px;" id="cancelOrderInfo"></div>
-        <textarea id="cancelReason" placeholder="Reason for cancellation (e.g., item unavailable, customer changed mind)"></textarea>
-        <button class="btn btn-primary" style="background:#ff6b6b;" onclick="confirmCancel()">Cancel Order</button>
-    </div>
-</div>
-
-<!-- ===== AUDIO ===== -->
-<audio id="alertSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH+Jj4+JgHZsakBYYHGBjpKOhHlxZFtTUl9vjJGQioB4a2FXU1licICNk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbYKOk5GJf3VpXlRTXW2CjpORiX91aV5UU11tgo6TkYl/dWleVFNdbQ==" type="audio/wav">
-</audio>
-
-<!-- ===== FIREBASE ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-
-<!-- MSG91 OTP SDK (for OTP login mode) -->
 <script>
-var configuration = {
-    widgetId: "366278704a57303934373930",
-    tokenAuth: "493471T68i0srho699dd45cP1",
-    exposeMethods: true,
-    success: (data) => { console.log('MSG91 success:', data); },
-    failure: (error) => { console.log('MSG91 failure:', error); }
-};
-</script>
-<script>
-(function loadOtpScript(urls) {
-    let i = 0;
-    function attempt() {
-        const s = document.createElement('script');
-        s.src = urls[i]; s.async = true;
-        s.onload = () => { if (typeof window.initSendOTP === 'function') window.initSendOTP(configuration); };
-        s.onerror = () => { i++; if (i < urls.length) attempt(); };
-        document.head.appendChild(s);
-    }
-    attempt();
-})(['https://verify.msg91.com/otp-provider.js','https://verify.phone91.com/otp-provider.js']);
-</script>
+firebase.initializeApp({apiKey:"AIzaSyBHmyK6NTVuSsKCh-969SElL1EEnq9Ln0M",authDomain:"nosh-qr-ordering-trial.firebaseapp.com",projectId:"nosh-qr-ordering-trial",storageBucket:"nosh-qr-ordering-trial.firebasestorage.app",messagingSenderId:"672306605373",appId:"1:672306605373:web:c234755331d045142c6954"});
+const db=firebase.firestore();
 
-<script>
-// ============================================================
-// CONFIG
-// ============================================================
-const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBHmyK6NTVuSsKCh-969SElL1EEnq9Ln0M",
-    authDomain: "nosh-qr-ordering-trial.firebaseapp.com",
-    projectId: "nosh-qr-ordering-trial",
-    storageBucket: "nosh-qr-ordering-trial.firebasestorage.app",
-    messagingSenderId: "672306605373",
-    appId: "1:672306605373:web:c234755331d045142c6954"
-};
+function getIST(){return new Date(Date.now()+5.5*60*60*1000);}
+function getISTDate(){const d=getIST();return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
+function getISTTime(){const d=getIST();let h=d.getUTCHours(),m=d.getUTCMinutes(),s=d.getUTCSeconds();const a=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' '+a;}
+function toast(m,t='ok'){const e=document.getElementById('toast');e.textContent=m;e.className='show '+t;setTimeout(()=>e.className='',2800);}
+function openM(id){document.getElementById(id).classList.add('on');}
+function closeM(id){document.getElementById(id).classList.remove('on');}
 
-firebase.initializeApp(FIREBASE_CONFIG);
-const db = firebase.firestore();
+let staffPhone='',staffRole='',staffOutletIds=[],selectedOutletId='',selectedOutletName='';
+let allOrders=[],allMenuItems=[],ordersListener=null,soundEnabled=true,lastNewCount=0,alertInt=null,cancelDocId='';
 
-// IST Helpers
-function getIST() { return new Date(Date.now() + 5.5 * 60 * 60 * 1000); }
-function getISTDateString() {
-    const ist = getIST();
-    return ist.getUTCFullYear() + '-' + String(ist.getUTCMonth() + 1).padStart(2, '0') + '-' + String(ist.getUTCDate()).padStart(2, '0');
+async function doLogin(){
+    const ph=document.getElementById('inpPhone').value.trim(),pin=document.getElementById('inpPin').value.trim();
+    if(!/^\d{10}$/.test(ph)){document.getElementById('loginErr').textContent='Enter 10-digit number';return;}
+    if(!pin){document.getElementById('loginErr').textContent='Enter PIN';return;}
+    document.getElementById('loginErr').textContent='';staffPhone='+91'+ph;
+    try{
+        const doc=await db.collection('qr_staff').doc(staffPhone).get();
+        if(!doc.exists){document.getElementById('loginErr').textContent='User not found';return;}
+        const d=doc.data();
+        if(!d.isActive){document.getElementById('loginErr').textContent='Account disabled';return;}
+        if((d.pin||'1234')!==pin){document.getElementById('loginErr').textContent='Wrong PIN';return;}
+        staffRole=d.role;staffOutletIds=d.outletIds||[];
+        localStorage.setItem('nosh_cashier',JSON.stringify({phone:staffPhone,at:Date.now()}));
+        if(!d.pin||d.pin==='1234'){document.getElementById('loginStep').style.display='none';document.getElementById('setPinStep').style.display='block';return;}
+        await pickOutlet();
+    }catch(e){document.getElementById('loginErr').textContent='Error: '+e.message;}
 }
-function getISTTimeString() {
-    const ist = getIST();
-    let h = ist.getUTCHours(), m = ist.getUTCMinutes(), s = ist.getUTCSeconds();
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ' ' + ampm;
+async function saveNewPin(){
+    const n=document.getElementById('inpNewPin').value.trim(),c=document.getElementById('inpConfirmPin').value.trim();
+    if(n.length<4){document.getElementById('setPinErr').textContent='4+ digits required';return;}
+    if(n!==c){document.getElementById('setPinErr').textContent='PINs do not match';return;}
+    if(n==='1234'){document.getElementById('setPinErr').textContent='Choose different PIN';return;}
+    try{await db.collection('qr_staff').doc(staffPhone).update({pin:n});toast('✅ PIN saved!');await pickOutlet();}catch(e){document.getElementById('setPinErr').textContent='Error: '+e.message;}
 }
-
-// ============================================================
-// STATE
-// ============================================================
-let staffPhone = '';
-let staffRole = '';
-let staffOutletIds = [];
-let selectedOutletId = '';
-let selectedOutletName = '';
-let allOrders = [];
-let allMenuItems = [];
-let ordersListener = null;
-let soundEnabled = true;
-let lastNewOrderCount = 0;
-let alertInterval = null;
-let cancelOrderId = '';
-
-// ============================================================
-// AUTH — PIN + OTP Login
-// ============================================================
-let loginMode = 'pin'; // 'pin' or 'otp'
-
-function setLoginMode(mode) {
-    loginMode = mode;
-    document.getElementById('modePinBtn').style.background = mode === 'pin' ? '#e94560' : '#1e2030';
-    document.getElementById('modePinBtn').style.color = mode === 'pin' ? '#fff' : '#888';
-    document.getElementById('modeOtpBtn').style.background = mode === 'otp' ? '#e94560' : '#1e2030';
-    document.getElementById('modeOtpBtn').style.color = mode === 'otp' ? '#fff' : '#888';
-    document.getElementById('pinFields').style.display = mode === 'pin' ? 'block' : 'none';
-    document.getElementById('otpFields').style.display = mode === 'otp' ? 'block' : 'none';
+function skipPin(){pickOutlet();}
+async function saveChangedPin(){
+    const cur=document.getElementById('cpCurrent').value.trim(),n=document.getElementById('cpNew').value.trim(),c=document.getElementById('cpConfirm').value.trim();
+    const doc=await db.collection('qr_staff').doc(staffPhone).get();
+    if(cur!==(doc.data()?.pin||'1234')){document.getElementById('cpErr').textContent='Wrong current PIN';return;}
+    if(n.length<4){document.getElementById('cpErr').textContent='4+ digits';return;}
+    if(n!==c){document.getElementById('cpErr').textContent='Do not match';return;}
+    try{await db.collection('qr_staff').doc(staffPhone).update({pin:n});toast('✅ PIN changed!');closeM('changePinModal');}catch(e){toast('Error','err');}
 }
-
-// PIN Login
-async function doLogin() {
-    const phone = document.getElementById('phoneInput').value.trim();
-    const pin = document.getElementById('pinInput').value.trim();
-    
-    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
-    if (!pin) { document.getElementById('loginError').textContent = 'Enter your PIN'; return; }
-    document.getElementById('loginError').textContent = '';
-    
-    staffPhone = '+91' + phone;
-    
-    try {
-        const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
-        if (!staffDoc.exists) { document.getElementById('loginError').textContent = 'User not found'; return; }
-        
-        const data = staffDoc.data();
-        if (!data.isActive) { document.getElementById('loginError').textContent = 'Account disabled'; return; }
-        
-        const expectedPin = data.pin || '1234';
-        if (pin !== expectedPin) { document.getElementById('loginError').textContent = 'Wrong PIN'; return; }
-        
-        staffRole = data.role;
-        staffOutletIds = data.outletIds || [];
-        
-        // Save login
-        localStorage.setItem('nosh_cashier_login', JSON.stringify({
-            phone: staffPhone, role: staffRole, outletIds: staffOutletIds, loginAt: Date.now()
-        }));
-        
-        // If first login (default PIN), force PIN change
-        if (!data.pin || data.pin === '1234') {
-            document.getElementById('loginStep').style.display = 'none';
-            document.getElementById('changePinStep').style.display = 'block';
-            document.getElementById('changePinTitle').textContent = 'Set Your New PIN';
-            document.getElementById('skipPinLink').style.display = 'block';
-            document.getElementById('newPinInput').focus();
-            return;
-        }
-        
-        await showOutletSelection();
-    } catch (e) {
-        document.getElementById('loginError').textContent = 'Error: ' + e.message;
-    }
+async function pickOutlet(){
+    let outs=[];
+    if(staffOutletIds.includes('all')){const s=await db.collection('qr_outlets').where('isActive','==',true).get();outs=s.docs.map(d=>d.data());}
+    else{for(const id of staffOutletIds){const d=await db.collection('qr_outlets').doc(id).get();if(d.exists&&d.data().isActive)outs.push(d.data());}}
+    if(!outs.length){document.getElementById('loginErr').textContent='No outlets assigned';return;}
+    if(outs.length===1){selectedOutletId=outs[0].id;selectedOutletName=outs[0].name;startDash();return;}
+    document.getElementById('outletSelect').innerHTML=outs.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
+    document.getElementById('authWrap').style.display='none';openM('outletModal');
 }
-
-async function saveNewPin() {
-    const newPin = document.getElementById('newPinInput').value.trim();
-    const confirmPin = document.getElementById('confirmPinInput').value.trim();
-    
-    if (newPin.length < 4) { document.getElementById('changePinError').textContent = 'PIN must be 4+ digits'; return; }
-    if (newPin !== confirmPin) { document.getElementById('changePinError').textContent = 'PINs do not match'; return; }
-    if (newPin === '1234') { document.getElementById('changePinError').textContent = 'Choose a different PIN'; return; }
-    document.getElementById('changePinError').textContent = '';
-    
-    try {
-        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
-        toast('✅ PIN saved!');
-        await showOutletSelection();
-    } catch (e) {
-        document.getElementById('changePinError').textContent = 'Error: ' + e.message;
-    }
+function enterDash(){const s=document.getElementById('outletSelect');selectedOutletId=s.value;selectedOutletName=s.options[s.selectedIndex].text;closeM('outletModal');startDash();}
+async function checkAutoLogin(){
+    const s=localStorage.getItem('nosh_cashier');if(!s)return;
+    try{const l=JSON.parse(s);if(Date.now()-l.at>12*3600000){localStorage.removeItem('nosh_cashier');return;}
+    const d=await db.collection('qr_staff').doc(l.phone).get();if(!d.exists||!d.data().isActive){localStorage.removeItem('nosh_cashier');return;}
+    staffPhone=l.phone;staffRole=d.data().role;staffOutletIds=d.data().outletIds||[];
+    const lo=localStorage.getItem('nosh_cashier_outlet');
+    if(lo){const od=await db.collection('qr_outlets').doc(lo).get();if(od.exists&&od.data().isActive){selectedOutletId=lo;selectedOutletName=od.data().name;startDash();return;}}
+    await pickOutlet();}catch(e){console.error(e);}
 }
+function doLogout(){localStorage.removeItem('nosh_cashier');localStorage.removeItem('nosh_cashier_outlet');if(ordersListener)ordersListener();location.reload();}
 
-async function skipPinChange() {
-    await showOutletSelection();
+function startDash(){
+    document.getElementById('authWrap').style.display='none';document.getElementById('dash').classList.add('on');
+    document.getElementById('dOutlet').textContent=selectedOutletName;localStorage.setItem('nosh_cashier_outlet',selectedOutletId);
+    setInterval(()=>{document.getElementById('dTime').textContent=getISTTime();},1000);document.getElementById('dTime').textContent=getISTTime();
+    loadMenuItems();loadTables();startListener();
 }
-
-// OTP Login
-function sendStaffOTP() {
-    const phone = document.getElementById('phoneInput').value.trim();
-    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
-    document.getElementById('loginError').textContent = '';
-    staffPhone = '+91' + phone;
-
-    if (typeof window.sendOtp !== 'function') {
-        document.getElementById('loginError').textContent = 'OTP loading... try again.';
-        return;
-    }
-
-    document.getElementById('sendOtpBtn').disabled = true;
-    document.getElementById('sendOtpBtn').textContent = 'Sending...';
-
-    window.sendOtp('91' + phone,
-        (data) => {
-            document.getElementById('sendOtpBtn').disabled = false;
-            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
-            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone;
-            document.getElementById('loginStep').style.display = 'none';
-            document.getElementById('otpVerifyStep').style.display = 'block';
-            document.querySelector('#otpVerifyStep .otp-box[data-idx="0"]').focus();
-        },
-        (err) => {
-            document.getElementById('sendOtpBtn').disabled = false;
-            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
-            document.getElementById('loginError').textContent = err?.message || 'Failed to send OTP';
-        }
-    );
+function startListener(){
+    ordersListener=db.collection('qr_orders').where('outletId','==',selectedOutletId).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
+        .onSnapshot(snap=>{allOrders=snap.docs.map(d=>({docId:d.id,...d.data()}));render();
+        const nc=allOrders.filter(o=>o.status==='new').length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;});
 }
-
-function verifyStaffOTP() {
-    const boxes = document.querySelectorAll('#otpVerifyStep .otp-box');
-    let otp = ''; boxes.forEach(b => otp += b.value);
-    if (otp.length !== 6) { document.getElementById('otpError').textContent = 'Enter 6-digit OTP'; return; }
-    document.getElementById('otpError').textContent = '';
-
-    if (typeof window.verifyOtp !== 'function') {
-        document.getElementById('otpError').textContent = 'OTP system not ready';
-        return;
-    }
-
-    window.verifyOtp(otp,
-        async (data) => {
-            const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
-            if (!staffDoc.exists || !staffDoc.data().isActive) {
-                document.getElementById('otpError').textContent = 'Not authorized. Contact admin.';
-                return;
-            }
-            staffRole = staffDoc.data().role;
-            staffOutletIds = staffDoc.data().outletIds || [];
-            localStorage.setItem('nosh_cashier_login', JSON.stringify({
-                phone: staffPhone, role: staffRole, outletIds: staffOutletIds, loginAt: Date.now()
-            }));
-            await showOutletSelection();
-        },
-        (err) => {
-            document.getElementById('otpError').textContent = err?.message || 'Invalid OTP';
-        }
-    );
+function render(){
+    const nw=allOrders.filter(o=>o.status==='new'),dn=allOrders.filter(o=>o.status!=='new');
+    document.getElementById('cntNew').textContent=nw.length;document.getElementById('cntDone').textContent=dn.length;
+    document.getElementById('sNew').textContent=nw.length;document.getElementById('sTotal').textContent=allOrders.length;
+    document.getElementById('colNew').innerHTML=nw.length?nw.map(o=>tile(o,'new')).join(''):'<div class="empty"><span class="ei">✨</span>No new orders</div>';
+    document.getElementById('colDone').innerHTML=dn.length?dn.slice(0,30).map(o=>tile(o,o.status==='cancelled'?'cancelled':'done')).join(''):'<div class="empty"><span class="ei">📋</span>No orders yet</div>';
 }
-
-// OTP auto-advance (6 digits)
-document.querySelectorAll('#otpVerifyStep .otp-box').forEach((box, idx) => {
-    box.addEventListener('input', e => {
-        e.target.value = e.target.value.replace(/\D/g, '');
-        if (e.target.value && idx < 5) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx+1}"]`).focus();
-        if (idx === 5 && e.target.value) verifyStaffOTP();
-    });
-    box.addEventListener('keydown', e => {
-        if (e.key === 'Backspace' && !e.target.value && idx > 0) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx-1}"]`).focus();
-    });
-});
-
-async function saveChangedPin() {
-    const current = document.getElementById('cpCurrentPin').value.trim();
-    const newPin = document.getElementById('cpNewPin').value.trim();
-    const confirm = document.getElementById('cpConfirmPin').value.trim();
-    
-    if (!current) { document.getElementById('changePinModalError').textContent = 'Enter current PIN'; return; }
-    
-    // Verify current PIN
-    const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
-    const currentPin = staffDoc.data()?.pin || '1234';
-    if (current !== currentPin) { document.getElementById('changePinModalError').textContent = 'Current PIN is wrong'; return; }
-    if (newPin.length < 4) { document.getElementById('changePinModalError').textContent = 'New PIN must be 4+ digits'; return; }
-    if (newPin !== confirm) { document.getElementById('changePinModalError').textContent = 'PINs do not match'; return; }
-    document.getElementById('changePinModalError').textContent = '';
-    
-    try {
-        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
-        toast('✅ PIN changed!');
-        document.getElementById('changePinModal').classList.remove('active');
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
-
-async function showOutletSelection() {
-    let outlets = [];
-    if (staffOutletIds.includes('all')) {
-        const snap = await db.collection('qr_outlets').where('isActive', '==', true).get();
-        outlets = snap.docs.map(d => d.data());
-    } else {
-        for (const oid of staffOutletIds) {
-            const doc = await db.collection('qr_outlets').doc(oid).get();
-            if (doc.exists && doc.data().isActive) outlets.push(doc.data());
-        }
-    }
-
-    if (outlets.length === 0) { document.getElementById('loginError').textContent = 'No outlets assigned'; return; }
-    if (outlets.length === 1) {
-        selectedOutletId = outlets[0].id;
-        selectedOutletName = outlets[0].name;
-        startDashboard();
-        return;
-    }
-
-    const select = document.getElementById('outletSelect');
-    select.innerHTML = outlets.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('outletModal').style.display = 'flex';
-}
-
-function enterDashboard() {
-    const select = document.getElementById('outletSelect');
-    selectedOutletId = select.value;
-    selectedOutletName = select.options[select.selectedIndex].text;
-    document.getElementById('outletModal').style.display = 'none';
-    startDashboard();
-}
-
-// Auto-login
-async function checkAutoLogin() {
-    const stored = localStorage.getItem('nosh_cashier_login');
-    if (!stored) return;
-    try {
-        const login = JSON.parse(stored);
-        if (Date.now() - login.loginAt > 12 * 60 * 60 * 1000) { localStorage.removeItem('nosh_cashier_login'); return; }
-        const doc = await db.collection('qr_staff').doc(login.phone).get();
-        if (!doc.exists || !doc.data().isActive) { localStorage.removeItem('nosh_cashier_login'); return; }
-        staffPhone = login.phone;
-        staffRole = doc.data().role;
-        staffOutletIds = doc.data().outletIds || [];
-        const lastOutlet = localStorage.getItem('nosh_cashier_outlet');
-        if (lastOutlet) {
-            const outletDoc = await db.collection('qr_outlets').doc(lastOutlet).get();
-            if (outletDoc.exists && outletDoc.data().isActive) {
-                selectedOutletId = lastOutlet;
-                selectedOutletName = outletDoc.data().name;
-                startDashboard();
-                return;
-            }
-        }
-        await showOutletSelection();
-    } catch (e) { console.error('Auto-login failed:', e); }
-}
-
-function logout() {
-    localStorage.removeItem('nosh_cashier_login');
-    localStorage.removeItem('nosh_cashier_outlet');
-    if (ordersListener) ordersListener();
-    if (alertInterval) clearInterval(alertInterval);
-    location.reload();
-}
-
-// ============================================================
-// DASHBOARD
-// ============================================================
-function startDashboard() {
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('dashboard').classList.add('active');
-    document.getElementById('dashOutletName').textContent = selectedOutletName;
-    localStorage.setItem('nosh_cashier_outlet', selectedOutletId);
-
-    // Start clock
-    updateClock();
-    setInterval(updateClock, 1000);
-
-    // Load menu items for availability toggle
-    loadMenuItems();
-
-    // Load tables for clear-table dropdown
-    loadTables();
-
-    // Start real-time orders listener
-    startOrdersListener();
-}
-
-function updateClock() {
-    document.getElementById('dashTime').textContent = getISTTimeString();
-}
-
-// ============================================================
-// REAL-TIME ORDERS
-// ============================================================
-function startOrdersListener() {
-    const today = getISTDateString();
-    
-    ordersListener = db.collection('qr_orders')
-        .where('outletId', '==', selectedOutletId)
-        .where('dateString', '==', today)
-        .orderBy('createdAt', 'desc')
-        .onSnapshot(snapshot => {
-            allOrders = snapshot.docs.map(d => ({ docId: d.id, ...d.data() }));
-            renderOrders();
-
-            // Check for new orders and alert
-            const newOrders = allOrders.filter(o => o.status === 'new');
-            if (newOrders.length > lastNewOrderCount && lastNewOrderCount >= 0) {
-                playAlert();
-            }
-            lastNewOrderCount = newOrders.length;
-        });
-}
-
-function renderOrders() {
-    const newOrders = allOrders.filter(o => o.status === 'new');
-
-    document.getElementById('newCount').textContent = newOrders.length;
-    document.getElementById('statNew').textContent = newOrders.length;
-    document.getElementById('statTotal').textContent = allOrders.length;
-
-    document.getElementById('newOrders').innerHTML = newOrders.length
-        ? newOrders.map(o => renderOrderCard(o)).join('')
-        : '<div class="empty-state"><div class="empty-state-icon">✨</div><div class="empty-state-text">No new orders</div></div>';
-
-    const doneOrders = allOrders.filter(o => o.status === 'accepted' || o.status === 'served' || o.status === 'cancelled');
-    document.getElementById('acceptedCount').textContent = doneOrders.length;
-
-    document.getElementById('acceptedOrders').innerHTML = doneOrders.length
-        ? doneOrders.slice(0, 30).map(o => renderOrderCard(o)).join('')
-        : '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">No orders processed yet</div></div>';
-}
-
-function renderOrderCard(order) {
-    const pulse = order.status === 'new' ? ' pulse' : '';
-    const itemCount = order.itemCount || (order.items || []).reduce((s,i) => s + i.qty, 0);
-    const itemNames = (order.items || []).slice(0, 3).map(i => i.qty + '× ' + i.name).join(', ');
-    const more = (order.items || []).length > 3 ? ' +' + ((order.items || []).length - 3) + ' more' : '';
-
-    return `
-    <div class="order-tile status-${order.status}${pulse}" onclick="openOrderDetail('${order.docId}')">
-        <div class="tile-row1">
-            <span class="tile-order-num">#${order.orderNumber}</span>
-            <span class="tile-table">${order.tableName || 'Table ' + order.tableNumber}</span>
-        </div>
-        <div style="font-size:12px;color:#aaa;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${itemNames}${more}</div>
-        <div class="tile-row2">
-            <span class="tile-time">${order.createdAtIST || ''}</span>
-            <span class="tile-items">${itemCount} item${itemCount > 1 ? 's' : ''}</span>
-        </div>
-        ${order.status === 'cancelled' ? '<div style="font-size:10px;color:#ff6b6b;margin-top:4px;">Cancelled</div>' : ''}
+function tile(o,cls){
+    const items=(o.items||[]).slice(0,3).map(i=>i.qty+'× '+i.name).join(', ');
+    const more=(o.items||[]).length>3?' +'+(o.items.length-3)+' more':'';
+    return `<div class="tile ${cls}${cls==='new'?' pulse':''}" onclick="openDetail('${o.docId}')">
+        <div class="tile-r1"><span class="tile-num">#${o.orderNumber}</span><span class="tile-tbl">${o.tableName||'Table '+o.tableNumber}</span></div>
+        <div class="tile-items">${items}${more}</div>
+        <div class="tile-r2"><span>${o.createdAtIST||''}</span><span>${o.itemCount||0} item${(o.itemCount||0)>1?'s':''}</span></div>
+        ${cls==='cancelled'?'<div style="font-size:10px;color:#ff6b6b;margin-top:3px;">Cancelled</div>':''}
     </div>`;
 }
-
-// ============================================================
-// ORDER DETAIL MODAL
-// ============================================================
-function openOrderDetail(docId) {
-    const order = allOrders.find(o => o.docId === docId);
-    if (!order) return;
-
-    const isNew = order.status === 'new';
-    const isCancelled = order.status === 'cancelled';
-    const badgeClass = isNew ? 'od-badge-new' : isCancelled ? 'od-badge-cancelled' : 'od-badge-done';
-    const badgeText = isNew ? '🔴 New Order' : isCancelled ? '❌ Cancelled' : '✅ Entered into POS';
-
-    const phone = order.customerPhone ? order.customerPhone.replace('+91', '') : '';
-    const displayPhone = phone ? phone.replace(/(\d{5})(\d{5})/, '$1 $2') : '';
-
-    const itemsHtml = (order.items || []).map(item => {
-        const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
-        const modsText = (item.modifiers || []).map(m => m.option).join(', ');
-        const itemPrice = item.price + (item.modifiers || []).reduce((s, m) => s + (m.extraPrice || 0), 0);
-        
-        return `
-        <div class="od-item">
-            <div class="od-item-qty">${item.qty}×</div>
-            <div class="od-item-details">
-                <div class="od-item-name">
-                    ${vegClass ? `<span class="veg-dot ${vegClass}"></span>` : ''}
-                    ${item.name}
-                </div>
-                ${modsText ? `<div class="od-item-mods">↳ ${modsText}</div>` : ''}
-                ${item.specialInstructions ? `<div class="od-item-instr">"${item.specialInstructions}"</div>` : ''}
-            </div>
-            <div class="od-item-price">₹${Math.round(itemPrice * item.qty)}</div>
-        </div>`;
+function openDetail(docId){
+    const o=allOrders.find(x=>x.docId===docId);if(!o)return;
+    const isNew=o.status==='new',isCan=o.status==='cancelled';
+    const badge=isNew?'background:#ff6b6b20;color:#ff6b6b':isCan?'background:#66666630;color:#888':'background:#4ecdc420;color:#4ecdc4';
+    const badgeTxt=isNew?'🔴 New Order':isCan?'❌ Cancelled':'✅ Entered into POS';
+    const ph=o.customerPhone?o.customerPhone.replace('+91',''):'';const dph=ph?ph.replace(/(\d{5})(\d{5})/,'$1 $2'):'';
+    const itemsH=(o.items||[]).map(i=>{
+        const vc=i.vegType==='Veg'?'veg':i.vegType==='NonVeg'?'nonveg':i.vegType==='Egg'?'egg':'';
+        const ms=(i.modifiers||[]).map(m=>m.option).join(', ');const pr=i.price+(i.modifiers||[]).reduce((s,m)=>s+(m.extraPrice||0),0);
+        return `<div class="od-item"><div class="od-qty">${i.qty}×</div><div class="od-det"><div class="od-name">${vc?`<span class="vd ${vc}"></span>`:''}${i.name}</div>${ms?`<div class="od-mods">↳ ${ms}</div>`:''}${i.specialInstructions?`<div class="od-instr">"${i.specialInstructions}"</div>`:''}</div><div class="od-price">₹${Math.round(pr*i.qty)}</div></div>`;
     }).join('');
-
-    const actionsHtml = isNew ? `
-        <div class="od-actions">
-            <button class="od-btn od-btn-accept" onclick="acceptOrder('${order.docId}')">✓ Entered into POS</button>
-            <button class="od-btn od-btn-cancel" onclick="closeModal('orderDetailModal');openCancelModal('${order.docId}', ${order.orderNumber})">Cancel</button>
-        </div>` : '';
-
-    document.getElementById('orderDetailContent').innerHTML = `
-        <div class="od-header">
-            <div class="od-title">Order #${order.orderNumber}</div>
-            <button class="od-close" onclick="closeModal('orderDetailModal')">✕</button>
-        </div>
-        <div class="od-badge ${badgeClass}">${badgeText}</div>
-        <div class="od-info">
-            <span>🪑 ${order.tableName || 'Table ' + order.tableNumber}</span>
-            <span>🕐 ${order.createdAtIST || ''}</span>
-            ${displayPhone ? `<span>📱 ${displayPhone}</span>` : ''}
-        </div>
-        <div class="od-items">${itemsHtml}</div>
-        <div class="od-total">
-            <span class="od-total-label">Total (reference)</span>
-            <span class="od-total-value">₹${Math.round(order.orderTotal || 0)}</span>
-        </div>
-        ${isCancelled && order.cancelReason ? `<div style="font-size:13px;color:#ff6b6b;margin-top:12px;padding:10px;background:#ff6b6b10;border-radius:8px;">Cancelled: ${order.cancelReason}</div>` : ''}
-        ${actionsHtml}
-    `;
-
-    document.getElementById('orderDetailModal').classList.add('active');
+    const acts=isNew?`<div class="od-actions"><button class="od-btn od-accept" onclick="acceptOrder('${o.docId}')">✓ Entered into POS</button><button class="od-btn od-cancel" onclick="closeM('detailModal');openCancel('${o.docId}',${o.orderNumber})">Cancel</button></div>`:'';
+    document.getElementById('detailContent').innerHTML=`
+        <div class="od-head"><div class="od-title">Order #${o.orderNumber}</div><button class="od-x" onclick="closeM('detailModal')">✕</button></div>
+        <div style="${badge};display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;margin-bottom:12px;">${badgeTxt}</div>
+        <div class="od-info"><span>🪑 ${o.tableName||'Table '+o.tableNumber}</span><span>🕐 ${o.createdAtIST||''}</span>${dph?`<span>📱 ${dph}</span>`:''}</div>
+        <div class="od-items">${itemsH}</div>
+        <div class="od-total"><span style="color:#888;">Total (ref)</span><span style="font-size:17px;font-weight:800;">₹${Math.round(o.orderTotal||0)}</span></div>
+        ${isCan&&o.cancelReason?`<div style="font-size:12px;color:#ff6b6b;margin-top:10px;padding:8px;background:#ff6b6b10;border-radius:8px;">Cancelled: ${o.cancelReason}</div>`:''}${acts}`;
+    openM('detailModal');
 }
+document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeM('detailModal');});
+async function acceptOrder(id){try{await db.collection('qr_orders').doc(id).update({status:'accepted',acceptedAt:firebase.firestore.FieldValue.serverTimestamp()});closeM('detailModal');stopAlert();toast('✅ Entered into POS');}catch(e){alert('Error: '+e.message);}}
+function openCancel(id,num){cancelDocId=id;document.getElementById('cancelInfo').textContent='Order #'+num;document.getElementById('cancelReason').value='';openM('cancelModal');}
+async function confirmCancel(){const r=document.getElementById('cancelReason').value.trim();if(!r){alert('Enter reason');return;}try{await db.collection('qr_orders').doc(cancelDocId).update({status:'cancelled',cancelledAt:firebase.firestore.FieldValue.serverTimestamp(),cancelReason:r});closeM('cancelModal');stopAlert();toast('Order cancelled');}catch(e){alert('Error: '+e.message);}}
 
-// Close order detail on overlay click
-document.getElementById('orderDetailModal').addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('active');
-});
-}
+function toggleSound(){soundEnabled=!soundEnabled;const b=document.getElementById('soundBtn');b.textContent=soundEnabled?'🔔':'🔕';b.classList.toggle('on',soundEnabled);if(!soundEnabled)stopAlert();}
+function playAlert(){if(!soundEnabled)return;stopAlert();try{document.getElementById('alertAudio').play().catch(()=>{});}catch(e){}alertInt=setInterval(()=>{try{document.getElementById('alertAudio').play().catch(()=>{});}catch(e){}},8000);}
+function stopAlert(){if(alertInt){clearInterval(alertInt);alertInt=null;}}
 
-// ============================================================
-// ORDER ACTIONS
-// ============================================================
-async function acceptOrder(docId) {
-    try {
-        await db.collection('qr_orders').doc(docId).update({
-            status: 'accepted',
-            acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        closeModal('orderDetailModal');
-        stopAlert();
-    } catch (e) {
-        console.error('Accept error:', e);
-        alert('Failed to accept order. Try again.');
-    }
-}
+async function loadMenuItems(){const s=await db.collection('menu_items').where('isActive','==',true).get();allMenuItems=s.docs.map(d=>({docId:d.id,...d.data()}));allMenuItems.sort((a,b)=>a.name.localeCompare(b.name));}
+function openAvail(){filterAvail();document.getElementById('availSearch').value='';openM('availModal');}
+function filterAvail(){const q=(document.getElementById('availSearch').value||'').toLowerCase();let items=allMenuItems;if(q)items=items.filter(i=>i.name.toLowerCase().includes(q));document.getElementById('availList').innerHTML=items.slice(0,50).map(i=>`<div class="avail-item"><span class="avail-name">${i.name}</span><div class="atgl ${i.isAvailable?'on':''}" onclick="toggleAvail('${i.docId}',${!i.isAvailable})"></div></div>`).join('');}
+async function toggleAvail(id,v){try{await db.collection('menu_items').doc(id).update({isAvailable:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});const i=allMenuItems.find(x=>x.docId===id);if(i)i.isAvailable=v;filterAvail();toast(v?'✅ Available':'🚫 86\'d');}catch(e){toast('Error','err');}}
 
-function openCancelModal(docId, orderNum) {
-    cancelOrderId = docId;
-    document.getElementById('cancelOrderInfo').textContent = `Order #${orderNum}`;
-    document.getElementById('cancelReason').value = '';
-    document.getElementById('cancelModal').classList.add('active');
-}
+async function loadTables(){const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();const t=s.docs.map(d=>d.data()).filter(t=>t.isActive).sort((a,b)=>a.tableNumber-b.tableNumber);document.getElementById('clearSelect').innerHTML='<option value="">Select...</option>'+t.map(t=>`<option value="${t.id}">${t.tableName}</option>`).join('');}
+async function clearTable(){const id=document.getElementById('clearSelect').value;if(!id){alert('Select a table');return;}if(!confirm('Clear table and end session?'))return;try{const td=await db.collection('qr_tables').doc(id).get();const sid=td.data()?.currentSessionId;if(sid)await db.collection('qr_sessions').doc(sid).update({isActive:false}).catch(()=>{});await db.collection('qr_tables').doc(id).update({currentSessionId:''});document.getElementById('clearSelect').value='';toast('✅ Table cleared!');}catch(e){alert('Error: '+e.message);}}
 
-async function confirmCancel() {
-    const reason = document.getElementById('cancelReason').value.trim();
-    if (!reason) { alert('Please enter a cancellation reason.'); return; }
-    try {
-        await db.collection('qr_orders').doc(cancelOrderId).update({
-            status: 'cancelled',
-            cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
-            cancelReason: reason
-        });
-        closeModal('cancelModal');
-        stopAlert();
-    } catch (e) {
-        console.error('Cancel error:', e);
-        alert('Failed to cancel order.');
-    }
-}
-
-// ============================================================
-// SOUND ALERT
-// ============================================================
-function toggleSound() {
-    soundEnabled = !soundEnabled;
-    const btn = document.getElementById('soundToggle');
-    btn.textContent = soundEnabled ? '🔔' : '🔕';
-    btn.classList.toggle('active', soundEnabled);
-    if (!soundEnabled) stopAlert();
-}
-
-function playAlert() {
-    if (!soundEnabled) return;
-    stopAlert();
-    const audio = document.getElementById('alertSound');
-    // Play immediately
-    try { audio.play().catch(() => {}); } catch(e) {}
-    // Repeat every 8 seconds until acknowledged
-    alertInterval = setInterval(() => {
-        try { audio.play().catch(() => {}); } catch(e) {}
-    }, 8000);
-}
-
-function stopAlert() {
-    if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
-}
-
-// ============================================================
-// 86 ITEMS — AVAILABILITY TOGGLE
-// ============================================================
-async function loadMenuItems() {
-    const snap = await db.collection('menu_items').where('isActive', '==', true).get();
-    allMenuItems = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
-    allMenuItems.sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function openAvailabilityModal() {
-    renderAvailItems('');
-    document.getElementById('availSearch').value = '';
-    document.getElementById('availModal').classList.add('active');
-}
-
-function filterAvailItems() {
-    renderAvailItems(document.getElementById('availSearch').value.trim().toLowerCase());
-}
-
-function renderAvailItems(search) {
-    let items = allMenuItems;
-    if (search) items = items.filter(i => i.name.toLowerCase().includes(search));
-
-    document.getElementById('availItemsList').innerHTML = items.slice(0, 50).map(item => {
-        const onClass = item.isAvailable ? 'on' : '';
-        return `
-        <div class="avail-item">
-            <span class="avail-item-name">${item.name}</span>
-            <div class="avail-toggle ${onClass}" onclick="toggleAvailability('${item.docId}', ${!item.isAvailable})"></div>
-        </div>`;
-    }).join('');
-}
-
-async function toggleAvailability(docId, newValue) {
-    try {
-        await db.collection('menu_items').doc(docId).update({
-            isAvailable: newValue,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        // Update local state
-        const item = allMenuItems.find(i => i.docId === docId);
-        if (item) item.isAvailable = newValue;
-        filterAvailItems();
-    } catch (e) {
-        console.error('Toggle availability error:', e);
-        alert('Failed to update. Try again.');
-    }
-}
-
-// ============================================================
-// CLEAR TABLE
-// ============================================================
-async function loadTables() {
-    const snap = await db.collection('qr_tables')
-        .where('outletId', '==', selectedOutletId)
-        .get();
-
-    const tables = snap.docs.map(d => d.data()).filter(t => t.isActive).sort((a,b) => a.tableNumber - b.tableNumber);
-    const select = document.getElementById('clearTableSelect');
-    select.innerHTML = '<option value="">Select table...</option>' +
-        tables.map(t => `<option value="${t.id}">${t.tableName}</option>`).join('');
-}
-
-async function clearTable() {
-    const tableId = document.getElementById('clearTableSelect').value;
-    if (!tableId) { alert('Select a table first.'); return; }
-
-    if (!confirm(`Clear this table and end the customer session?`)) return;
-
-    try {
-        // Get table's current session
-        const tableDoc = await db.collection('qr_tables').doc(tableId).get();
-        const sessionId = tableDoc.data()?.currentSessionId;
-
-        // Deactivate session
-        if (sessionId) {
-            await db.collection('qr_sessions').doc(sessionId).update({ isActive: false });
-        }
-
-        // Clear table's session
-        await db.collection('qr_tables').doc(tableId).update({ currentSessionId: '' });
-
-        document.getElementById('clearTableSelect').value = '';
-        alert('Table cleared! Customer will need to scan QR and verify again.');
-    } catch (e) {
-        console.error('Clear table error:', e);
-        alert('Failed to clear table.');
-    }
-}
-
-// ============================================================
-// UTILS
-// ============================================================
-function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-// Close modals on overlay click
-document.querySelectorAll('.modal-overlay').forEach(el => {
-    el.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
-});
-
-// ============================================================
-// INIT
-// ============================================================
-window.addEventListener('DOMContentLoaded', checkAutoLogin);
+['availModal','cancelModal','changePinModal','outletModal'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeM(id);});});
+window.addEventListener('DOMContentLoaded',checkAutoLogin);
 </script>
 </body>
 </html>
