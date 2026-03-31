@@ -226,6 +226,23 @@
                     </div>
                     <div class="toggle on" id="orderingToggle" onclick="toggleOrderingSetting()" style="width:50px;height:28px;margin-top:8px;"></div>
                 </div>
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <div style="font-size:14px;font-weight:600;">🌅 Daily Reset Hour</div>
+                            <div style="font-size:12px;color:#888;margin-top:4px;">Old orders & tables are auto-cleared at this time. Set after your restaurant closes.</div>
+                        </div>
+                        <select id="resetHourSelect" onchange="saveResetHour()" style="background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;padding:8px 12px;color:#fff;font-size:14px;font-family:'Poppins',sans-serif;outline:none;">
+                            <option value="4">4:00 AM</option>
+                            <option value="5">5:00 AM</option>
+                            <option value="6" selected>6:00 AM</option>
+                            <option value="7">7:00 AM</option>
+                            <option value="8">8:00 AM</option>
+                            <option value="9">9:00 AM</option>
+                            <option value="10">10:00 AM</option>
+                        </select>
+                    </div>
+                </div>
                 <div style="padding:16px 0;font-size:12px;color:#666;">
                     ⚠️ Remember to turn OTP back ON before going live with real customers.
                 </div>
@@ -1131,9 +1148,27 @@ async function loadSettings() {
         
         document.getElementById('otpToggle').className = 'toggle' + (otpOn ? ' on' : '');
         document.getElementById('orderingToggle').className = 'toggle' + (orderingOn ? ' on' : '');
+
+        // Load outlet-specific reset hour
+        const outDoc = await db.collection('qr_outlets').doc(staffData.outletIds?.[0] || 'house_of_nosh').get();
+        if (outDoc.exists && outDoc.data().resetHour !== undefined) {
+            document.getElementById('resetHourSelect').value = outDoc.data().resetHour;
+        }
     } catch(e) {
         console.error('Load settings error:', e);
     }
+}
+
+async function saveResetHour() {
+    const hour = parseInt(document.getElementById('resetHourSelect').value);
+    try {
+        // Save to all outlets this admin has access to
+        const outletIds = (staffData.outletIds || []).includes('all') ? outlets.map(o => o.docId) : staffData.outletIds;
+        for (const oid of outletIds) {
+            await db.collection('qr_outlets').doc(oid).update({ resetHour: hour });
+        }
+        toast('✅ Reset hour set to ' + hour + ':00 AM');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
 async function toggleOTPSetting() {
