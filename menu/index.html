@@ -3,400 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nosh QR — Menu Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Nosh QR — Firestore Setup Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Poppins', sans-serif; background: #0f1117; color: #e8e8e8; min-height: 100vh; }
-
-        /* Auth */
-        .auth-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #0f1117, #1a1a2e); }
-        .auth-card { width: 360px; text-align: center; }
-        .auth-logo { font-size: 24px; font-weight: 800; color: #e94560; margin-bottom: 24px; }
-        .auth-input-group { display: flex; gap: 0; margin-bottom: 12px; }
-        .auth-prefix { background: #1e2030; border: 1.5px solid #2a2d3e; border-right: none; border-radius: 8px 0 0 8px; padding: 12px; font-size: 14px; color: #888; }
-        .auth-input { flex: 1; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 0 8px 8px 0; padding: 12px 14px; font-size: 15px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
-        .auth-input:focus { border-color: #e94560; }
-        .otp-inputs { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
-        .otp-box { width: 40px; height: 46px; text-align: center; font-size: 18px; font-weight: 600; background: #1e2030; border: 1.5px solid #2a2d3e; border-radius: 8px; color: #fff; outline: none; font-family: 'Poppins', sans-serif; }
-        .otp-box:focus { border-color: #e94560; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        body { font-family: 'Poppins', sans-serif; background: #0f1117; color: #e8e8e8; min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 700px; margin: 0 auto; }
+        h1 { font-size: 24px; color: #e94560; margin-bottom: 8px; }
+        .subtitle { color: #888; font-size: 14px; margin-bottom: 30px; }
+        .warning { background: #ff6b6b15; border: 1px solid #ff6b6b30; border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 13px; color: #ff6b6b; }
+        .section { background: #1a1c2e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .section-desc { font-size: 13px; color: #888; margin-bottom: 14px; }
+        .input-group { margin-bottom: 12px; }
+        .input-label { font-size: 12px; color: #888; margin-bottom: 4px; display: block; }
+        .input-field { width: 100%; padding: 10px 14px; background: #0f1117; border: 1.5px solid #2a2d3e; border-radius: 8px; color: #fff; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; }
+        .input-field:focus { border-color: #e94560; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
         .btn-primary { background: #e94560; color: #fff; }
+        .btn-primary:hover { background: #d63851; }
         .btn-primary:disabled { background: #444; cursor: not-allowed; }
-        .auth-error { color: #ff6b6b; font-size: 13px; margin-bottom: 10px; min-height: 18px; }
-        .auth-link { color: #666; font-size: 12px; margin-top: 10px; cursor: pointer; }
-
-        /* Dashboard */
-        .dashboard { display: none; }
-        .dashboard.active { display: block; }
-        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #161822; border-bottom: 1px solid #1e2030; position: sticky; top: 0; z-index: 100; }
-        .topbar-title { font-size: 16px; font-weight: 700; color: #e94560; }
-        .topbar-right { display: flex; align-items: center; gap: 10px; }
-        .role-badge { background: rgba(233,69,96,0.15); padding: 4px 10px; border-radius: 20px; font-size: 10px; color: #e94560; font-weight: 700; }
-        .btn-sm { padding: 6px 12px; border: 1px solid #333; border-radius: 6px; background: none; color: #888; font-size: 11px; cursor: pointer; font-family: 'Poppins', sans-serif; }
-        .btn-sm:hover { border-color: #e94560; color: #e94560; }
-
-        /* Tabs */
-        .tabs { display: flex; gap: 4px; padding: 12px 20px; background: #161822; overflow-x: auto; }
-        .tab { padding: 8px 16px; border-radius: 8px; border: 1px solid #2a2d3e; background: none; color: #888; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: 'Poppins', sans-serif; }
-        .tab.active { background: #e94560; border-color: #e94560; color: #fff; }
-
-        /* Content */
-        .content { padding: 16px 20px; }
-        .section-title { font-size: 14px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
-
-        /* Cards */
-        .card { background: #1a1c2e; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
-        .card-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
-
-        /* Form */
-        .ff { margin-bottom: 14px; }
-        .ff label { font-size: 11px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
-        .fi { width: 100%; padding: 10px 12px; background: #0f1117; border: 1.5px solid #2a2d3e; border-radius: 8px; color: #fff; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; }
-        .fi:focus { border-color: #e94560; }
-        .fi option { background: #1a1c2e; color: #fff; }
-        .fi::placeholder { color: #444; }
-        textarea.fi { resize: vertical; min-height: 60px; }
-        .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-        /* Item list */
-        .item-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #1a1c2e; border-radius: 10px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.04); }
-        .item-row:hover { border-color: rgba(255,255,255,0.1); }
-        .item-veg { width: 14px; height: 14px; border: 1.5px solid; border-radius: 3px; flex-shrink: 0; position: relative; }
-        .item-veg::after { content: ''; position: absolute; width: 7px; height: 7px; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); }
-        .item-veg.veg { border-color: #0a8f0a; } .item-veg.veg::after { background: #0a8f0a; }
-        .item-veg.nonveg { border-color: #ff4444; } .item-veg.nonveg::after { background: #ff4444; }
-        .item-veg.egg { border-color: #f9a825; } .item-veg.egg::after { background: #f9a825; }
-        .item-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .item-price { font-size: 13px; color: #888; min-width: 50px; text-align: right; }
-        .item-cat { font-size: 10px; color: #666; min-width: 80px; }
-        .toggle { position: relative; width: 40px; height: 22px; background: #333; border-radius: 11px; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
-        .toggle.on { background: #2ecc71; }
-        .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
-        .toggle.on::after { transform: translateX(18px); }
-        .item-actions { display: flex; gap: 4px; }
-        .btn-edit { padding: 4px 10px; border: 1px solid #3498db30; background: #3498db15; color: #5dade2; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Poppins', sans-serif; }
-        .btn-del { padding: 4px 10px; border: 1px solid #ff6b6b30; background: #ff6b6b15; color: #ff6b6b; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Poppins', sans-serif; }
-
-        /* Search */
-        .search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
-        .search-bar input { flex: 1; }
-        .search-bar select { width: 140px; }
-        .count-label { font-size: 12px; color: #888; margin-bottom: 10px; }
-
-        /* Modifier builder */
-        .mod-group { background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
-        .mod-group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .mod-option { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-        .mod-option input { flex: 1; padding: 6px 8px; background: #1a1c2e; border: 1px solid #2a2d3e; border-radius: 6px; color: #fff; font-size: 12px; font-family: 'Poppins', sans-serif; outline: none; }
-        .mod-option input:focus { border-color: #e94560; }
-
-        /* Staff table */
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { padding: 8px; text-align: left; color: #888; font-size: 10px; font-weight: 700; border-bottom: 1px solid #1e2030; text-transform: uppercase; }
-        td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-        .b-super { background: #e9456020; color: #e94560; }
-        .b-manager { background: #3498db20; color: #5dade2; }
-        .b-cashier { background: #2ecc7120; color: #2ecc71; }
-
-        /* Modal */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
-        .modal-overlay.active { display: flex; }
-        .modal { background: #1a1c2e; border-radius: 16px; padding: 24px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
-        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-close { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; }
-
-        .empty-state { text-align: center; padding: 40px; color: #555; }
-        .empty-state .icon { font-size: 40px; margin-bottom: 8px; display: block; }
-
-        /* Toast */
-        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 999; opacity: 0; transition: all 0.25s; pointer-events: none; }
-        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-        #toast.ok { background: #2ecc71; color: #fff; }
-        #toast.err { background: #ff6b6b; color: #fff; }
+        .btn-secondary { background: #2a2d3e; color: #e8e8e8; }
+        .log { background: #0a0b10; border-radius: 8px; padding: 14px; margin-top: 12px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.8; }
+        .log-line { margin-bottom: 2px; }
+        .log-success { color: #2ecc71; }
+        .log-error { color: #ff6b6b; }
+        .log-info { color: #3498db; }
+        .log-warn { color: #f39c12; }
+        .step-badge { background: #e94560; color: #fff; font-size: 12px; font-weight: 700; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+        .check { color: #2ecc71; font-size: 18px; }
+        .status { font-size: 13px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; }
+        .status-success { background: #2ecc7115; color: #2ecc71; }
+        .status-error { background: #ff6b6b15; color: #ff6b6b; }
+        .status-loading { background: #3498db15; color: #3498db; }
     </style>
 </head>
 <body>
+<div class="container">
+    <h1>🔧 Nosh QR — Firestore Setup Tool</h1>
+    <div class="subtitle">This tool uploads your menu data, creates tables, and sets up the super admin. Run once.</div>
+    
+    <div class="warning">
+        ⚠️ This uploads to the <strong>TRIAL</strong> project: <strong>nosh-qr-ordering-trial</strong>. 
+        Your live waitlist system is NOT affected.
+    </div>
 
-<!-- AUTH SCREEN -->
-<div id="authScreen" class="auth-screen">
-    <div class="auth-card">
-        <div class="auth-logo">NOSH QR — Menu Admin</div>
-        <div id="loginStep">
-            <div style="display:flex;gap:0;margin-bottom:16px;border:1.5px solid #2a2d3e;border-radius:8px;overflow:hidden;">
-                <button id="modePinBtn" onclick="setLoginMode('pin')" style="flex:1;padding:10px;border:none;background:#e94560;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">🔑 PIN</button>
-                <button id="modeOtpBtn" onclick="setLoginMode('otp')" style="flex:1;padding:10px;border:none;background:#1e2030;color:#888;font-size:13px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">📱 OTP</button>
-            </div>
-            <div class="auth-error" id="loginError"></div>
-            <div class="auth-input-group">
-                <span class="auth-prefix">+91</span>
-                <input type="tel" class="auth-input" id="phoneInput" placeholder="Phone number" maxlength="10" inputmode="numeric">
-            </div>
-            <div id="pinFields">
-                <div style="margin-bottom:12px;"><input type="password" class="auth-input" id="pinInput" placeholder="Enter PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')doLogin()"></div>
-                <button class="btn btn-primary" onclick="doLogin()">Login</button>
-            </div>
-            <div id="otpFields" style="display:none;">
-                <button class="btn btn-primary" id="sendOtpBtn" onclick="sendStaffOTP()">Send OTP</button>
-            </div>
+    <!-- STEP 1: Super Admin Phone -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">1</span> Super Admin Phone Number</div>
+        <div class="section-desc">Your phone number — you'll use this to log into the cashier screen and menu admin.</div>
+        <div class="input-group">
+            <label class="input-label">Phone number (10 digits, without +91)</label>
+            <input type="tel" class="input-field" id="adminPhone" placeholder="9876543210" maxlength="10" inputmode="numeric">
         </div>
-        <div id="otpVerifyStep" style="display:none;">
-            <div style="font-size:13px;color:#888;margin-bottom:12px;" id="otpSubtitle">OTP sent</div>
-            <div class="auth-error" id="otpError"></div>
-            <div class="otp-inputs">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="0">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="1">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="2">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="3">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="4">
-                <input type="tel" class="otp-box" maxlength="1" inputmode="numeric" data-idx="5">
-            </div>
-            <button class="btn btn-primary" onclick="verifyStaffOTP()">Verify</button>
-            <div class="auth-link" onclick="document.getElementById('otpVerifyStep').style.display='none';document.getElementById('loginStep').style.display='block';">← Back</div>
+    </div>
+
+    <!-- STEP 2: Upload -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">2</span> Upload Everything to Firestore</div>
+        <div class="section-desc">This will create: 10 categories, 406 menu items, 10 tables, 1 outlet config, and your super admin account.</div>
+        <button class="btn btn-primary" id="uploadBtn" onclick="startUpload()">🚀 Start Upload</button>
+        <div id="uploadStatus"></div>
+        <div class="log" id="uploadLog" style="display:none;"></div>
+    </div>
+
+    <!-- STEP 3: Verify -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">3</span> Verify Upload</div>
+        <div class="section-desc">Click to check that everything was uploaded correctly.</div>
+        <button class="btn btn-secondary" onclick="verifyUpload()">✓ Verify Data</button>
+        <div id="verifyStatus"></div>
+        <div class="log" id="verifyLog" style="display:none;"></div>
+    </div>
+
+    <!-- STEP 4: OTP Toggle -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">4</span> OTP Toggle (Testing Mode)</div>
+        <div class="section-desc">Turn OTP OFF for testing — customers only enter phone number, no SMS sent. Turn ON before going live.</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px;">
+            <button class="btn" style="background:#2ecc71;color:#fff;flex:1;" onclick="setOTP(false)">🔓 Turn OTP OFF (Testing)</button>
+            <button class="btn" style="background:#e94560;color:#fff;flex:1;" onclick="setOTP(true)">🔒 Turn OTP ON (Live)</button>
         </div>
-        <div id="changePinStep" style="display:none;">
-            <div style="font-size:14px;color:#888;margin-bottom:16px;text-align:center;">Set Your New PIN</div>
-            <div class="auth-error" id="changePinError"></div>
-            <div style="margin-bottom:12px;"><input type="password" class="auth-input" id="newPinInput" placeholder="New PIN (4+ digits)" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;"></div>
-            <div style="margin-bottom:12px;"><input type="password" class="auth-input" id="confirmPinInput" placeholder="Confirm PIN" maxlength="6" inputmode="numeric" style="width:100%;border-radius:8px;text-align:center;font-size:20px;letter-spacing:8px;" onkeydown="if(event.key==='Enter')saveNewPin()"></div>
-            <button class="btn btn-primary" onclick="saveNewPin()">Save PIN & Continue</button>
-            <div class="auth-link" onclick="skipPinChange()">Skip for now</div>
+        <div id="otpStatus" style="font-size:13px;margin-top:8px;"></div>
+    </div>
+
+    <!-- STEP 5: Reset Admin PIN -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">5</span> Reset Admin PIN</div>
+        <div class="section-desc">Reset your super admin PIN to <strong>1234</strong>. Use if you forgot your PIN or just set up the system.</div>
+        <div class="input-group">
+            <label class="input-label">Phone number (same as Step 1)</label>
+            <input type="tel" class="input-field" id="resetPinPhone" placeholder="9876543210" maxlength="10" inputmode="numeric">
         </div>
+        <button class="btn" style="background:#FFB800;color:#000;" onclick="resetAdminPin()">🔑 Reset PIN to 1234</button>
+        <div id="resetPinStatus" style="font-size:13px;margin-top:8px;"></div>
+    </div>
+
+    <!-- STEP 5: Reset (if needed) -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">!</span> Reset (if needed)</div>
+        <div class="section-desc">If something goes wrong, this deletes ALL data and lets you start fresh. Use carefully.</div>
+        <button class="btn" style="background:#ff6b6b30;color:#ff6b6b;" onclick="confirmReset()">🗑️ Delete All & Reset</button>
+        <div id="resetStatus"></div>
     </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="dashboard">
-    <div class="topbar">
-        <div>
-            <div class="topbar-title">NOSH QR — Menu Admin</div>
-            <div style="font-size:11px;color:#666;" id="dashUser"></div>
-        </div>
-        <div class="topbar-right">
-            <span class="role-badge" id="dashRole">Admin</span>
-            <button class="btn-sm" style="background:#FFB800;color:#000;border-color:#FFB800;" onclick="showChangePinModal()">🔑 PIN</button>
-            <button class="btn-sm" onclick="logout()">Logout</button>
-        </div>
-    </div>
-    <div class="tabs" id="tabsBar">
-        <button class="tab active" onclick="showTab('items')">🍽️ Menu Items</button>
-        <button class="tab" onclick="showTab('categories')">📂 Categories</button>
-        <button class="tab" onclick="showTab('settings')" id="tabSettings" style="display:none;">⚙️ Settings</button>
-        <button class="tab" onclick="showTab('staff')" id="tabStaff" style="display:none;">👥 Staff</button>
-    </div>
-    <div class="content">
-        <!-- MENU ITEMS TAB -->
-        <div id="tab-items">
-            <div class="search-bar">
-                <input class="fi" type="text" id="itemSearch" placeholder="🔍 Search items..." oninput="renderItems()">
-                <select class="fi" id="itemCatFilter" onchange="renderItems()">
-                    <option value="">All Categories</option>
-                </select>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <div class="count-label" id="itemCount">0 items</div>
-                <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="openItemModal()" id="btnAddItem">+ Add Item</button>
-            </div>
-            <div id="itemsList"></div>
-        </div>
-        <!-- CATEGORIES TAB -->
-        <div id="tab-categories" style="display:none;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <div class="section-title" style="margin:0;">Categories</div>
-                <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="openCatModal()" id="btnAddCat">+ Add Category</button>
-            </div>
-            <div id="catsList"></div>
-        </div>
-        <!-- SETTINGS TAB -->
-        <div id="tab-settings" style="display:none;">
-            <div class="card">
-                <div class="card-title">⚙️ QR Ordering Settings</div>
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #1e2030;">
-                    <div>
-                        <div style="font-size:14px;font-weight:600;">📱 OTP Verification</div>
-                        <div style="font-size:12px;color:#888;margin-top:4px;">When OFF, customers only enter phone number (no SMS). Use for testing.</div>
-                    </div>
-                    <div class="toggle" id="otpToggle" onclick="toggleOTPSetting()" style="width:50px;height:28px;"></div>
-                </div>
-                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
-                    <div>
-                        <div style="font-size:14px;font-weight:600;">🏪 QR Ordering Active</div>
-                        <div style="font-size:12px;color:#888;margin-top:4px;">Master switch — when OFF, customers see "Ordering Unavailable" on scan.</div>
-                    </div>
-                    <div class="toggle on" id="orderingToggle" onclick="toggleOrderingSetting()" style="width:50px;height:28px;margin-top:8px;"></div>
-                </div>
-                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;">
-                        <div>
-                            <div style="font-size:14px;font-weight:600;">🌅 Daily Reset Hour</div>
-                            <div style="font-size:12px;color:#888;margin-top:4px;">Old orders & tables are auto-cleared at this time. Set after your restaurant closes.</div>
-                        </div>
-                        <select id="resetHourSelect" onchange="saveResetHour()" style="background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;padding:8px 12px;color:#fff;font-size:14px;font-family:'Poppins',sans-serif;outline:none;">
-                            <option value="4">4:00 AM</option>
-                            <option value="5">5:00 AM</option>
-                            <option value="6" selected>6:00 AM</option>
-                            <option value="7">7:00 AM</option>
-                            <option value="8">8:00 AM</option>
-                            <option value="9">9:00 AM</option>
-                            <option value="10">10:00 AM</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="padding:16px 0;font-size:12px;color:#666;">
-                    ⚠️ Remember to turn OTP back ON before going live with real customers.
-                </div>
-            </div>
-        </div>
-        <!-- STAFF TAB -->
-        <div id="tab-staff" style="display:none;">
-            <div class="card">
-                <div class="card-title">Add / Edit Staff</div>
-                <div class="frow">
-                    <div class="ff"><label>Name *</label><input class="fi" id="sName" placeholder="Staff name"></div>
-                    <div class="ff"><label>Phone *</label><input class="fi" id="sPhone" placeholder="10 digits" maxlength="10" inputmode="numeric"></div>
-                </div>
-                <div class="frow">
-                    <div class="ff"><label>Role *</label>
-                        <select class="fi" id="sRole">
-                            <option value="cashier">Cashier</option>
-                            <option value="outlet_manager">Outlet Manager</option>
-                            <option value="super_admin">Super Admin</option>
-                        </select>
-                    </div>
-                    <div class="ff"><label>Outlet</label>
-                        <select class="fi" id="sOutlet">
-                            <option value="all">All Outlets</option>
-                        </select>
-                    </div>
-                </div>
-                <input type="hidden" id="sEditPhone" value="">
-                <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="saveStaff()">💾 Save</button>
-            </div>
-            <div id="staffList" style="margin-top:16px;"></div>
-        </div>
-    </div>
-</div>
-
-<!-- ITEM EDIT MODAL -->
-<div class="modal-overlay" id="itemModal">
-    <div class="modal">
-        <div class="modal-title">
-            <span id="itemModalTitle">Add Item</span>
-            <button class="modal-close" onclick="closeModal('itemModal')">✕</button>
-        </div>
-        <div class="frow">
-            <div class="ff"><label>Item Name *</label><input class="fi" id="imName" placeholder="e.g. Paneer Tikka"></div>
-            <div class="ff"><label>Price (₹) *</label><input class="fi" id="imPrice" type="number" placeholder="299" inputmode="numeric"></div>
-        </div>
-        <div class="frow">
-            <div class="ff"><label>Category *</label><select class="fi" id="imCategory"></select></div>
-            <div class="ff"><label>Subcategory</label><select class="fi" id="imSubcat"><option value="">None</option></select></div>
-        </div>
-        <div class="frow">
-            <div class="ff"><label>Veg Type *</label>
-                <select class="fi" id="imVegType">
-                    <option value="Veg">🟢 Veg</option>
-                    <option value="NonVeg">🔴 Non-Veg</option>
-                    <option value="Egg">🟡 Egg</option>
-                </select>
-            </div>
-            <div class="ff"><label>Sort Order</label><input class="fi" id="imSort" type="number" placeholder="1" inputmode="numeric"></div>
-        </div>
-        <div class="ff"><label>Description</label><textarea class="fi" id="imDesc" placeholder="Short description..."></textarea></div>
-
-        <!-- Photo Upload -->
-        <div class="ff">
-            <label>Item Photo</label>
-            <div id="imPhotoPreview" style="margin-bottom:8px;"></div>
-            <input type="file" id="imPhotoFile" accept="image/*" style="display:none;" onchange="previewItemPhoto(event)">
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button type="button" style="padding:6px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="document.getElementById('imPhotoFile').click()">📷 Choose Photo</button>
-                <span id="imPhotoStatus" style="font-size:11px;color:#666;"></span>
-                <button type="button" id="imRemovePhoto" style="display:none;padding:4px 10px;background:#ff6b6b20;border:1px solid #ff6b6b30;border-radius:6px;color:#ff6b6b;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="removeItemPhoto()">✕ Remove</button>
-            </div>
-            <div style="font-size:10px;color:#555;margin-top:4px;">Max 2MB. Recommended: 600×400px, JPEG.</div>
-        </div>
-
-        <!-- Modifier Groups -->
-        <div class="ff">
-            <label>Modifier Groups</label>
-            <div id="imModGroups"></div>
-            <button type="button" style="padding:6px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;margin-top:6px;font-family:'Poppins',sans-serif;" onclick="addModGroup()">+ Add Modifier Group</button>
-        </div>
-
-        <input type="hidden" id="imEditId" value="">
-        <div style="display:flex;gap:8px;margin-top:16px;">
-            <button class="btn btn-primary" onclick="saveItem()">💾 Save Item</button>
-            <button class="btn" style="background:#2a2d3e;color:#888;" onclick="closeModal('itemModal')">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<!-- CATEGORY EDIT MODAL -->
-<div class="modal-overlay" id="catModal">
-    <div class="modal" style="max-width:450px;">
-        <div class="modal-title">
-            <span id="catModalTitle">Add Category</span>
-            <button class="modal-close" onclick="closeModal('catModal')">✕</button>
-        </div>
-        <div class="ff"><label>Category Name *</label><input class="fi" id="cmName" placeholder="e.g. Starters"></div>
-        <div class="ff"><label>Sort Order</label><input class="fi" id="cmSort" type="number" placeholder="1" inputmode="numeric"></div>
-        <div class="ff">
-            <label>Subcategories (one per line)</label>
-            <textarea class="fi" id="cmSubcats" placeholder="Veg Kabab&#10;Chicken Kababs&#10;Seafood" rows="4"></textarea>
-        </div>
-        <input type="hidden" id="cmEditId" value="">
-        <button class="btn btn-primary" style="margin-top:12px;" onclick="saveCat()">💾 Save</button>
-    </div>
-</div>
-
-<!-- Change PIN Modal -->
-<div class="modal-overlay" id="changePinModal">
-    <div class="modal" style="max-width:360px;">
-        <div class="modal-title"><span>🔑 Change PIN</span><button class="modal-close" onclick="closeModal('changePinModal')">✕</button></div>
-        <div class="auth-error" id="cpError"></div>
-        <div class="ff"><label>Current PIN</label><input type="password" class="fi" id="cpCurrent" placeholder="Current PIN" maxlength="6" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:6px;"></div>
-        <div class="ff"><label>New PIN</label><input type="password" class="fi" id="cpNew" placeholder="New PIN" maxlength="6" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:6px;"></div>
-        <div class="ff"><label>Confirm PIN</label><input type="password" class="fi" id="cpConfirm" placeholder="Confirm" maxlength="6" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:6px;"></div>
-        <button class="btn btn-primary" onclick="saveChangedPin()">Save PIN</button>
-    </div>
-</div>
-
-<div id="toast"></div>
-
-<!-- FIREBASE -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-
-<!-- MSG91 OTP SDK -->
-<script>
-var configuration = {
-    widgetId: "366278704a57303934373930",
-    tokenAuth: "493471T68i0srho699dd45cP1",
-    exposeMethods: true,
-    success: (data) => { console.log('MSG91 success:', data); },
-    failure: (error) => { console.log('MSG91 failure:', error); }
-};
-</script>
-<script>
-(function loadOtpScript(urls) {
-    let i = 0;
-    function attempt() {
-        const s = document.createElement('script');
-        s.src = urls[i]; s.async = true;
-        s.onload = () => { if (typeof window.initSendOTP === 'function') window.initSendOTP(configuration); };
-        s.onerror = () => { i++; if (i < urls.length) attempt(); };
-        document.head.appendChild(s);
-    }
-    attempt();
-})(['https://verify.msg91.com/otp-provider.js','https://verify.phone91.com/otp-provider.js']);
-</script>
 
 <script>
 // ============================================================
-// CONFIG
+// FIREBASE CONFIG — Trial Project
 // ============================================================
 firebase.initializeApp({
     apiKey: "AIzaSyBHmyK6NTVuSsKCh-969SElL1EEnq9Ln0M",
@@ -407,808 +125,372 @@ firebase.initializeApp({
     appId: "1:672306605373:web:c234755331d045142c6954"
 });
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 // ============================================================
-// STATE
+// LOGGING HELPERS
 // ============================================================
-let staffPhone = '', staffRole = '', staffData = null;
-let categories = [], items = [], outlets = [];
-let loginMode = 'pin';
-
-function toast(msg, type='ok') {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.className = 'show ' + type;
-    setTimeout(() => t.className = '', 2800);
-}
-function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-// ============================================================
-// AUTH — PIN + OTP Login
-// ============================================================
-function setLoginMode(mode) {
-    loginMode = mode;
-    document.getElementById('modePinBtn').style.background = mode === 'pin' ? '#e94560' : '#1e2030';
-    document.getElementById('modePinBtn').style.color = mode === 'pin' ? '#fff' : '#888';
-    document.getElementById('modeOtpBtn').style.background = mode === 'otp' ? '#e94560' : '#1e2030';
-    document.getElementById('modeOtpBtn').style.color = mode === 'otp' ? '#fff' : '#888';
-    document.getElementById('pinFields').style.display = mode === 'pin' ? 'block' : 'none';
-    document.getElementById('otpFields').style.display = mode === 'otp' ? 'block' : 'none';
+function addLog(logId, msg, type) {
+    const log = document.getElementById(logId);
+    log.style.display = 'block';
+    const cls = type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : type === 'warn' ? 'log-warn' : 'log-info';
+    log.innerHTML += `<div class="log-line ${cls}">${msg}</div>`;
+    log.scrollTop = log.scrollHeight;
 }
 
-// PIN Login
-async function doLogin() {
-    const phone = document.getElementById('phoneInput').value.trim();
-    const pin = document.getElementById('pinInput').value.trim();
-    
-    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
-    if (!pin) { document.getElementById('loginError').textContent = 'Enter your PIN'; return; }
-    document.getElementById('loginError').textContent = '';
-    
-    staffPhone = '+91' + phone;
+function setStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    el.innerHTML = `<div class="status status-${type}">${msg}</div>`;
+}
+
+// ============================================================
+// MENU DATA (embedded — parsed from DotPe Excel)
+// ============================================================
+// This is the full menu data. In a real scenario this would be
+// loaded from a file, but we embed it for zero-install simplicity.
+
+let MENU_DATA = null;
+
+async function loadMenuData() {
+    // We'll fetch the JSON from the same directory
+    // For the standalone version, the data is embedded below
+    if (MENU_DATA) return MENU_DATA;
     
     try {
-        const doc = await db.collection('qr_staff').doc(staffPhone).get();
-        if (!doc.exists) { document.getElementById('loginError').textContent = 'User not found'; return; }
-        
-        const data = doc.data();
-        if (!data.isActive) { document.getElementById('loginError').textContent = 'Account disabled'; return; }
-        
-        const expectedPin = data.pin || '1234';
-        if (pin !== expectedPin) { document.getElementById('loginError').textContent = 'Wrong PIN'; return; }
-        
-        staffData = data;
-        staffRole = data.role;
-        localStorage.setItem('nosh_menu_login', JSON.stringify({ phone: staffPhone, loginAt: Date.now() }));
-        
-        // Force PIN change on first login
-        if (!data.pin || data.pin === '1234') {
-            document.getElementById('loginStep').style.display = 'none';
-            document.getElementById('changePinStep').style.display = 'block';
-            document.getElementById('newPinInput').focus();
+        const resp = await fetch('./firestore_menu_data.json');
+        if (resp.ok) {
+            MENU_DATA = await resp.json();
+            return MENU_DATA;
+        }
+    } catch(e) {}
+    
+    // If JSON file not found, show error
+    addLog('uploadLog', '❌ Could not load firestore_menu_data.json — make sure it is in the same folder as this HTML file', 'error');
+    return null;
+}
+
+// ============================================================
+// UPLOAD
+// ============================================================
+async function startUpload() {
+    const phone = document.getElementById('adminPhone').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        alert('Please enter a valid 10-digit phone number in Step 1');
+        return;
+    }
+    const fullPhone = '+91' + phone;
+    
+    document.getElementById('uploadBtn').disabled = true;
+    document.getElementById('uploadLog').innerHTML = '';
+    setStatus('uploadStatus', '⏳ Uploading... please wait, this takes about 30 seconds.', 'loading');
+    addLog('uploadLog', '🚀 Starting upload to nosh-qr-ordering-trial...', 'info');
+
+    try {
+        // Load menu data
+        addLog('uploadLog', '📁 Loading menu data...', 'info');
+        const data = await loadMenuData();
+        if (!data) {
+            setStatus('uploadStatus', '❌ Failed — could not load menu data.', 'error');
+            document.getElementById('uploadBtn').disabled = false;
             return;
         }
-        
-        await startDashboard();
-    } catch (e) {
-        document.getElementById('loginError').textContent = 'Error: ' + e.message;
-    }
-}
+        addLog('uploadLog', `✓ Menu data loaded: ${Object.keys(data.menu_categories).length} categories, ${Object.keys(data.menu_items).length} items`, 'success');
 
-async function saveNewPin() {
-    const newPin = document.getElementById('newPinInput').value.trim();
-    const confirmPin = document.getElementById('confirmPinInput').value.trim();
-    if (newPin.length < 4) { document.getElementById('changePinError').textContent = 'PIN must be 4+ digits'; return; }
-    if (newPin !== confirmPin) { document.getElementById('changePinError').textContent = 'PINs do not match'; return; }
-    if (newPin === '1234') { document.getElementById('changePinError').textContent = 'Choose a different PIN'; return; }
-    
-    try {
-        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
-        toast('✅ PIN saved!');
-        await startDashboard();
-    } catch (e) { document.getElementById('changePinError').textContent = 'Error: ' + e.message; }
-}
-
-async function skipPinChange() { await startDashboard(); }
-
-function showChangePinModal() {
-    document.getElementById('cpCurrent').value = '';
-    document.getElementById('cpNew').value = '';
-    document.getElementById('cpConfirm').value = '';
-    document.getElementById('cpError').textContent = '';
-    document.getElementById('changePinModal').classList.add('active');
-}
-
-async function saveChangedPin() {
-    const current = document.getElementById('cpCurrent').value.trim();
-    const newPin = document.getElementById('cpNew').value.trim();
-    const confirm = document.getElementById('cpConfirm').value.trim();
-    
-    const staffDoc = await db.collection('qr_staff').doc(staffPhone).get();
-    const currentPin = staffDoc.data()?.pin || '1234';
-    if (current !== currentPin) { document.getElementById('cpError').textContent = 'Current PIN is wrong'; return; }
-    if (newPin.length < 4) { document.getElementById('cpError').textContent = 'New PIN must be 4+ digits'; return; }
-    if (newPin !== confirm) { document.getElementById('cpError').textContent = 'PINs do not match'; return; }
-    
-    try {
-        await db.collection('qr_staff').doc(staffPhone).update({ pin: newPin });
-        toast('✅ PIN changed!');
-        closeModal('changePinModal');
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
-
-// OTP Login
-function sendStaffOTP() {
-    const phone = document.getElementById('phoneInput').value.trim();
-    if (!/^\d{10}$/.test(phone)) { document.getElementById('loginError').textContent = 'Enter 10-digit number'; return; }
-    document.getElementById('loginError').textContent = '';
-    staffPhone = '+91' + phone;
-
-    if (typeof window.sendOtp !== 'function') { document.getElementById('loginError').textContent = 'OTP loading...'; return; }
-    document.getElementById('sendOtpBtn').disabled = true;
-    document.getElementById('sendOtpBtn').textContent = 'Sending...';
-
-    window.sendOtp('91' + phone,
-        (data) => {
-            document.getElementById('sendOtpBtn').disabled = false;
-            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
-            document.getElementById('otpSubtitle').textContent = 'OTP sent to +91 ' + phone;
-            document.getElementById('loginStep').style.display = 'none';
-            document.getElementById('otpVerifyStep').style.display = 'block';
-            document.querySelector('#otpVerifyStep .otp-box[data-idx="0"]').focus();
-        },
-        (err) => {
-            document.getElementById('sendOtpBtn').disabled = false;
-            document.getElementById('sendOtpBtn').textContent = 'Send OTP';
-            document.getElementById('loginError').textContent = err?.message || 'Failed to send OTP';
-        }
-    );
-}
-
-function verifyStaffOTP() {
-    const boxes = document.querySelectorAll('#otpVerifyStep .otp-box');
-    let otp = ''; boxes.forEach(b => otp += b.value);
-    if (otp.length !== 6) { document.getElementById('otpError').textContent = 'Enter 6-digit OTP'; return; }
-
-    if (typeof window.verifyOtp !== 'function') { document.getElementById('otpError').textContent = 'Not ready'; return; }
-
-    window.verifyOtp(otp,
-        async (data) => {
-            const doc = await db.collection('qr_staff').doc(staffPhone).get();
-            if (!doc.exists || !doc.data().isActive) { document.getElementById('otpError').textContent = 'Not authorized'; return; }
-            staffData = doc.data();
-            staffRole = staffData.role;
-            localStorage.setItem('nosh_menu_login', JSON.stringify({ phone: staffPhone, loginAt: Date.now() }));
-            await startDashboard();
-        },
-        (err) => { document.getElementById('otpError').textContent = err?.message || 'Invalid OTP'; }
-    );
-}
-
-// OTP auto-advance
-document.querySelectorAll('#otpVerifyStep .otp-box').forEach((box, idx) => {
-    box.addEventListener('input', e => {
-        e.target.value = e.target.value.replace(/\D/g, '');
-        if (e.target.value && idx < 5) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx+1}"]`).focus();
-        if (idx === 5 && e.target.value) verifyStaffOTP();
-    });
-    box.addEventListener('keydown', e => {
-        if (e.key === 'Backspace' && !e.target.value && idx > 0) document.querySelector(`#otpVerifyStep .otp-box[data-idx="${idx-1}"]`).focus();
-    });
-});
-
-// Auto-login
-async function checkAutoLogin() {
-    const stored = localStorage.getItem('nosh_menu_login');
-    if (!stored) return;
-    try {
-        const login = JSON.parse(stored);
-        if (Date.now() - login.loginAt > 12 * 60 * 60 * 1000) { localStorage.removeItem('nosh_menu_login'); return; }
-        const doc = await db.collection('qr_staff').doc(login.phone).get();
-        if (!doc.exists || !doc.data().isActive) { localStorage.removeItem('nosh_menu_login'); return; }
-        staffPhone = login.phone;
-        staffData = doc.data();
-        staffRole = staffData.role;
-        await startDashboard();
-    } catch (e) { console.error(e); }
-}
-
-function logout() { localStorage.removeItem('nosh_menu_login'); location.reload(); }
-
-// ============================================================
-// DASHBOARD
-// ============================================================
-async function startDashboard() {
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('dashboard').classList.add('active');
-    document.getElementById('dashUser').textContent = staffData.name || staffPhone;
-    document.getElementById('dashRole').textContent = staffRole === 'super_admin' ? '👑 Super Admin' : staffRole === 'outlet_manager' ? '🏪 Manager' : '💳 Cashier';
-
-    // Show/hide tabs based on role
-    if (staffRole === 'super_admin') {
-        document.getElementById('tabStaff').style.display = 'inline-block';
-        document.getElementById('tabSettings').style.display = 'inline-block';
-        document.getElementById('btnAddItem').style.display = 'inline-block';
-        document.getElementById('btnAddCat').style.display = 'inline-block';
-    } else {
-        document.getElementById('btnAddItem').style.display = 'none';
-        document.getElementById('btnAddCat').style.display = 'none';
-    }
-
-    await loadData();
-    renderItems();
-    renderCats();
-}
-
-async function loadData() {
-    const [catSnap, itemSnap, outletSnap] = await Promise.all([
-        db.collection('menu_categories').orderBy('sortOrder').get(),
-        db.collection('menu_items').get(),
-        db.collection('qr_outlets').get()
-    ]);
-    categories = catSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-    items = itemSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-    items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-    outlets = outletSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
-
-    // Populate category filter
-    const sel = document.getElementById('itemCatFilter');
-    sel.innerHTML = '<option value="">All Categories</option>' + categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-    // Populate outlet selects
-    const sSel = document.getElementById('sOutlet');
-    if (sSel) sSel.innerHTML = '<option value="all">All Outlets</option>' + outlets.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-}
-
-// ============================================================
-// TABS
-// ============================================================
-function showTab(name) {
-    ['items', 'categories', 'settings', 'staff'].forEach(t => {
-        const el = document.getElementById('tab-' + t);
-        if (el) el.style.display = t === name ? 'block' : 'none';
-    });
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-    if (name === 'staff') loadStaff();
-    if (name === 'settings') loadSettings();
-}
-
-// ============================================================
-// MENU ITEMS
-// ============================================================
-function renderItems() {
-    const search = (document.getElementById('itemSearch').value || '').toLowerCase();
-    const catFilter = document.getElementById('itemCatFilter').value;
-
-    let filtered = items.filter(i => {
-        if (search && !i.name.toLowerCase().includes(search)) return false;
-        if (catFilter && i.categoryId !== catFilter) return false;
-        return true;
-    });
-
-    document.getElementById('itemCount').textContent = filtered.length + ' items';
-
-    if (!filtered.length) {
-        document.getElementById('itemsList').innerHTML = '<div class="empty-state"><span class="icon">🍽️</span>No items found</div>';
-        return;
-    }
-
-    document.getElementById('itemsList').innerHTML = filtered.map(item => {
-        const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
-        const cat = categories.find(c => c.id === item.categoryId);
-        const availClass = item.isAvailable ? 'on' : '';
-
-        return `
-        <div class="item-row">
-            <div class="item-veg ${vegClass}"></div>
-            <div class="item-name" title="${item.name}">${item.name}</div>
-            <div class="item-price">₹${Math.round(item.price || 0)}</div>
-            <div class="item-cat">${cat ? cat.name : ''}</div>
-            <div class="toggle ${availClass}" onclick="toggleAvail('${item.docId}', ${!item.isAvailable})" title="${item.isAvailable ? 'Available' : 'Unavailable (86\'d)'}"></div>
-            ${staffRole === 'super_admin' ? `
-            <div class="item-actions">
-                <button class="btn-edit" onclick="editItem('${item.docId}')">Edit</button>
-                <button class="btn-del" onclick="deleteItem('${item.docId}','${item.name.replace(/'/g,"\\'")}')">Del</button>
-            </div>` : staffRole === 'outlet_manager' ? `
-            <div class="item-actions">
-                <button class="btn-edit" onclick="editPrice('${item.docId}','${item.name.replace(/'/g,"\\'")}',${item.price})">₹ Edit</button>
-            </div>` : ''}
-        </div>`;
-    }).join('');
-}
-
-async function toggleAvail(docId, newValue) {
-    try {
-        await db.collection('menu_items').doc(docId).update({
-            isAvailable: newValue,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        const item = items.find(i => i.docId === docId);
-        if (item) item.isAvailable = newValue;
-        renderItems();
-        toast(newValue ? '✅ Item available' : '🚫 Item 86\'d');
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
-
-function editPrice(docId, name, currentPrice) {
-    const newPrice = prompt(`Edit price for "${name}"\n\nCurrent: ₹${currentPrice}`, currentPrice);
-    if (newPrice === null) return;
-    const price = parseFloat(newPrice);
-    if (isNaN(price) || price < 0) { toast('Invalid price', 'err'); return; }
-    db.collection('menu_items').doc(docId).update({ price: price, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-        .then(() => {
-            const item = items.find(i => i.docId === docId);
-            if (item) item.price = price;
-            renderItems();
-            toast('✅ Price updated to ₹' + price);
-        })
-        .catch(e => toast('Error: ' + e.message, 'err'));
-}
-
-// ============================================================
-// ITEM MODAL (Add/Edit)
-// ============================================================
-function openItemModal(editId) {
-    document.getElementById('imEditId').value = editId || '';
-    document.getElementById('itemModalTitle').textContent = editId ? 'Edit Item' : 'Add Item';
-
-    // RESET photo state
-    pendingPhotoFile = null;
-    pendingPhotoRemove = false;
-    document.getElementById('imPhotoFile').value = '';
-    document.getElementById('imPhotoPreview').innerHTML = '';
-    const removeBtn = document.getElementById('imRemovePhoto');
-    if (removeBtn) removeBtn.style.display = 'none';
-    const statusEl = document.getElementById('imPhotoStatus');
-    if (statusEl) statusEl.textContent = '';
-
-    // Populate category dropdown
-    const catSel = document.getElementById('imCategory');
-    catSel.innerHTML = '<option value="">Select...</option>' + categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    catSel.onchange = () => updateSubcats();
-
-    if (editId) {
-        const item = items.find(i => i.docId === editId);
-        if (!item) return;
-        document.getElementById('imName').value = item.name;
-        document.getElementById('imPrice').value = item.price;
-        document.getElementById('imCategory').value = item.categoryId;
-        updateSubcats();
-        document.getElementById('imSubcat').value = item.subCategoryId || '';
-        document.getElementById('imVegType').value = item.vegType || 'Veg';
-        document.getElementById('imSort').value = item.sortOrder || '';
-        document.getElementById('imDesc').value = item.description || '';
-        renderModGroups(item.modifierGroups || []);
-        // Show existing photo if any
-        if (item.imageUrl) {
-            document.getElementById('imPhotoPreview').innerHTML = `<img src="${item.imageUrl}" style="max-width:200px;max-height:120px;border-radius:8px;border:1px solid #2a2d3e;">`;
-            if (removeBtn) removeBtn.style.display = 'inline-block';
-        }
-    } else {
-        document.getElementById('imName').value = '';
-        document.getElementById('imPrice').value = '';
-        document.getElementById('imCategory').value = '';
-        document.getElementById('imSubcat').innerHTML = '<option value="">None</option>';
-        document.getElementById('imVegType').value = 'Veg';
-        document.getElementById('imSort').value = '';
-        document.getElementById('imDesc').value = '';
-        renderModGroups([]);
-    }
-
-    document.getElementById('itemModal').classList.add('active');
-}
-
-function editItem(docId) { openItemModal(docId); }
-
-function updateSubcats() {
-    const catId = document.getElementById('imCategory').value;
-    const cat = categories.find(c => c.id === catId);
-    const subcatSel = document.getElementById('imSubcat');
-    subcatSel.innerHTML = '<option value="">None</option>';
-    if (cat && cat.subcategories) {
-        cat.subcategories.forEach(sc => {
-            subcatSel.innerHTML += `<option value="${sc.id}">${sc.name}</option>`;
-        });
-    }
-}
-
-// Modifier group builder
-function renderModGroups(groups) {
-    const container = document.getElementById('imModGroups');
-    container.innerHTML = '';
-    (groups || []).forEach((g, gIdx) => {
-        addModGroupHTML(container, g, gIdx);
-    });
-}
-
-function addModGroup() {
-    const container = document.getElementById('imModGroups');
-    const idx = container.children.length;
-    addModGroupHTML(container, { groupName: '', required: false, maxSelect: 1, options: [{ name: '', extraPrice: 0 }] }, idx);
-}
-
-function addModGroupHTML(container, g, gIdx) {
-    const div = document.createElement('div');
-    div.className = 'mod-group';
-    div.dataset.idx = gIdx;
-    let optionsHTML = (g.options || []).map((opt, oIdx) => `
-        <div class="mod-option">
-            <input placeholder="Option name" value="${opt.name || ''}" class="mg-opt-name">
-            <input placeholder="Extra ₹" type="number" value="${opt.extraPrice || 0}" class="mg-opt-price" style="width:70px;">
-            <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:14px;">✕</button>
-        </div>
-    `).join('');
-
-    div.innerHTML = `
-        <div class="mod-group-header">
-            <input class="fi mg-name" value="${g.groupName || ''}" placeholder="Group name (e.g. Spice Level)" style="flex:1;padding:6px 8px;font-size:12px;">
-            <button type="button" onclick="this.closest('.mod-group').remove()" style="background:none;border:none;color:#ff6b6b;cursor:pointer;margin-left:8px;">🗑️</button>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="mg-required" ${g.required ? 'checked' : ''}> Required</label>
-            <label style="font-size:11px;display:flex;align-items:center;gap:4px;">Max: <input type="number" class="mg-max" value="${g.maxSelect || 1}" style="width:40px;padding:2px 4px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;text-align:center;"></label>
-        </div>
-        <div class="mg-options">${optionsHTML}</div>
-        <button type="button" onclick="addModOption(this)" style="padding:4px 10px;background:#2a2d3e;border:none;border-radius:4px;color:#888;font-size:11px;cursor:pointer;margin-top:4px;">+ Add Option</button>
-    `;
-    container.appendChild(div);
-}
-
-function addModOption(btn) {
-    const optContainer = btn.previousElementSibling;
-    const div = document.createElement('div');
-    div.className = 'mod-option';
-    div.innerHTML = `
-        <input placeholder="Option name" class="mg-opt-name">
-        <input placeholder="Extra ₹" type="number" value="0" class="mg-opt-price" style="width:70px;">
-        <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:14px;">✕</button>
-    `;
-    optContainer.appendChild(div);
-}
-
-function collectModGroups() {
-    const groups = [];
-    document.querySelectorAll('#imModGroups .mod-group').forEach(div => {
-        const name = div.querySelector('.mg-name').value.trim();
-        if (!name) return;
-        const required = div.querySelector('.mg-required').checked;
-        const maxSelect = parseInt(div.querySelector('.mg-max').value) || 1;
-        const options = [];
-        div.querySelectorAll('.mod-option').forEach(optDiv => {
-            const optName = optDiv.querySelector('.mg-opt-name').value.trim();
-            const extraPrice = parseFloat(optDiv.querySelector('.mg-opt-price').value) || 0;
-            if (optName) options.push({ name: optName, extraPrice: extraPrice });
-        });
-        if (options.length > 0) groups.push({ groupName: name, required, maxSelect, options });
-    });
-    return groups;
-}
-
-// Photo management
-let pendingPhotoFile = null;
-let pendingPhotoRemove = false;
-
-function previewItemPhoto(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast('Photo must be under 2MB', 'err'); event.target.value = ''; return; }
-    pendingPhotoFile = file;
-    pendingPhotoRemove = false;
-    const reader = new FileReader();
-    reader.onload = e => {
-        document.getElementById('imPhotoPreview').innerHTML = `<img src="${e.target.result}" style="max-width:200px;max-height:120px;border-radius:8px;border:1px solid #2a2d3e;">`;
-        document.getElementById('imPhotoStatus').textContent = file.name;
-        document.getElementById('imRemovePhoto').style.display = 'inline-block';
-    };
-    reader.readAsDataURL(file);
-}
-
-function removeItemPhoto() {
-    pendingPhotoFile = null;
-    pendingPhotoRemove = true;
-    document.getElementById('imPhotoPreview').innerHTML = '';
-    document.getElementById('imPhotoFile').value = '';
-    document.getElementById('imPhotoStatus').textContent = 'Photo removed';
-    document.getElementById('imRemovePhoto').style.display = 'none';
-}
-
-async function uploadItemPhoto(itemId) {
-    if (!pendingPhotoFile) return null;
-    const fileRef = storage.ref('menu-images/' + itemId + '/' + pendingPhotoFile.name);
-    await fileRef.put(pendingPhotoFile);
-    return await fileRef.getDownloadURL();
-}
-
-async function saveItem() {
-    const editId = document.getElementById('imEditId').value;
-    const name = document.getElementById('imName').value.trim();
-    const price = parseFloat(document.getElementById('imPrice').value);
-    const categoryId = document.getElementById('imCategory').value;
-    const subCategoryId = document.getElementById('imSubcat').value;
-    const vegType = document.getElementById('imVegType').value;
-    const sortOrder = parseInt(document.getElementById('imSort').value) || 0;
-    const description = document.getElementById('imDesc').value.trim();
-    const modifierGroups = collectModGroups();
-
-    if (!name) { toast('Enter item name', 'err'); return; }
-    if (isNaN(price)) { toast('Enter valid price', 'err'); return; }
-    if (!categoryId) { toast('Select category', 'err'); return; }
-
-    try {
-        // Handle photo upload/removal
-        let imageUrl = null; // null means "don't change"
-        if (pendingPhotoFile) {
-            toast('Uploading photo...', 'ok');
-            imageUrl = await uploadItemPhoto(editId || name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50) + '_' + Date.now());
-        } else if (pendingPhotoRemove) {
-            imageUrl = ''; // explicitly clear
-        }
-
-        if (editId) {
-            // EDIT — only update changed fields, preserve imageUrl & isAvailable
-            const updateData = {
-                name, price, categoryId, subCategoryId, vegType, sortOrder, description,
-                modifierGroups,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            if (imageUrl !== null) updateData.imageUrl = imageUrl;
-            await db.collection('menu_items').doc(editId).update(updateData);
-            toast('✅ Item updated');
-        } else {
-            // NEW — set all fields
-            const id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50) + '_' + Date.now();
-            const data = {
-                id, name, price, categoryId, subCategoryId, vegType, sortOrder, description,
-                modifierGroups, isActive: true, isAvailable: true,
-                imageUrl: imageUrl || '', outletSpecific: false, outletIds: [],
+        // 1. Upload Categories
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '📂 Uploading categories...', 'info');
+        let catCount = 0;
+        for (const [catId, catData] of Object.entries(data.menu_categories)) {
+            await db.collection('menu_categories').doc(catId).set({
+                id: catId,
+                name: catData.name,
+                sortOrder: catData.sortOrder,
+                isActive: true,
+                subcategories: catData.subcategories || [],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            await db.collection('menu_items').doc(id).set(data);
-            toast('✅ Item added');
+            });
+            catCount++;
         }
-        closeModal('itemModal');
-        await loadData();
-        renderItems();
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
+        addLog('uploadLog', `✓ ${catCount} categories uploaded`, 'success');
 
-async function deleteItem(docId, name) {
-    if (!confirm(`Delete "${name}"?`)) return;
-    try {
-        await db.collection('menu_items').doc(docId).delete();
-        toast('🗑️ Deleted');
-        await loadData();
-        renderItems();
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
+        // 2. Upload Menu Items (in small batches to avoid quota issues)
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '🍽️ Uploading menu items... (this takes a moment)', 'info');
+        const itemEntries = Object.entries(data.menu_items);
+        let itemCount = 0;
+        const BATCH_SIZE = 50;
 
-// ============================================================
-// CATEGORIES
-// ============================================================
-function renderCats() {
-    if (!categories.length) {
-        document.getElementById('catsList').innerHTML = '<div class="empty-state"><span class="icon">📂</span>No categories</div>';
-        return;
+        for (let i = 0; i < itemEntries.length; i += BATCH_SIZE) {
+            const batch = db.batch();
+            const chunk = itemEntries.slice(i, i + BATCH_SIZE);
+
+            for (const [itemId, itemData] of chunk) {
+                const ref = db.collection('menu_items').doc(itemId);
+                batch.set(ref, {
+                    id: itemId,
+                    name: itemData.name,
+                    categoryId: itemData.categoryId,
+                    subCategoryId: itemData.subCategoryId || '',
+                    price: itemData.price,
+                    description: itemData.description || '',
+                    vegType: itemData.vegType || 'Unknown',
+                    isActive: true,
+                    isAvailable: true,
+                    sortOrder: itemData.sortOrder || 0,
+                    modifierGroups: itemData.modifierGroups || [],
+                    imageUrl: itemData.imageUrl || '',
+                    outletSpecific: false,
+                    outletIds: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                itemCount++;
+            }
+
+            await batch.commit();
+            addLog('uploadLog', `  ✓ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${chunk.length} items uploaded (${itemCount} total)`, 'success');
+        }
+        addLog('uploadLog', `✓ ${itemCount} menu items uploaded`, 'success');
+
+        // 3. Create Outlet
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '🏪 Creating outlet...', 'info');
+        await db.collection('qr_outlets').doc('house_of_nosh').set({
+            id: 'house_of_nosh',
+            name: 'House Of Nosh',
+            isActive: true,
+            qrOrderingEnabled: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        addLog('uploadLog', '✓ Outlet created: House Of Nosh', 'success');
+
+        // 4. Create 10 Tables
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '🪑 Creating 10 tables...', 'info');
+        const tableBatch = db.batch();
+        for (let t = 1; t <= 10; t++) {
+            const tableId = `house_of_nosh_table_${t}`;
+            tableBatch.set(db.collection('qr_tables').doc(tableId), {
+                id: tableId,
+                outletId: 'house_of_nosh',
+                outletName: 'House Of Nosh',
+                tableNumber: t,
+                tableName: `Table ${t}`,
+                qrUrl: `https://order.houseofnosh.in?o=house_of_nosh&t=house_of_nosh_table_${t}`,
+                isActive: true,
+                currentSessionId: '',
+                capacity: 4,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        await tableBatch.commit();
+        addLog('uploadLog', '✓ 10 tables created (Table 1 to Table 10)', 'success');
+
+        // 5. Create Super Admin
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '👤 Creating super admin...', 'info');
+        await db.collection('qr_staff').doc(fullPhone).set({
+            phone: fullPhone,
+            name: 'Abhishek',
+            role: 'super_admin',
+            outletIds: ['all'],
+            isActive: true,
+            pin: '1234',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        addLog('uploadLog', `✓ Super admin created: ${fullPhone} (default PIN: 1234)`, 'success');
+
+        // DONE!
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '========================================', 'success');
+        addLog('uploadLog', '🎉 ALL DONE! Upload complete.', 'success');
+        addLog('uploadLog', '========================================', 'success');
+        addLog('uploadLog', `  Categories:  ${catCount}`, 'success');
+        addLog('uploadLog', `  Items:       ${itemCount}`, 'success');
+        addLog('uploadLog', `  Tables:      10`, 'success');
+        addLog('uploadLog', `  Outlet:      House Of Nosh`, 'success');
+        addLog('uploadLog', `  Super Admin: ${fullPhone}`, 'success');
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '👉 Next: Click "Verify Data" below to confirm everything is correct.', 'info');
+
+        setStatus('uploadStatus', '✅ Upload complete! All data is in Firestore.', 'success');
+
+    } catch (err) {
+        console.error('Upload error:', err);
+        addLog('uploadLog', `❌ ERROR: ${err.message}`, 'error');
+        addLog('uploadLog', 'Check that Firestore is in TEST MODE in Firebase Console.', 'warn');
+        setStatus('uploadStatus', '❌ Upload failed. Check the log above.', 'error');
     }
-    document.getElementById('catsList').innerHTML = categories.map(cat => {
-        const itemCount = items.filter(i => i.categoryId === cat.id).length;
-        const subcats = (cat.subcategories || []).map(s => s.name).join(', ');
-        return `
-        <div class="item-row">
-            <div style="font-size:16px;margin-right:4px;">📂</div>
-            <div class="item-name"><strong>${cat.name}</strong></div>
-            <div style="font-size:11px;color:#888;flex:1;">${subcats || 'No subcategories'}</div>
-            <div style="font-size:12px;color:#666;margin-right:8px;">${itemCount} items</div>
-            ${staffRole === 'super_admin' ? `
-            <div class="item-actions">
-                <button class="btn-edit" onclick="editCat('${cat.docId}')">Edit</button>
-                <button class="btn-del" onclick="deleteCat('${cat.docId}','${cat.name.replace(/'/g,"\\'")}')">Del</button>
-            </div>` : ''}
-        </div>`;
-    }).join('');
+
+    document.getElementById('uploadBtn').disabled = false;
 }
 
-function openCatModal(editId) {
-    document.getElementById('cmEditId').value = editId || '';
-    document.getElementById('catModalTitle').textContent = editId ? 'Edit Category' : 'Add Category';
-    if (editId) {
-        const cat = categories.find(c => c.docId === editId);
-        if (!cat) return;
-        document.getElementById('cmName').value = cat.name;
-        document.getElementById('cmSort').value = cat.sortOrder || '';
-        document.getElementById('cmSubcats').value = (cat.subcategories || []).map(s => s.name).join('\n');
-    } else {
-        document.getElementById('cmName').value = '';
-        document.getElementById('cmSort').value = '';
-        document.getElementById('cmSubcats').value = '';
+// ============================================================
+// VERIFY
+// ============================================================
+async function verifyUpload() {
+    document.getElementById('verifyLog').innerHTML = '';
+    setStatus('verifyStatus', '⏳ Checking...', 'loading');
+
+    try {
+        addLog('verifyLog', '🔍 Verifying Firestore data...', 'info');
+
+        // Check categories
+        const catSnap = await db.collection('menu_categories').get();
+        addLog('verifyLog', `📂 Categories: ${catSnap.size} documents`, catSnap.size > 0 ? 'success' : 'error');
+
+        // Check items
+        const itemSnap = await db.collection('menu_items').get();
+        addLog('verifyLog', `🍽️ Menu items: ${itemSnap.size} documents`, itemSnap.size > 0 ? 'success' : 'error');
+
+        // Check a sample item
+        if (itemSnap.size > 0) {
+            const sample = itemSnap.docs[0].data();
+            addLog('verifyLog', `  Sample item: "${sample.name}" — ₹${sample.price} — ${sample.vegType}`, 'info');
+        }
+
+        // Check outlet
+        const outletSnap = await db.collection('qr_outlets').get();
+        addLog('verifyLog', `🏪 Outlets: ${outletSnap.size} documents`, outletSnap.size > 0 ? 'success' : 'error');
+
+        // Check tables
+        const tableSnap = await db.collection('qr_tables').get();
+        addLog('verifyLog', `🪑 Tables: ${tableSnap.size} documents`, tableSnap.size > 0 ? 'success' : 'error');
+
+        // Check staff
+        const staffSnap = await db.collection('qr_staff').get();
+        addLog('verifyLog', `👤 Staff users: ${staffSnap.size} documents`, staffSnap.size > 0 ? 'success' : 'error');
+        if (staffSnap.size > 0) {
+            const admin = staffSnap.docs[0].data();
+            addLog('verifyLog', `  Super admin: ${admin.phone} (${admin.role})`, 'info');
+        }
+
+        // Items with modifiers
+        let modCount = 0;
+        itemSnap.docs.forEach(d => { if (d.data().modifierGroups && d.data().modifierGroups.length > 0) modCount++; });
+        addLog('verifyLog', `🔧 Items with modifiers: ${modCount}`, 'info');
+
+        // Veg/NonVeg breakdown
+        let vegCount = 0, nonvegCount = 0, eggCount = 0, unknownCount = 0;
+        itemSnap.docs.forEach(d => {
+            const v = d.data().vegType;
+            if (v === 'Veg') vegCount++;
+            else if (v === 'NonVeg') nonvegCount++;
+            else if (v === 'Egg') eggCount++;
+            else unknownCount++;
+        });
+        addLog('verifyLog', `🟢 Veg: ${vegCount} | 🔴 Non-Veg: ${nonvegCount} | 🟡 Egg: ${eggCount} | ❓ Unknown: ${unknownCount}`, 'info');
+
+        addLog('verifyLog', '', 'info');
+        const allGood = catSnap.size > 0 && itemSnap.size > 0 && outletSnap.size > 0 && tableSnap.size > 0 && staffSnap.size > 0;
+        if (allGood) {
+            addLog('verifyLog', '✅ Everything looks good! Your Firestore is ready.', 'success');
+            setStatus('verifyStatus', '✅ All data verified successfully!', 'success');
+        } else {
+            addLog('verifyLog', '⚠️ Some collections are missing. Try running the upload again.', 'warn');
+            setStatus('verifyStatus', '⚠️ Some data is missing. Check the log.', 'error');
+        }
+
+    } catch (err) {
+        addLog('verifyLog', `❌ Error: ${err.message}`, 'error');
+        setStatus('verifyStatus', '❌ Verification failed.', 'error');
     }
-    document.getElementById('catModal').classList.add('active');
 }
 
-function editCat(docId) { openCatModal(docId); }
-
-async function saveCat() {
-    const editId = document.getElementById('cmEditId').value;
-    const name = document.getElementById('cmName').value.trim();
-    const sortOrder = parseInt(document.getElementById('cmSort').value) || 0;
-    const subcatLines = document.getElementById('cmSubcats').value.trim().split('\n').filter(s => s.trim());
-
-    if (!name) { toast('Enter name', 'err'); return; }
-
-    const subcategories = subcatLines.map((s, i) => ({
-        id: s.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_'),
-        name: s.trim(),
-        sortOrder: i + 1
-    }));
-
-    const data = {
-        name, sortOrder, isActive: true, subcategories,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
+// ============================================================
+// OTP TOGGLE
+// ============================================================
+async function setOTP(enabled) {
     try {
-        if (editId) {
-            await db.collection('menu_categories').doc(editId).update(data);
-            toast('✅ Updated');
+        await db.collection('qr_settings').doc('config').set({
+            otpEnabled: enabled
+        }, { merge: true });
+        
+        const statusEl = document.getElementById('otpStatus');
+        if (enabled) {
+            statusEl.innerHTML = '<div class="status status-success">🔒 OTP is ON — customers will receive SMS verification</div>';
         } else {
-            const id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
-            data.id = id;
-            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            await db.collection('menu_categories').doc(id).set(data);
-            toast('✅ Added');
+            statusEl.innerHTML = '<div class="status status-success">🔓 OTP is OFF — testing mode. Customers enter phone only, no SMS.</div>';
         }
-        closeModal('catModal');
-        await loadData();
-        renderCats();
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
+    } catch(e) {
+        document.getElementById('otpStatus').innerHTML = '<div class="status status-error">Error: ' + e.message + '</div>';
+    }
 }
 
-async function deleteCat(docId, name) {
-    const count = items.filter(i => i.categoryId === docId || i.categoryId === categories.find(c => c.docId === docId)?.id).length;
-    if (!confirm(`Delete "${name}"?\n\n${count} items in this category will become uncategorized.`)) return;
-    try {
-        await db.collection('menu_categories').doc(docId).delete();
-        toast('🗑️ Deleted');
-        await loadData();
-        renderCats();
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
-
-// ============================================================
-// STAFF MANAGEMENT (Super Admin only)
-// ============================================================
-async function loadStaff() {
-    const snap = await db.collection('qr_staff').get();
-    const staff = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
-
-    document.getElementById('staffList').innerHTML = staff.length ? `
-        <table>
-            <tr><th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th></th></tr>
-            ${staff.map(s => `
-                <tr>
-                    <td><strong>${s.name || '—'}</strong></td>
-                    <td>${s.phone || ''}</td>
-                    <td><span class="badge b-${s.role === 'super_admin' ? 'super' : s.role === 'outlet_manager' ? 'manager' : 'cashier'}">${s.role}</span></td>
-                    <td>${s.isActive ? '🟢' : '🔴'}</td>
-                    <td>
-                        <button class="btn-edit" onclick="editStaff('${s.docId}')">Edit</button>
-                        <button class="btn-del" onclick="deleteStaff('${s.docId}','${(s.name||'').replace(/'/g,"\\'")}')">Del</button>
-                    </td>
-                </tr>
-            `).join('')}
-        </table>
-    ` : '<div class="empty-state"><span class="icon">👥</span>No staff</div>';
-}
-
-async function saveStaff() {
-    const name = document.getElementById('sName').value.trim();
-    const phone = document.getElementById('sPhone').value.trim();
-    const role = document.getElementById('sRole').value;
-    const outletId = document.getElementById('sOutlet').value;
-    const editPhone = document.getElementById('sEditPhone').value;
-
-    if (!name || !/^\d{10}$/.test(phone)) { toast('Enter name and 10-digit phone', 'err'); return; }
-
-    const fullPhone = '+91' + phone;
-    const data = {
-        phone: fullPhone, name, role,
-        outletIds: outletId === 'all' ? ['all'] : [outletId],
-        isActive: true,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    try {
-        if (editPhone) {
-            await db.collection('qr_staff').doc(editPhone).update(data);
-        } else {
-            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            await db.collection('qr_staff').doc(fullPhone).set(data);
-        }
-        toast('✅ Staff saved');
-        document.getElementById('sName').value = '';
-        document.getElementById('sPhone').value = '';
-        document.getElementById('sEditPhone').value = '';
-        loadStaff();
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
-
-async function editStaff(docId) {
-    const doc = await db.collection('qr_staff').doc(docId).get();
-    if (!doc.exists) return;
-    const s = doc.data();
-    document.getElementById('sName').value = s.name || '';
-    document.getElementById('sPhone').value = (s.phone || '').replace('+91', '');
-    document.getElementById('sRole').value = s.role || 'cashier';
-    document.getElementById('sOutlet').value = (s.outletIds || ['all'])[0];
-    document.getElementById('sEditPhone').value = docId;
-    window.scrollTo(0, 0);
-}
-
-async function deleteStaff(docId, name) {
-    if (!confirm(`Delete "${name}"?`)) return;
-    try {
-        await db.collection('qr_staff').doc(docId).delete();
-        toast('🗑️ Deleted');
-        loadStaff();
-    } catch (e) { toast('Error: ' + e.message, 'err'); }
-}
-
-// ============================================================
-// SETTINGS
-// ============================================================
-async function loadSettings() {
+// Check current OTP status on load
+async function checkOTPStatus() {
     try {
         const doc = await db.collection('qr_settings').doc('config').get();
-        const data = doc.exists ? doc.data() : {};
-        
-        const otpOn = data.otpEnabled !== false; // default true
-        const orderingOn = data.qrOrderingActive !== false; // default true
-        
-        document.getElementById('otpToggle').className = 'toggle' + (otpOn ? ' on' : '');
-        document.getElementById('orderingToggle').className = 'toggle' + (orderingOn ? ' on' : '');
+        const enabled = doc.exists ? doc.data().otpEnabled !== false : true;
+        document.getElementById('otpStatus').innerHTML = enabled 
+            ? '<div class="status status-loading">Current: 🔒 OTP is ON</div>'
+            : '<div class="status status-loading">Current: 🔓 OTP is OFF (testing mode)</div>';
+    } catch(e) {}
+}
+setTimeout(checkOTPStatus, 1500);
 
-        // Load outlet-specific reset hour
-        const outDoc = await db.collection('qr_outlets').doc(staffData.outletIds?.[0] || 'house_of_nosh').get();
-        if (outDoc.exists && outDoc.data().resetHour !== undefined) {
-            document.getElementById('resetHourSelect').value = outDoc.data().resetHour;
-        }
-    } catch(e) {
-        console.error('Load settings error:', e);
+// ============================================================
+// RESET ADMIN PIN
+// ============================================================
+async function resetAdminPin() {
+    const phone = document.getElementById('resetPinPhone').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        document.getElementById('resetPinStatus').innerHTML = '<div class="status status-error">Enter a valid 10-digit phone number</div>';
+        return;
     }
-}
-
-async function saveResetHour() {
-    const hour = parseInt(document.getElementById('resetHourSelect').value);
+    const fullPhone = '+91' + phone;
     try {
-        // Save to all outlets this admin has access to
-        const outletIds = (staffData.outletIds || []).includes('all') ? outlets.map(o => o.docId) : staffData.outletIds;
-        for (const oid of outletIds) {
-            await db.collection('qr_outlets').doc(oid).update({ resetHour: hour });
+        const doc = await db.collection('qr_staff').doc(fullPhone).get();
+        if (!doc.exists) {
+            document.getElementById('resetPinStatus').innerHTML = '<div class="status status-error">User not found. Run upload first.</div>';
+            return;
         }
-        toast('✅ Reset hour set to ' + hour + ':00 AM');
-    } catch(e) { toast('Error: ' + e.message, 'err'); }
-}
-
-async function toggleOTPSetting() {
-    const toggle = document.getElementById('otpToggle');
-    const isOn = toggle.classList.contains('on');
-    const newValue = !isOn;
-    
-    try {
-        await db.collection('qr_settings').doc('config').set({
-            otpEnabled: newValue
-        }, { merge: true });
-        
-        toggle.className = 'toggle' + (newValue ? ' on' : '');
-        toast(newValue ? '✅ OTP enabled — customers will receive SMS' : '🔓 OTP disabled — testing mode (phone only, no SMS)');
+        await db.collection('qr_staff').doc(fullPhone).update({ pin: '1234' });
+        document.getElementById('resetPinStatus').innerHTML = '<div class="status status-success">✅ PIN reset to 1234 for ' + fullPhone + '. Login with this PIN, you will be asked to change it.</div>';
     } catch(e) {
-        toast('Error: ' + e.message, 'err');
-    }
-}
-
-async function toggleOrderingSetting() {
-    const toggle = document.getElementById('orderingToggle');
-    const isOn = toggle.classList.contains('on');
-    const newValue = !isOn;
-    
-    try {
-        await db.collection('qr_settings').doc('config').set({
-            qrOrderingActive: newValue
-        }, { merge: true });
-        
-        toggle.className = 'toggle' + (newValue ? ' on' : '');
-        toast(newValue ? '✅ QR Ordering active' : '🚫 QR Ordering disabled — customers see "Unavailable"');
-    } catch(e) {
-        toast('Error: ' + e.message, 'err');
+        document.getElementById('resetPinStatus').innerHTML = '<div class="status status-error">Error: ' + e.message + '</div>';
     }
 }
 
 // ============================================================
-// INIT
+// RESET
 // ============================================================
-window.addEventListener('DOMContentLoaded', checkAutoLogin);
+async function confirmReset() {
+    if (!confirm('⚠️ This will DELETE ALL DATA in the trial Firestore.\n\nAre you absolutely sure?')) return;
+    if (!confirm('LAST CHANCE — this cannot be undone. Type OK to proceed.')) return;
+
+    setStatus('resetStatus', '⏳ Deleting all collections...', 'loading');
+
+    try {
+        const collections = ['menu_categories', 'menu_items', 'qr_tables', 'qr_outlets', 'qr_staff', 'qr_orders', 'qr_sessions', 'qr_order_counters', 'customers'];
+        
+        for (const col of collections) {
+            const snap = await db.collection(col).get();
+            if (snap.size > 0) {
+                // Delete in batches
+                const batches = [];
+                let batch = db.batch();
+                let count = 0;
+                snap.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                    count++;
+                    if (count >= 400) {
+                        batches.push(batch);
+                        batch = db.batch();
+                        count = 0;
+                    }
+                });
+                if (count > 0) batches.push(batch);
+                for (const b of batches) await b.commit();
+            }
+        }
+
+        setStatus('resetStatus', '✅ All data deleted. You can now run the upload again.', 'success');
+
+    } catch (err) {
+        setStatus('resetStatus', `❌ Reset failed: ${err.message}`, 'error');
+    }
+}
 </script>
 </body>
 </html>
