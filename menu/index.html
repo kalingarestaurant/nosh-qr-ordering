@@ -273,6 +273,15 @@
                     <button class="btn btn-primary" style="width:auto;padding:10px 20px;margin-top:10px;font-size:13px;" onclick="recompressAllPhotos()">🔄 Re-compress All Photos</button>
                     <div id="recompressStatus" style="font-size:12px;color:#888;margin-top:8px;max-height:200px;overflow-y:auto;"></div>
                 </div>
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">🏪 Manage Outlets</div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                        <input class="fi" id="newOutletName" placeholder="Outlet name" style="flex:1;min-width:150px;">
+                        <input class="fi" id="newOutletId" placeholder="Short ID (e.g. cafe_xyz)" style="flex:1;min-width:120px;">
+                        <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="addOutlet()">+ Add Outlet</button>
+                    </div>
+                    <div id="outletsList"></div>
+                </div>
                 <div style="padding:16px 0;font-size:12px;color:#666;">
                     ⚠️ Remember to turn OTP back ON before going live with real customers.
                 </div>
@@ -1747,20 +1756,92 @@ async function loadSettings() {
         const doc = await db.collection('qr_settings').doc('config').get();
         const data = doc.exists ? doc.data() : {};
         
-        const otpOn = data.otpEnabled !== false; // default true
-        const orderingOn = data.qrOrderingActive !== false; // default true
+        const otpOn = data.otpEnabled !== false;
+        const orderingOn = data.qrOrderingActive !== false;
         
         document.getElementById('otpToggle').className = 'toggle' + (otpOn ? ' on' : '');
         document.getElementById('orderingToggle').className = 'toggle' + (orderingOn ? ' on' : '');
 
-        // Load outlet-specific reset hour
-        const outDoc = await db.collection('qr_outlets').doc(staffData.outletIds?.[0] || 'house_of_nosh').get();
+        const outDoc = await db.collection('qr_outlets').doc(staffData.outletIds?.[0] || 'babylon_brewery').get();
         if (outDoc.exists && outDoc.data().resetHour !== undefined) {
             document.getElementById('resetHourSelect').value = outDoc.data().resetHour;
         }
+        
+        renderOutletsList();
     } catch(e) {
         console.error('Load settings error:', e);
     }
+}
+
+function renderOutletsList() {
+    const container = document.getElementById('outletsList');
+    if (!outlets.length) {
+        container.innerHTML = '<div style="font-size:12px;color:#555;">No outlets yet</div>';
+        return;
+    }
+    container.innerHTML = outlets.map(o => {
+        const id = o.id || o.docId;
+        return `
+        <div class="item-row">
+            <div class="item-name"><strong>${o.name}</strong></div>
+            <div style="font-size:11px;color:#666;min-width:100px;">${id}</div>
+            <div class="toggle ${o.isActive ? 'on' : ''}" onclick="toggleOutletActive('${o.docId}', ${!o.isActive})" title="${o.isActive ? 'Active' : 'Inactive'}"></div>
+            <div class="item-actions">
+                <button class="btn-edit" onclick="editOutletName('${o.docId}','${(o.name||'').replace(/'/g,"\\'")}')">Edit</button>
+                <button class="btn-del" onclick="deleteOutlet('${o.docId}','${(o.name||'').replace(/'/g,"\\'")}')">Del</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function addOutlet() {
+    const name = document.getElementById('newOutletName').value.trim();
+    let id = document.getElementById('newOutletId').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+    if (!name) { toast('Enter outlet name', 'err'); return; }
+    if (!id) { id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_'); }
+    
+    // Check if ID already exists
+    const existing = outlets.find(o => (o.id || o.docId) === id);
+    if (existing) { toast('Outlet ID "' + id + '" already exists', 'err'); return; }
+    
+    try {
+        await db.collection('qr_outlets').doc(id).set({
+            id: id, name: name, isActive: true, qrOrderingEnabled: true, resetHour: 6,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('newOutletName').value = '';
+        document.getElementById('newOutletId').value = '';
+        await loadData();
+        renderOutletsList();
+        toast('✅ Outlet added: ' + name);
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function toggleOutletActive(docId, newValue) {
+    try {
+        await db.collection('qr_outlets').doc(docId).update({ isActive: newValue });
+        await loadData();
+        renderOutletsList();
+        toast(newValue ? '✅ Outlet active' : '🚫 Outlet deactivated');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function editOutletName(docId, currentName) {
+    const newName = prompt('Edit outlet name:', currentName);
+    if (!newName || newName === currentName) return;
+    db.collection('qr_outlets').doc(docId).update({ name: newName.trim() })
+        .then(async () => { await loadData(); renderOutletsList(); toast('✅ Updated'); })
+        .catch(e => toast('Error: ' + e.message, 'err'));
+}
+
+async function deleteOutlet(docId, name) {
+    if (!confirm(`Delete "${name}"?\n\nThis will NOT delete the outlet's tables, menu overrides, or orders. But it will disappear from all dropdowns.`)) return;
+    try {
+        await db.collection('qr_outlets').doc(docId).delete();
+        await loadData();
+        renderOutletsList();
+        toast('🗑️ Outlet deleted');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
 async function recompressAllPhotos() {
