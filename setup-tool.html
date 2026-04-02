@@ -87,9 +87,25 @@
         <div id="otpStatus" style="font-size:13px;margin-top:8px;"></div>
     </div>
 
-    <!-- STEP 5: Reset Admin PIN -->
+    <!-- STEP 5: Create Outlets + Tables ONLY -->
     <div class="section">
-        <div class="section-title"><span class="step-badge">5</span> Reset Admin PIN</div>
+        <div class="section-title"><span class="step-badge">5</span> Setup Outlets & Tables (Safe — doesn't touch menu)</div>
+        <div class="section-desc">Creates 5 outlets with 10 tables each. <strong>Does NOT modify your menu items, photos, or categories.</strong></div>
+        <div style="background:#1a2a1a;border:1px solid #2a4a2a;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:#4ecdc4;">
+            ✅ Babylon Craft Brewery (2 tables)<br>
+            ✅ Babylon Rooftop (2 tables)<br>
+            ✅ Level 5 Bistro (2 tables)<br>
+            ✅ Babylon Nip Room — BNR (2 tables)<br>
+            ✅ Pan Asia (2 tables)
+        </div>
+        <button class="btn btn-primary" id="outletBtn" onclick="createOutletsOnly()">🏪 Create 5 Outlets + 10 Tables</button>
+        <div id="outletSetupStatus" style="font-size:13px;margin-top:8px;"></div>
+        <div class="log" id="outletSetupLog" style="display:none;"></div>
+    </div>
+
+    <!-- STEP 6: Reset Admin PIN -->
+    <div class="section">
+        <div class="section-title"><span class="step-badge">6</span> Reset Admin PIN</div>
         <div class="section-desc">Reset your super admin PIN to <strong>1234</strong>. Use if you forgot your PIN or just set up the system.</div>
         <div class="input-group">
             <label class="input-label">Phone number (same as Step 1)</label>
@@ -252,39 +268,52 @@ async function startUpload() {
         }
         addLog('uploadLog', `✓ ${itemCount} menu items uploaded`, 'success');
 
-        // 3. Create Outlet
+        // 3. Create 5 Outlets
         addLog('uploadLog', '', 'info');
-        addLog('uploadLog', '🏪 Creating outlet...', 'info');
-        await db.collection('qr_outlets').doc('house_of_nosh').set({
-            id: 'house_of_nosh',
-            name: 'House Of Nosh',
-            isActive: true,
-            qrOrderingEnabled: true,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        addLog('uploadLog', '✓ Outlet created: House Of Nosh', 'success');
-
-        // 4. Create 10 Tables
-        addLog('uploadLog', '', 'info');
-        addLog('uploadLog', '🪑 Creating 10 tables...', 'info');
-        const tableBatch = db.batch();
-        for (let t = 1; t <= 10; t++) {
-            const tableId = `house_of_nosh_table_${t}`;
-            tableBatch.set(db.collection('qr_tables').doc(tableId), {
-                id: tableId,
-                outletId: 'house_of_nosh',
-                outletName: 'House Of Nosh',
-                tableNumber: t,
-                tableName: `Table ${t}`,
-                qrUrl: `https://order.houseofnosh.in?o=house_of_nosh&t=house_of_nosh_table_${t}`,
+        addLog('uploadLog', '🏪 Creating 5 outlets...', 'info');
+        const OUTLETS = [
+            { id: 'babylon_brewery', name: 'Babylon Craft Brewery' },
+            { id: 'babylon_rooftop', name: 'Babylon Rooftop' },
+            { id: 'level5_bistro', name: 'Level 5 Bistro' },
+            { id: 'bnr', name: 'Babylon Nip Room (BNR)' },
+            { id: 'pan_asia', name: 'Pan Asia' }
+        ];
+        for (const outlet of OUTLETS) {
+            await db.collection('qr_outlets').doc(outlet.id).set({
+                id: outlet.id,
+                name: outlet.name,
                 isActive: true,
-                currentSessionId: '',
-                capacity: 4,
+                qrOrderingEnabled: true,
+                resetHour: 6,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+            addLog('uploadLog', '  ✓ ' + outlet.name, 'success');
         }
-        await tableBatch.commit();
-        addLog('uploadLog', '✓ 10 tables created (Table 1 to Table 10)', 'success');
+        addLog('uploadLog', '✓ 5 outlets created', 'success');
+
+        // 4. Create 10 Tables per Outlet (50 total)
+        addLog('uploadLog', '', 'info');
+        addLog('uploadLog', '🪑 Creating 10 tables per outlet (50 total)...', 'info');
+        for (const outlet of OUTLETS) {
+            const tableBatch = db.batch();
+            for (let t = 1; t <= 10; t++) {
+                const tableId = `${outlet.id}_table_${t}`;
+                tableBatch.set(db.collection('qr_tables').doc(tableId), {
+                    id: tableId,
+                    outletId: outlet.id,
+                    outletName: outlet.name,
+                    tableNumber: t,
+                    tableName: `Table ${t}`,
+                    seats: 4,
+                    isActive: true,
+                    currentSessionId: '',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+            await tableBatch.commit();
+            addLog('uploadLog', '  ✓ ' + outlet.name + ': 10 tables', 'success');
+        }
+        addLog('uploadLog', '✓ 50 tables created', 'success');
 
         // 5. Create Super Admin
         addLog('uploadLog', '', 'info');
@@ -307,7 +336,8 @@ async function startUpload() {
         addLog('uploadLog', '========================================', 'success');
         addLog('uploadLog', `  Categories:  ${catCount}`, 'success');
         addLog('uploadLog', `  Items:       ${itemCount}`, 'success');
-        addLog('uploadLog', `  Tables:      10`, 'success');
+        addLog('uploadLog', `  Outlets:     5`, 'success');
+        addLog('uploadLog', `  Tables:      50 (10 per outlet)`, 'success');
         addLog('uploadLog', `  Outlet:      House Of Nosh`, 'success');
         addLog('uploadLog', `  Super Admin: ${fullPhone}`, 'success');
         addLog('uploadLog', '', 'info');
@@ -395,6 +425,78 @@ async function verifyUpload() {
         addLog('verifyLog', `❌ Error: ${err.message}`, 'error');
         setStatus('verifyStatus', '❌ Verification failed.', 'error');
     }
+}
+
+// ============================================================
+// CREATE OUTLETS + TABLES ONLY (safe — no menu changes)
+// ============================================================
+async function createOutletsOnly() {
+    document.getElementById('outletBtn').disabled = true;
+    document.getElementById('outletSetupLog').style.display = 'block';
+    const logId = 'outletSetupLog';
+
+    const OUTLETS = [
+        { id: 'babylon_brewery', name: 'Babylon Craft Brewery' },
+        { id: 'babylon_rooftop', name: 'Babylon Rooftop' },
+        { id: 'level5_bistro', name: 'Level 5 Bistro' },
+        { id: 'bnr', name: 'Babylon Nip Room (BNR)' },
+        { id: 'pan_asia', name: 'Pan Asia' }
+    ];
+
+    try {
+        // Create outlets
+        addLog(logId, '🏪 Creating outlets...', 'info');
+        for (const outlet of OUTLETS) {
+            // Use set with merge to not overwrite if already exists
+            await db.collection('qr_outlets').doc(outlet.id).set({
+                id: outlet.id,
+                name: outlet.name,
+                isActive: true,
+                qrOrderingEnabled: true,
+                resetHour: 6,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            addLog(logId, '  ✓ ' + outlet.name, 'success');
+        }
+
+        // Create 10 tables per outlet
+        addLog(logId, '', 'info');
+        addLog(logId, '🪑 Creating tables (2 per outlet)...', 'info');
+        let totalTables = 0;
+        for (const outlet of OUTLETS) {
+            const batch = db.batch();
+            for (let t = 1; t <= 2; t++) {
+                const tableId = `${outlet.id}_table_${t}`;
+                // Use set with merge to not overwrite existing sessions
+                batch.set(db.collection('qr_tables').doc(tableId), {
+                    id: tableId,
+                    outletId: outlet.id,
+                    outletName: outlet.name,
+                    tableNumber: t,
+                    tableName: `Table ${t}`,
+                    seats: 4,
+                    isActive: true,
+                    currentSessionId: '',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                totalTables++;
+            }
+            await batch.commit();
+            addLog(logId, '  ✓ ' + outlet.name + ': 2 tables', 'success');
+        }
+
+        addLog(logId, '', 'info');
+        addLog(logId, '========================================', 'success');
+        addLog(logId, '🎉 DONE! ' + OUTLETS.length + ' outlets + ' + totalTables + ' tables created.', 'success');
+        addLog(logId, '  Your menu items & photos are untouched.', 'success');
+        addLog(logId, '========================================', 'success');
+
+        document.getElementById('outletSetupStatus').innerHTML = '<div class="status status-success">✅ 5 outlets + 10 tables created successfully!</div>';
+    } catch (e) {
+        addLog(logId, '❌ Error: ' + e.message, 'error');
+        document.getElementById('outletSetupStatus').innerHTML = '<div class="status status-error">Error: ' + e.message + '</div>';
+    }
+    document.getElementById('outletBtn').disabled = false;
 }
 
 // ============================================================
