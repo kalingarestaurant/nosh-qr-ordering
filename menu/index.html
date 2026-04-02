@@ -183,6 +183,7 @@
         <button class="tab active" onclick="showTab('items')">🍽️ Menu Items</button>
         <button class="tab" onclick="showTab('categories')">📂 Categories</button>
         <button class="tab" onclick="showTab('settings')" id="tabSettings" style="display:none;">⚙️ Settings</button>
+        <button class="tab" onclick="showTab('tables')" id="tabTables" style="display:none;">🪑 Tables</button>
         <button class="tab" onclick="showTab('staff')" id="tabStaff" style="display:none;">👥 Staff</button>
     </div>
     <div class="content">
@@ -253,6 +254,35 @@
                     ⚠️ Remember to turn OTP back ON before going live with real customers.
                 </div>
             </div>
+        </div>
+        <!-- TABLES TAB -->
+        <div id="tab-tables" style="display:none;">
+            <div class="card">
+                <div class="card-title">Add / Edit Table</div>
+                <div class="frow">
+                    <div class="ff"><label>Table Number *</label><input class="fi" id="tblNumber" type="number" placeholder="e.g. 1" inputmode="numeric"></div>
+                    <div class="ff"><label>Table Name *</label><input class="fi" id="tblName" placeholder="e.g. Table 1"></div>
+                </div>
+                <div class="frow">
+                    <div class="ff"><label>Seats</label><input class="fi" id="tblSeats" type="number" placeholder="4" inputmode="numeric"></div>
+                    <div class="ff"><label>Outlet</label>
+                        <select class="fi" id="tblOutlet"></select>
+                    </div>
+                </div>
+                <input type="hidden" id="tblEditId" value="">
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="saveTable()">💾 Save Table</button>
+                    <button class="btn" style="width:auto;padding:10px 20px;background:#2a2d3e;color:#888;" onclick="clearTableForm()" id="tblCancelBtn" style="display:none;">Cancel Edit</button>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px;">
+                <div class="section-title" style="margin:0;">Tables</div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="count-label" id="tableCount">0 tables</div>
+                    <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="downloadAllQR()">📥 Download All QR Codes</button>
+                </div>
+            </div>
+            <div id="tablesList"></div>
         </div>
         <!-- STAFF TAB -->
         <div id="tab-staff" style="display:none;">
@@ -375,6 +405,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <!-- MSG91 OTP SDK -->
 <script>
@@ -614,6 +646,7 @@ async function startDashboard() {
     if (staffRole === 'super_admin') {
         document.getElementById('tabStaff').style.display = 'inline-block';
         document.getElementById('tabSettings').style.display = 'inline-block';
+        document.getElementById('tabTables').style.display = 'inline-block';
         document.getElementById('btnAddItem').style.display = 'inline-block';
         document.getElementById('btnAddCat').style.display = 'inline-block';
     } else {
@@ -650,7 +683,7 @@ async function loadData() {
 // TABS
 // ============================================================
 function showTab(name) {
-    ['items', 'categories', 'settings', 'staff'].forEach(t => {
+    ['items', 'categories', 'settings', 'tables', 'staff'].forEach(t => {
         const el = document.getElementById('tab-' + t);
         if (el) el.style.display = t === name ? 'block' : 'none';
     });
@@ -658,6 +691,7 @@ function showTab(name) {
     event.target.classList.add('active');
     if (name === 'staff') loadStaff();
     if (name === 'settings') loadSettings();
+    if (name === 'tables') loadTablesTab();
 }
 
 // ============================================================
@@ -1117,6 +1151,243 @@ async function deleteCat(docId, name) {
         await loadData();
         renderCats();
     } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// ============================================================
+// TABLE MANAGEMENT (Super Admin only)
+// ============================================================
+let allTables = [];
+
+async function loadTablesTab() {
+    const snap = await db.collection('qr_tables').get();
+    allTables = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    allTables.sort((a, b) => (a.tableNumber || 0) - (b.tableNumber || 0));
+
+    // Populate outlet dropdown
+    const sel = document.getElementById('tblOutlet');
+    sel.innerHTML = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
+
+    renderTables();
+}
+
+function renderTables() {
+    document.getElementById('tableCount').textContent = allTables.length + ' tables';
+
+    if (!allTables.length) {
+        document.getElementById('tablesList').innerHTML = '<div class="empty-state"><span class="icon">🪑</span>No tables yet</div>';
+        return;
+    }
+
+    document.getElementById('tablesList').innerHTML = allTables.map(t => {
+        const outlet = outlets.find(o => (o.id || o.docId) === t.outletId);
+        const statusDot = t.currentSessionId ? '🟢' : '⚪';
+        return `
+        <div class="item-row">
+            <div style="font-size:15px;margin-right:4px;">${statusDot}</div>
+            <div class="item-name"><strong>${t.tableName || 'Table ' + t.tableNumber}</strong></div>
+            <div style="font-size:11px;color:#888;min-width:30px;">#${t.tableNumber}</div>
+            <div style="font-size:11px;color:#666;min-width:50px;">${t.seats || '-'} seats</div>
+            <div class="item-cat">${outlet ? outlet.name : t.outletId}</div>
+            <div class="toggle ${t.isActive ? 'on' : ''}" onclick="toggleTableActive('${t.docId}', ${!t.isActive})" title="${t.isActive ? 'Active' : 'Inactive'}"></div>
+            <div class="item-actions">
+                <button class="btn-edit" style="background:#9b59b615;color:#9b59b6;border-color:#9b59b630;" onclick="downloadSingleQR('${t.id || t.docId}','${t.outletId}','${(t.tableName||'Table '+t.tableNumber).replace(/'/g,"\\'")}',${t.tableNumber})">QR</button>
+                <button class="btn-edit" onclick="editTable('${t.docId}')">Edit</button>
+                <button class="btn-del" onclick="deleteTable('${t.docId}','${(t.tableName||'').replace(/'/g,"\\'")}')">Del</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function clearTableForm() {
+    document.getElementById('tblEditId').value = '';
+    document.getElementById('tblNumber').value = '';
+    document.getElementById('tblName').value = '';
+    document.getElementById('tblSeats').value = '';
+}
+
+function editTable(docId) {
+    const t = allTables.find(x => x.docId === docId);
+    if (!t) return;
+    document.getElementById('tblEditId').value = docId;
+    document.getElementById('tblNumber').value = t.tableNumber || '';
+    document.getElementById('tblName').value = t.tableName || '';
+    document.getElementById('tblSeats').value = t.seats || '';
+    document.getElementById('tblOutlet').value = t.outletId || '';
+    window.scrollTo(0, 0);
+}
+
+async function saveTable() {
+    const editId = document.getElementById('tblEditId').value;
+    const num = parseInt(document.getElementById('tblNumber').value);
+    const name = document.getElementById('tblName').value.trim();
+    const seats = parseInt(document.getElementById('tblSeats').value) || 4;
+    const outletId = document.getElementById('tblOutlet').value;
+
+    if (!num || num < 1) { toast('Enter table number', 'err'); return; }
+    if (!name) { toast('Enter table name', 'err'); return; }
+    if (!outletId) { toast('Select outlet', 'err'); return; }
+
+    try {
+        if (editId) {
+            await db.collection('qr_tables').doc(editId).update({
+                tableNumber: num, tableName: name, seats: seats, outletId: outletId,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            toast('✅ Table updated');
+        } else {
+            // Generate table ID
+            const id = outletId + '_table_' + num;
+            // Check if table number already exists for this outlet
+            const existing = allTables.find(t => t.outletId === outletId && t.tableNumber === num);
+            if (existing) { toast('Table #' + num + ' already exists for this outlet', 'err'); return; }
+
+            await db.collection('qr_tables').doc(id).set({
+                id: id, tableNumber: num, tableName: name, seats: seats,
+                outletId: outletId, isActive: true, currentSessionId: '',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            toast('✅ Table added');
+        }
+        clearTableForm();
+        await loadTablesTab();
+    } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function toggleTableActive(docId, newValue) {
+    try {
+        await db.collection('qr_tables').doc(docId).update({ isActive: newValue });
+        const t = allTables.find(x => x.docId === docId);
+        if (t) t.isActive = newValue;
+        renderTables();
+        toast(newValue ? '✅ Table active' : '🚫 Table deactivated');
+    } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function deleteTable(docId, name) {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+        await db.collection('qr_tables').doc(docId).delete();
+        toast('🗑️ Table deleted');
+        await loadTablesTab();
+    } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// ============================================================
+// QR CODE GENERATION
+// ============================================================
+const CUSTOMER_BASE_URL = 'https://kalingarestaurant.github.io/nosh-qr-ordering/customer/';
+
+function getTableQRUrl(outletId, tableId) {
+    return CUSTOMER_BASE_URL + '?o=' + encodeURIComponent(outletId) + '&t=' + encodeURIComponent(tableId);
+}
+
+function generateQRCanvas(url, label, size) {
+    return new Promise((resolve) => {
+        const padding = 40;
+        const labelHeight = 60;
+        const totalWidth = size + padding * 2;
+        const totalHeight = size + padding * 2 + labelHeight;
+
+        // Create temp div for QR generation
+        const tempDiv = document.createElement('div');
+        tempDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+        document.body.appendChild(tempDiv);
+
+        new QRCode(tempDiv, {
+            text: url,
+            width: size,
+            height: size,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // Wait for QR to render
+        setTimeout(() => {
+            const qrCanvas = tempDiv.querySelector('canvas');
+            if (!qrCanvas) { document.body.removeChild(tempDiv); resolve(null); return; }
+
+            // Create final canvas with padding and label
+            const canvas = document.createElement('canvas');
+            canvas.width = totalWidth;
+            canvas.height = totalHeight;
+            const ctx = canvas.getContext('2d');
+
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+            // Draw QR code centered
+            ctx.drawImage(qrCanvas, padding, padding, size, size);
+
+            // Draw border around QR
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(padding - 5, padding - 5, size + 10, size + 10);
+
+            // Draw label below
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 24px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, totalWidth / 2, size + padding * 2 + 10);
+
+            // Draw "Scan to Order" subtitle
+            ctx.fillStyle = '#888888';
+            ctx.font = '16px Arial, sans-serif';
+            ctx.fillText('Scan to Order', totalWidth / 2, size + padding * 2 + 36);
+
+            document.body.removeChild(tempDiv);
+            resolve(canvas);
+        }, 200);
+    });
+}
+
+async function downloadSingleQR(tableId, outletId, tableName, tableNumber) {
+    toast('Generating QR...');
+    const url = getTableQRUrl(outletId, tableId);
+    const canvas = await generateQRCanvas(url, tableName, 400);
+    if (!canvas) { toast('Failed to generate QR', 'err'); return; }
+
+    const link = document.createElement('a');
+    link.download = 'Table_' + tableNumber + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toast('✅ Downloaded: Table_' + tableNumber + '.png');
+}
+
+async function downloadAllQR() {
+    const activeTables = allTables.filter(t => t.isActive);
+    if (activeTables.length === 0) { toast('No active tables', 'err'); return; }
+
+    if (!confirm(`Generate QR codes for ${activeTables.length} tables and download as ZIP?`)) return;
+
+    toast('Generating ' + activeTables.length + ' QR codes...');
+
+    try {
+        const zip = new JSZip();
+        const folder = zip.folder('QR_Codes');
+
+        for (const t of activeTables) {
+            const url = getTableQRUrl(t.outletId, t.id || t.docId);
+            const label = t.tableName || 'Table ' + t.tableNumber;
+            const canvas = await generateQRCanvas(url, label, 400);
+            if (!canvas) continue;
+
+            // Convert canvas to blob
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            folder.file('Table_' + t.tableNumber + '.png', blob);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        link.download = 'QR_Codes_All_Tables.zip';
+        link.href = URL.createObjectURL(zipBlob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        toast('✅ Downloaded: QR_Codes_All_Tables.zip (' + activeTables.length + ' tables)');
+    } catch(e) {
+        toast('Error: ' + e.message, 'err');
+    }
 }
 
 // ============================================================
