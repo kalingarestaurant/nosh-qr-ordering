@@ -617,19 +617,65 @@ async function loadMenu() {
     const catSnap = await db.collection('menu_categories').orderBy('sortOrder').get();
     menuCategories = catSnap.docs.map(d => d.data());
 
-    // Load active items for this outlet
+    // Load all active master items
     const itemSnap = await db.collection('menu_items')
         .where('isActive', '==', true)
-        .where('isAvailable', '==', true)
         .get();
     
-    menuItems = itemSnap.docs.map(d => d.data()).filter(item => {
-        // Filter outlet-specific items
-        if (item.outletSpecific && item.outletIds && item.outletIds.length > 0) {
-            return item.outletIds.includes(outletId);
-        }
-        return true; // non-outlet-specific items show everywhere
-    });
+    let allItems = itemSnap.docs.map(d => d.data());
+
+    // Load outlet-specific overrides
+    let outletOverrides = {};
+    let hasOutletMenu = false;
+    try {
+        const omSnap = await db.collection('outlet_menu')
+            .where('outletId', '==', outletId)
+            .get();
+        omSnap.docs.forEach(d => {
+            const data = d.data();
+            outletOverrides[data.itemId] = data;
+        });
+        hasOutletMenu = omSnap.size > 0;
+    } catch(e) { console.log('No outlet menu overrides found'); }
+
+    // If outlet has menu config, only show enabled items
+    // If no outlet menu exists (backward compat), show all available items
+    if (hasOutletMenu) {
+        menuItems = allItems.filter(item => {
+            const om = outletOverrides[item.id];
+            return om && om.isEnabled && om.isAvailable !== false;
+        }).map(item => {
+            const om = outletOverrides[item.id];
+            // Apply price override
+            const merged = { ...item };
+            if (om.price !== undefined && om.price !== null) {
+                merged.price = om.price;
+            }
+            // Apply modifier price overrides
+            if (om.variantPrices && merged.modifierGroups) {
+                merged.modifierGroups = merged.modifierGroups.map((mg, gIdx) => ({
+                    ...mg,
+                    options: mg.options.map((opt, oIdx) => {
+                        const key = gIdx + '_' + oIdx;
+                        if (om.variantPrices[key] !== undefined && om.variantPrices[key] !== null) {
+                            return { ...opt, extraPrice: om.variantPrices[key] };
+                        }
+                        return opt;
+                    })
+                }));
+            }
+            return merged;
+        });
+    } else {
+        // Backward compat — no outlet_menu, show all available items
+        menuItems = allItems.filter(item => {
+            if (item.isAvailable === false) return false;
+            if (item.outletSpecific && item.outletIds && item.outletIds.length > 0) {
+                return item.outletIds.includes(outletId);
+            }
+            return true;
+        });
+    }
 
     // Sort items by sortOrder
     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
