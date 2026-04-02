@@ -217,7 +217,7 @@
     <div class="cart-items-list" id="cartItemsList"></div>
     <div class="cart-place-order" id="cartFooter">
         <div class="cart-summary" id="cartSummary">Items will be sent to our kitchen</div>
-        <button class="btn btn-primary" onclick="placeOrder()">Place Order</button>
+        <button class="btn btn-primary" id="placeOrderBtn" onclick="placeOrder()">Place Order</button>
     </div>
 </div>
 
@@ -380,6 +380,7 @@ function getISTTimestamp() { return getIST().getTime(); }
 // ============================================================
 let outletId = '';
 let tableId = '';
+let browseMode = false; // true when menu-only link (no table assigned)
 let outletName = '';
 let tableName = '';
 let tableNumber = 0;
@@ -394,6 +395,38 @@ let activeCategory = '';
 let searchTerm = '';
 let ordersListener = null; // Firestore listener for session orders
 let sessionListener = null; // Firestore listener for session deactivation
+
+// ============================================================
+// CART PERSISTENCE (localStorage per outlet, 7-day expiry)
+// ============================================================
+const CART_EXPIRY_DAYS = 7;
+
+function saveCartToStorage() {
+    if (!outletId) return;
+    const data = { cart: cart, updatedAt: Date.now() };
+    localStorage.setItem('nosh_cart_' + outletId, JSON.stringify(data));
+}
+
+function loadCartFromStorage() {
+    if (!outletId) return;
+    try {
+        const stored = localStorage.getItem('nosh_cart_' + outletId);
+        if (!stored) return;
+        const data = JSON.parse(stored);
+        // Check expiry
+        if (Date.now() - data.updatedAt > CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
+            localStorage.removeItem('nosh_cart_' + outletId);
+            return;
+        }
+        if (data.cart && data.cart.length > 0) {
+            cart = data.cart;
+        }
+    } catch(e) { console.log('Cart load error:', e); }
+}
+
+function clearCartStorage() {
+    if (outletId) localStorage.removeItem('nosh_cart_' + outletId);
+}
 
 // ============================================================
 // SCREEN MANAGEMENT
@@ -423,15 +456,16 @@ async function init() {
     outletId = params.get('o') || '';
     tableId = params.get('t') || '';
 
-    if (!outletId || !tableId) {
-        showError('Invalid QR Code', 'Please scan the QR code on your table to start ordering.');
+    if (!outletId) {
+        showError('Invalid Link', 'Please scan the QR code or use the link shared with you.');
         return;
     }
 
+    browseMode = !tableId;
     showLoading('Loading menu...');
 
     try {
-        // 1. Verify outlet exists and QR ordering is enabled
+        // 1. Verify outlet
         const outletDoc = await db.collection('qr_outlets').doc(outletId).get();
         if (!outletDoc.exists || !outletDoc.data().qrOrderingEnabled) {
             showError('Ordering Unavailable', 'Online ordering is not available at this outlet right now.');
@@ -443,33 +477,36 @@ async function init() {
         try {
             const settingsDoc = await db.collection('qr_settings').doc('config').get();
             if (settingsDoc.exists) {
-                otpEnabled = settingsDoc.data().otpEnabled !== false; // default true
+                otpEnabled = settingsDoc.data().otpEnabled !== false;
             }
-        } catch(e) { console.log('Settings not found, OTP enabled by default'); }
+        } catch(e) {}
 
-        // 2. Verify table exists
-        const tableDoc = await db.collection('qr_tables').doc(tableId).get();
-        if (!tableDoc.exists || !tableDoc.data().isActive) {
-            showError('Invalid Table', 'This table is not set up for ordering. Please ask staff for help.');
-            return;
-        }
-        tableName = tableDoc.data().tableName;
-        tableNumber = tableDoc.data().tableNumber;
+        if (!browseMode) {
+            // TABLE MODE — verify table, check session
+            const tableDoc = await db.collection('qr_tables').doc(tableId).get();
+            if (!tableDoc.exists || !tableDoc.data().isActive) {
+                showError('Invalid Table', 'This table is not set up for ordering. Please ask staff for help.');
+                return;
+            }
+            tableName = tableDoc.data().tableName;
+            tableNumber = tableDoc.data().tableNumber;
 
-        // 3. Silently check for existing valid session (no UI change)
-        const existingSession = await checkExistingSession();
-        if (existingSession === 'BLOCKED') {
-            // Stale QR — error screen already shown by checkExistingSession
-            hideLoading();
-            return;
-        }
-        if (existingSession) {
-            customerPhone = existingSession.phone;
-            sessionId = existingSession.sessionId;
-            await startOrdersListener();
+            const existingSession = await checkExistingSession();
+            if (existingSession === 'BLOCKED') { hideLoading(); return; }
+            if (existingSession) {
+                customerPhone = existingSession.phone;
+                sessionId = existingSession.sessionId;
+                await startOrdersListener();
+            }
+        } else {
+            // BROWSE MODE — no table assigned yet
+            tableName = '📋 Browse Menu';
+            tableNumber = 0;
         }
 
-        // 4. Load menu and go straight to it — no auth needed to browse
+        // Load persisted cart from earlier browsing
+        loadCartFromStorage();
+
         updateAuthScreens();
         await loadMenu();
         hideLoading();
@@ -1032,7 +1069,11 @@ function updateCartBar() {
     
     if (totalItems > 0) {
         bar.classList.add('visible');
-        document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} added`;
+        if (browseMode) {
+            document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Scan table QR to order`;
+        } else {
+            document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} added`;
+        }
     } else {
         bar.classList.remove('visible');
     }
@@ -1042,6 +1083,9 @@ function updateCartBar() {
     if (sessionOrders.length > 0) {
         histBtn.style.display = 'block';
     }
+
+    // Persist cart to localStorage
+    saveCartToStorage();
 }
 
 function renderCart() {
@@ -1055,7 +1099,12 @@ function renderCart() {
 
     document.getElementById('cartFooter').style.display = 'block';
     const totalItems = cart.reduce((sum, c) => sum + c.qty, 0);
-    document.getElementById('cartSummary').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Will be sent to our kitchen`;
+    
+    if (browseMode) {
+        document.getElementById('cartSummary').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Saved for when you're seated`;
+    } else {
+        document.getElementById('cartSummary').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Will be sent to our kitchen`;
+    }
 
     container.innerHTML = cart.map((c, idx) => {
         const vegClass = c.vegType === 'Veg' ? 'veg' : c.vegType === 'NonVeg' ? 'nonveg' : c.vegType === 'Egg' ? 'egg' : '';
@@ -1095,7 +1144,19 @@ function cartQty(idx, delta) {
 const _origShowScreen = showScreen;
 showScreen = function(id) {
     _origShowScreen(id);
-    if (id === 'cartScreen') renderCart();
+    if (id === 'cartScreen') {
+        renderCart();
+        const btn = document.getElementById('placeOrderBtn');
+        if (browseMode) {
+            btn.textContent = '📱 Scan Table QR to Place Order';
+            btn.style.background = '#333';
+            btn.style.color = '#888';
+        } else {
+            btn.textContent = 'Place Order';
+            btn.style.background = '#e94560';
+            btn.style.color = '#fff';
+        }
+    }
 };
 
 // ============================================================
@@ -1103,6 +1164,12 @@ showScreen = function(id) {
 // ============================================================
 async function placeOrder() {
     if (cart.length === 0) return;
+
+    // Browse mode — cannot place order without table
+    if (browseMode) {
+        alert('Please scan the QR code on your table to place the order.\n\nYour cart has been saved — it will be here when you scan!');
+        return;
+    }
 
     // If no active session, show OTP modal first
     if (!sessionId) {
@@ -1346,6 +1413,7 @@ async function submitOrder() {
         // Clear cart
         const placedItems = [...cart];
         cart = [];
+        clearCartStorage();
         
         hideLoading();
 
