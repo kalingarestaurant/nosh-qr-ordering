@@ -1787,11 +1787,27 @@ function renderOutletsList() {
             <div style="font-size:11px;color:#666;min-width:100px;">${id}</div>
             <div class="toggle ${o.isActive ? 'on' : ''}" onclick="toggleOutletActive('${o.docId}', ${!o.isActive})" title="${o.isActive ? 'Active' : 'Inactive'}"></div>
             <div class="item-actions">
+                <button class="btn-edit" style="background:#9b59b615;color:#9b59b6;border-color:#9b59b630;" onclick="copyMenuLink('${id}')">🔗 Link</button>
                 <button class="btn-edit" onclick="editOutletName('${o.docId}','${(o.name||'').replace(/'/g,"\\'")}')">Edit</button>
                 <button class="btn-del" onclick="deleteOutlet('${o.docId}','${(o.name||'').replace(/'/g,"\\'")}')">Del</button>
             </div>
         </div>`;
     }).join('');
+}
+
+const MENU_BASE_URL = 'https://kalingarestaurant.github.io/nosh-qr-ordering/customer/';
+function copyMenuLink(outletId) {
+    const link = MENU_BASE_URL + '?o=' + outletId;
+    navigator.clipboard.writeText(link).then(() => {
+        toast('✅ Link copied: ' + link);
+    }).catch(() => {
+        // Fallback for older browsers
+        const inp = document.createElement('input');
+        inp.value = link; document.body.appendChild(inp);
+        inp.select(); document.execCommand('copy');
+        document.body.removeChild(inp);
+        toast('✅ Link copied!');
+    });
 }
 
 async function addOutlet() {
