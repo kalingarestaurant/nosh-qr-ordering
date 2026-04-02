@@ -282,6 +282,21 @@
                     </div>
                     <div id="outletsList"></div>
                 </div>
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">🕐 Ordering Hours</div>
+                    <div style="font-size:12px;color:#888;margin-bottom:12px;">Set when customers can place orders. They can browse the menu anytime, but ordering is blocked outside these hours.</div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+                        <label style="font-size:12px;color:#888;">Outlet:</label>
+                        <select class="fi" id="ohOutletSelect" onchange="loadOrderingHours()" style="flex:1;"></select>
+                    </div>
+                    <div id="ohSlots"></div>
+                    <div style="display:flex;gap:8px;margin-top:10px;">
+                        <button style="padding:8px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="addTimeSlot()">+ Add Time Slot</button>
+                        <button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:12px;" onclick="saveOrderingHours()">💾 Save Hours</button>
+                        <button style="padding:8px 14px;background:#2ecc7120;border:1px solid #2ecc7130;border-radius:6px;color:#2ecc71;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="setOpenAllDay()">🟢 Open All Day</button>
+                    </div>
+                    <div id="ohStatus" style="font-size:12px;margin-top:8px;"></div>
+                </div>
                 <div style="padding:16px 0;font-size:12px;color:#666;">
                     ⚠️ Remember to turn OTP back ON before going live with real customers.
                 </div>
@@ -1768,6 +1783,7 @@ async function loadSettings() {
         }
         
         renderOutletsList();
+        initOrderingHours();
     } catch(e) {
         console.error('Load settings error:', e);
     }
@@ -1950,12 +1966,71 @@ function compressImageFromBlob(blob) {
 async function saveResetHour() {
     const hour = parseInt(document.getElementById('resetHourSelect').value);
     try {
-        // Save to all outlets this admin has access to
         const outletIds = (staffData.outletIds || []).includes('all') ? outlets.map(o => o.docId) : staffData.outletIds;
         for (const oid of outletIds) {
             await db.collection('qr_outlets').doc(oid).update({ resetHour: hour });
         }
         toast('✅ Reset hour set to ' + hour + ':00 AM');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// ============================================================
+// ORDERING HOURS
+// ============================================================
+let ohSlots = []; // [{open: "11:00", close: "15:30"}, ...]
+
+function initOrderingHours() {
+    const sel = document.getElementById('ohOutletSelect');
+    sel.innerHTML = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
+    if (sel.value) loadOrderingHours();
+}
+
+async function loadOrderingHours() {
+    const outletId = document.getElementById('ohOutletSelect').value;
+    if (!outletId) return;
+    try {
+        const doc = await db.collection('qr_outlets').doc(outletId).get();
+        ohSlots = (doc.exists && doc.data().orderingHours) ? doc.data().orderingHours : [];
+        renderTimeSlots();
+    } catch(e) { console.error(e); }
+}
+
+function renderTimeSlots() {
+    const container = document.getElementById('ohSlots');
+    if (ohSlots.length === 0) {
+        container.innerHTML = '<div style="font-size:12px;color:#2ecc71;padding:8px 0;">🟢 Open all day — no time restrictions</div>';
+        return;
+    }
+    container.innerHTML = ohSlots.map((slot, idx) => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:12px;color:#888;min-width:50px;">Slot ${idx + 1}:</span>
+            <input type="time" value="${slot.open}" onchange="ohSlots[${idx}].open=this.value" style="background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:6px 10px;color:#fff;font-size:13px;font-family:'Poppins',sans-serif;outline:none;">
+            <span style="color:#666;">to</span>
+            <input type="time" value="${slot.close}" onchange="ohSlots[${idx}].close=this.value" style="background:#0f1117;border:1px solid #2a2d3e;border-radius:6px;padding:6px 10px;color:#fff;font-size:13px;font-family:'Poppins',sans-serif;outline:none;">
+            <button onclick="ohSlots.splice(${idx},1);renderTimeSlots();" style="background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+    `).join('');
+}
+
+function addTimeSlot() {
+    ohSlots.push({ open: '11:00', close: '23:00' });
+    renderTimeSlots();
+}
+
+function setOpenAllDay() {
+    ohSlots = [];
+    renderTimeSlots();
+    saveOrderingHours();
+}
+
+async function saveOrderingHours() {
+    const outletId = document.getElementById('ohOutletSelect').value;
+    if (!outletId) return;
+    try {
+        await db.collection('qr_outlets').doc(outletId).update({ orderingHours: ohSlots });
+        const msg = ohSlots.length === 0 ? '🟢 Open all day' : ohSlots.map(s => s.open + ' – ' + s.close).join(', ');
+        toast('✅ Saved: ' + msg);
+        document.getElementById('ohStatus').innerHTML = '<span style="color:#2ecc71;">Saved: ' + msg + '</span>';
     } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
