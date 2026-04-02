@@ -395,6 +395,48 @@ let activeCategory = '';
 let searchTerm = '';
 let ordersListener = null; // Firestore listener for session orders
 let sessionListener = null; // Firestore listener for session deactivation
+let outletOrderingHours = []; // [{open: "11:00", close: "15:30"}, ...]
+
+// Check if current IST time is within ordering hours
+function isWithinOrderingHours() {
+    // No hours set = open all day
+    if (!outletOrderingHours || outletOrderingHours.length === 0) return true;
+    
+    const ist = getIST();
+    const nowMins = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+    
+    for (const slot of outletOrderingHours) {
+        const [oh, om] = slot.open.split(':').map(Number);
+        const [ch, cm] = slot.close.split(':').map(Number);
+        const openMins = oh * 60 + om;
+        const closeMins = ch * 60 + cm;
+        
+        if (closeMins > openMins) {
+            // Normal slot (e.g., 11:00 - 15:30)
+            if (nowMins >= openMins && nowMins <= closeMins) return true;
+        } else {
+            // Overnight slot (e.g., 22:00 - 02:00)
+            if (nowMins >= openMins || nowMins <= closeMins) return true;
+        }
+    }
+    return false;
+}
+
+function getOrderingHoursText() {
+    if (!outletOrderingHours || outletOrderingHours.length === 0) return '';
+    return outletOrderingHours.map(s => {
+        const openH = parseInt(s.open.split(':')[0]);
+        const openM = s.open.split(':')[1];
+        const closeH = parseInt(s.close.split(':')[0]);
+        const closeM = s.close.split(':')[1];
+        const fmtTime = (h, m) => {
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return h12 + ':' + m + ' ' + ampm;
+        };
+        return fmtTime(openH, openM) + ' – ' + fmtTime(closeH, closeM);
+    }).join(' & ');
+}
 
 // ============================================================
 // CART PERSISTENCE (localStorage per outlet, 7-day expiry)
@@ -472,6 +514,7 @@ async function init() {
             return;
         }
         outletName = outletDoc.data().name;
+        outletOrderingHours = outletDoc.data().orderingHours || [];
 
         // 1b. Check OTP setting
         try {
@@ -1151,6 +1194,11 @@ showScreen = function(id) {
             btn.textContent = '📱 Scan Table QR to Place Order';
             btn.style.background = '#333';
             btn.style.color = '#888';
+        } else if (!isWithinOrderingHours()) {
+            const hours = getOrderingHoursText();
+            btn.textContent = '🕐 Ordering opens ' + hours;
+            btn.style.background = '#333';
+            btn.style.color = '#f0a500';
         } else {
             btn.textContent = 'Place Order';
             btn.style.background = '#e94560';
@@ -1168,6 +1216,13 @@ async function placeOrder() {
     // Browse mode — cannot place order without table
     if (browseMode) {
         alert('Please scan the QR code on your table to place the order.\n\nYour cart has been saved — it will be here when you scan!');
+        return;
+    }
+
+    // Check ordering hours
+    if (!isWithinOrderingHours()) {
+        const hours = getOrderingHoursText();
+        alert('Ordering is currently closed.\n\nOrdering hours: ' + hours + '\n\nYou can browse and add items to your cart. Your cart will be saved!');
         return;
     }
 
