@@ -15,10 +15,12 @@
         body { font-family: 'Poppins', sans-serif; background: #f5f5f5; color: #1a1a1a; height: 100dvh; overflow: hidden; }
         
         /* ===== APP SHELL ===== */
-        #appShell { display: none; height: 100dvh; flex-direction: column; }
-        #appShell.active { display: flex; }
-        .tab-content { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; flex-direction: column; }
+        #appShell { display: none; height: 100vh; height: 100dvh; flex-direction: column; overflow: hidden; }
+        #appShell.active { display: flex; flex-direction: column; }
+        .tab-content { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; flex-direction: column; min-height: 0; }
         .tab-content.active { display: flex; }
+        #tabCart.active { overflow: hidden; }
+        #tabOrders.active { overflow-y: auto; }
 
         /* ===== BOTTOM NAV ===== */
         .bottom-nav { display: flex; background: #fff; border-top: 1px solid #eee; padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); z-index: 200; flex-shrink: 0; }
@@ -135,7 +137,7 @@
         /* ===== CART TAB ===== */
         #tabCart { background: #f5f5f5; }
         #tabOrders { background: #f5f5f5; }
-        .cart-items-list { flex: 1; padding: 12px 16px 160px; }
+        .cart-items-list { flex: 1; padding: 12px 16px 20px; overflow-y: auto; }
         .cart-item { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .cart-item-top { display: flex; align-items: flex-start; justify-content: space-between; }
         .cart-item-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -143,7 +145,7 @@
         .cart-item-modifiers { font-size: 12px; color: #888; margin-top: 4px; }
         .cart-item-instructions { font-size: 12px; color: #e94560; font-style: italic; margin-top: 4px; }
         .cart-item-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-        .cart-place-order { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px; background: #fff; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); }
+        .cart-place-order { padding: 12px 16px; background: #fff; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); flex-shrink: 0; }
         .cart-summary { font-size: 13px; color: #888; margin-bottom: 10px; text-align: center; }
 
         /* ===== ORDER CONFIRMATION SCREEN ===== */
