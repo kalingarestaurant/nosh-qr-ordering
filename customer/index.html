@@ -75,8 +75,8 @@
         .menu-search input:focus { border-color: #e94560; background: #fff; }
         .menu-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #999; font-size: 16px; }
 
-        /* Category Tabs */
-        .cat-tabs { position: sticky; top: 90px; z-index: 99; background: #fff; border-bottom: 1px solid #eee; overflow-x: auto; white-space: nowrap; padding: 0 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        /* Category Tabs — inside header for proper stacking */
+        .cat-tabs { background: #fff; border-bottom: 1px solid #eee; overflow-x: auto; white-space: nowrap; padding: 0 12px; margin-top: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .cat-tabs::-webkit-scrollbar { display: none; }
         .cat-tab { display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 2.5px solid transparent; transition: all 0.2s; }
         .cat-tab.active { color: #e94560; border-bottom-color: #e94560; font-weight: 600; }
@@ -213,8 +213,8 @@
                 <span class="menu-search-icon">🔍</span>
                 <input type="text" id="menuSearchInput" placeholder="Search menu..." oninput="filterMenu()">
             </div>
+            <div class="cat-tabs" id="catTabs"></div>
         </div>
-        <div class="cat-tabs" id="catTabs"></div>
         <div class="menu-items-container" id="menuItemsContainer"></div>
     </div>
 
@@ -623,7 +623,6 @@ async function init() {
     showLoading('Loading menu...');
 
     try {
-        // 1. Verify outlet
         const outletDoc = await db.collection('qr_outlets').doc(outletId).get();
         if (!outletDoc.exists || !outletDoc.data().qrOrderingEnabled) {
             showError('Ordering Unavailable', 'Online ordering is not available at this outlet right now.');
@@ -632,11 +631,9 @@ async function init() {
         outletName = outletDoc.data().name;
         outletOrderingHours = outletDoc.data().orderingHours || [];
 
-        // Load Meta Pixel if configured
         const pixelId = outletDoc.data().metaPixelId || '';
         if (pixelId) initMetaPixel(pixelId);
 
-        // 1b. Check OTP setting
         try {
             const settingsDoc = await db.collection('qr_settings').doc('config').get();
             if (settingsDoc.exists) {
@@ -645,7 +642,6 @@ async function init() {
         } catch(e) {}
 
         if (!browseMode) {
-            // TABLE MODE — verify table, check session
             const tableDoc = await db.collection('qr_tables').doc(tableId).get();
             if (!tableDoc.exists || !tableDoc.data().isActive) {
                 showError('Invalid Table', 'This table is not set up for ordering. Please ask staff for help.');
@@ -662,14 +658,11 @@ async function init() {
                 await startOrdersListener();
             }
         } else {
-            // BROWSE MODE — no table assigned yet
             tableName = '📋 Browse Menu';
             tableNumber = 0;
         }
 
-        // Load persisted cart from earlier browsing
         loadCartFromStorage();
-
         updateAuthScreens();
         await loadMenu();
         hideLoading();
@@ -678,7 +671,7 @@ async function init() {
     } catch (err) {
         console.error('Init error:', err);
         hideLoading();
-        showError('Something went wrong', 'Please try scanning the QR code again.');
+        showError('Something went wrong', err.message || 'Unknown error');
     }
 }
 
@@ -1327,43 +1320,15 @@ function renderCart() {
 
     // Calculate tax breakdown
     let subtotal = 0;
-    const taxGroups = {}; // { rate: subtotalForThatRate }
-    
     for (const c of cart) {
         const itemTotal = (c.price + c.modifiers.reduce((s, m) => s + (m.extraPrice || 0), 0)) * c.qty;
         subtotal += itemTotal;
-        
-        // Look up GST rate from category
-        const cat = menuCategories.find(cat => cat.id === c.categoryId);
-        const rate = (cat && cat.gstRate !== undefined) ? cat.gstRate : 5;
-        
-        if (!taxGroups[rate]) taxGroups[rate] = 0;
-        taxGroups[rate] += itemTotal;
     }
     
-    let totalTax = 0;
-    let taxHtml = '';
-    const rates = Object.keys(taxGroups).sort((a, b) => parseFloat(a) - parseFloat(b));
-    
-    for (const rate of rates) {
-        const taxAmt = taxGroups[rate] * (parseFloat(rate) / 100);
-        totalTax += taxAmt;
-        taxHtml += `<div style="display:flex;justify-content:space-between;font-size:13px;color:#888;margin-bottom:4px;">
-            <span>Taxes (${rate}%)</span><span>₹${Math.round(taxAmt)}</span>
-        </div>`;
-    }
-    
-    const grandTotal = subtotal + totalTax;
-    
-    // Add totals section
     itemsHtml += `
     <div style="border-top:1.5px solid #e0e0e0;margin-top:12px;padding-top:12px;">
-        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
-            <span>Subtotal</span><span>₹${Math.round(subtotal)}</span>
-        </div>
-        ${taxHtml}
-        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#1a1a1a;margin-top:8px;padding-top:8px;border-top:1px solid #eee;">
-            <span>Total</span><span>₹${Math.round(grandTotal)}</span>
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#1a1a1a;">
+            <span>Total</span><span>₹${Math.round(subtotal)}</span>
         </div>
     </div>`;
 
