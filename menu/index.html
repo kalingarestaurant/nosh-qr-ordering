@@ -514,17 +514,28 @@
 
 <!-- CATEGORY EDIT MODAL -->
 <div class="modal-overlay" id="catModal">
-    <div class="modal" style="max-width:450px;">
+    <div class="modal" style="max-width:500px;max-height:85vh;overflow-y:auto;">
         <div class="modal-title">
             <span id="catModalTitle">Add Category</span>
             <button class="modal-close" onclick="closeModal('catModal')">✕</button>
         </div>
         <div class="ff"><label>Category Name *</label><input class="fi" id="cmName" placeholder="e.g. Starters"></div>
         <div class="ff"><label>Sort Order</label><input class="fi" id="cmSort" type="number" placeholder="1" inputmode="numeric"></div>
-        <div class="ff"><label>Tax Rate (%)</label><input class="fi" id="cmGstRate" type="number" placeholder="5" inputmode="numeric" step="0.1"><div style="font-size:10px;color:#666;margin-top:4px;">GST for food (5%), VAT for alcohol (varies). Shown in cart.</div></div>
         <div class="ff">
-            <label>Subcategories (one per line)</label>
-            <textarea class="fi" id="cmSubcats" placeholder="Veg Kabab&#10;Chicken Kababs&#10;Seafood" rows="4"></textarea>
+            <label>Category Photo (for menu grid tile)</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <img id="cmPhotoPreview" src="" style="width:80px;height:80px;border-radius:8px;object-fit:cover;display:none;background:#f0f0f0;">
+                <div>
+                    <input type="file" id="cmPhotoInput" accept="image/*" onchange="previewCatPhoto(this)" style="font-size:12px;">
+                    <button type="button" onclick="clearCatPhoto()" style="padding:4px 8px;background:#ff6b6b20;border:1px solid #ff6b6b30;border-radius:4px;color:#ff6b6b;font-size:11px;cursor:pointer;margin-top:4px;display:none;" id="cmPhotoClear">Remove</button>
+                </div>
+            </div>
+            <input type="hidden" id="cmPhotoUrl" value="">
+        </div>
+        <div class="ff">
+            <label>Subcategories</label>
+            <div id="cmSubcatList"></div>
+            <button type="button" style="padding:6px 12px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;margin-top:6px;" onclick="addSubcatRow()">+ Add Subcategory</button>
         </div>
         <input type="hidden" id="cmEditId" value="">
         <button class="btn btn-primary" style="margin-top:12px;" onclick="saveCat()">💾 Save</button>
@@ -1562,21 +1573,85 @@ function renderCats() {
     }).join('');
 }
 
+let pendingCatPhoto = null;
+
+function previewCatPhoto(input) {
+    if (!input.files || !input.files[0]) return;
+    compressImage(input.files[0]).then(blob => {
+        pendingCatPhoto = blob;
+        const url = URL.createObjectURL(blob);
+        document.getElementById('cmPhotoPreview').src = url;
+        document.getElementById('cmPhotoPreview').style.display = 'block';
+        document.getElementById('cmPhotoClear').style.display = 'inline-block';
+    });
+}
+
+function clearCatPhoto() {
+    pendingCatPhoto = null;
+    document.getElementById('cmPhotoPreview').style.display = 'none';
+    document.getElementById('cmPhotoClear').style.display = 'none';
+    document.getElementById('cmPhotoInput').value = '';
+    document.getElementById('cmPhotoUrl').value = '';
+}
+
+function addSubcatRow(name, imageUrl) {
+    const container = document.getElementById('cmSubcatList');
+    const row = document.createElement('div');
+    row.className = 'sc-row';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:8px;';
+    row.innerHTML = `
+        <img class="sc-photo-preview" src="${imageUrl || ''}" style="width:50px;height:50px;border-radius:6px;object-fit:cover;background:#f0f0f0;flex-shrink:0;${imageUrl ? '' : 'display:none;'}">
+        <input class="fi sc-name" placeholder="Subcategory name" value="${name || ''}" style="flex:1;padding:6px 8px;font-size:12px;">
+        <label style="padding:4px 8px;background:#3498db15;border:1px solid #3498db30;border-radius:4px;color:#5dade2;font-size:10px;cursor:pointer;white-space:nowrap;">
+            📷
+            <input type="file" accept="image/*" class="sc-photo-input" onchange="previewSubcatPhoto(this)" style="display:none;">
+        </label>
+        <input type="hidden" class="sc-photo-url" value="${imageUrl || ''}">
+        <button onclick="this.parentElement.remove();" style="background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:14px;padding:0 4px;">✕</button>
+    `;
+    container.appendChild(row);
+}
+
+function previewSubcatPhoto(input) {
+    if (!input.files || !input.files[0]) return;
+    const row = input.closest('.sc-row');
+    compressImage(input.files[0]).then(blob => {
+        row._pendingBlob = blob;
+        const url = URL.createObjectURL(blob);
+        const preview = row.querySelector('.sc-photo-preview');
+        preview.src = url;
+        preview.style.display = 'block';
+    });
+}
+
 function openCatModal(editId) {
+    pendingCatPhoto = null;
     document.getElementById('cmEditId').value = editId || '';
     document.getElementById('catModalTitle').textContent = editId ? 'Edit Category' : 'Add Category';
+    document.getElementById('cmPhotoInput').value = '';
+    document.getElementById('cmSubcatList').innerHTML = '';
+    
     if (editId) {
         const cat = categories.find(c => c.docId === editId);
         if (!cat) return;
         document.getElementById('cmName').value = cat.name;
         document.getElementById('cmSort').value = cat.sortOrder || '';
-        document.getElementById('cmGstRate').value = cat.gstRate !== undefined ? cat.gstRate : 5;
-        document.getElementById('cmSubcats').value = (cat.subcategories || []).map(s => s.name).join('\n');
+        document.getElementById('cmPhotoUrl').value = cat.imageUrl || '';
+        if (cat.imageUrl) {
+            document.getElementById('cmPhotoPreview').src = cat.imageUrl;
+            document.getElementById('cmPhotoPreview').style.display = 'block';
+            document.getElementById('cmPhotoClear').style.display = 'inline-block';
+        } else {
+            document.getElementById('cmPhotoPreview').style.display = 'none';
+            document.getElementById('cmPhotoClear').style.display = 'none';
+        }
+        (cat.subcategories || []).forEach(s => addSubcatRow(s.name, s.imageUrl || ''));
     } else {
         document.getElementById('cmName').value = '';
         document.getElementById('cmSort').value = '';
-        document.getElementById('cmGstRate').value = '5';
-        document.getElementById('cmSubcats').value = '';
+        document.getElementById('cmPhotoUrl').value = '';
+        document.getElementById('cmPhotoPreview').style.display = 'none';
+        document.getElementById('cmPhotoClear').style.display = 'none';
     }
     document.getElementById('catModal').classList.add('active');
 }
@@ -1587,19 +1662,46 @@ async function saveCat() {
     const editId = document.getElementById('cmEditId').value;
     const name = document.getElementById('cmName').value.trim();
     const sortOrder = parseInt(document.getElementById('cmSort').value) || 0;
-    const gstRate = parseFloat(document.getElementById('cmGstRate').value) || 5;
-    const subcatLines = document.getElementById('cmSubcats').value.trim().split('\n').filter(s => s.trim());
 
     if (!name) { toast('Enter name', 'err'); return; }
-
-    const subcategories = subcatLines.map((s, i) => ({
-        id: s.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_'),
-        name: s.trim(),
-        sortOrder: i + 1
-    }));
+    
+    const catId = editId || name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
+    
+    // Upload category photo if changed
+    let imageUrl = document.getElementById('cmPhotoUrl').value || '';
+    if (pendingCatPhoto) {
+        try {
+            toast('Uploading category photo...');
+            const ref = storage.ref('category-images/' + catId + '/cover_' + Date.now() + '.jpg');
+            await ref.put(pendingCatPhoto, { contentType: 'image/jpeg' });
+            imageUrl = await ref.getDownloadURL();
+        } catch(e) { toast('Photo upload error: ' + e.message, 'err'); }
+    }
+    
+    // Collect subcategories with photos
+    const subcategories = [];
+    const scRows = document.querySelectorAll('#cmSubcatList .sc-row');
+    for (let i = 0; i < scRows.length; i++) {
+        const row = scRows[i];
+        const scName = row.querySelector('.sc-name').value.trim();
+        if (!scName) continue;
+        const scId = scName.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
+        let scImageUrl = row.querySelector('.sc-photo-url').value || '';
+        
+        // Upload subcategory photo if pending
+        if (row._pendingBlob) {
+            try {
+                const ref = storage.ref('category-images/' + catId + '/subcat_' + scId + '_' + Date.now() + '.jpg');
+                await ref.put(row._pendingBlob, { contentType: 'image/jpeg' });
+                scImageUrl = await ref.getDownloadURL();
+            } catch(e) { console.error('Subcat photo error:', e); }
+        }
+        
+        subcategories.push({ id: scId, name: scName, sortOrder: i + 1, imageUrl: scImageUrl });
+    }
 
     const data = {
-        name, sortOrder, gstRate, isActive: true, subcategories,
+        name, sortOrder, isActive: true, subcategories, imageUrl,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -1608,10 +1710,9 @@ async function saveCat() {
             await db.collection('menu_categories').doc(editId).update(data);
             toast('✅ Updated');
         } else {
-            const id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
-            data.id = id;
+            data.id = catId;
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            await db.collection('menu_categories').doc(id).set(data);
+            await db.collection('menu_categories').doc(catId).set(data);
             toast('✅ Added');
         }
         closeModal('catModal');
