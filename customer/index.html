@@ -239,7 +239,11 @@
             <div style="font-size:18px;font-weight:700;color:#fff;">📷 Scan Table QR</div>
             <button onclick="closeQRScanner()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button>
         </div>
-        <div id="qrReader" style="width:100%;border-radius:12px;overflow:hidden;"></div>
+        <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;">
+            <video id="qrVideo" playsinline autoplay muted style="width:100%;display:block;"></video>
+            <canvas id="qrCanvas" style="display:none;"></canvas>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;border:2px solid #e94560;border-radius:12px;pointer-events:none;"></div>
+        </div>
         <div id="qrScanStatus" style="font-size:13px;color:#888;margin-top:12px;">Point your camera at the QR code on your table</div>
     </div>
 </div>
@@ -306,7 +310,7 @@
 
 <!-- ===== FIREBASE SDK ===== -->
 <!-- ===== QR SCANNER ===== -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
 <!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1335,37 +1339,28 @@ async function placeOrder() {
 }
 
 // ============================================================
-// QR SCANNER (for browse mode → table mode transition)
+// QR SCANNER (jsQR — reliable on iOS Safari + Android)
 // ============================================================
-let qrScanner = null;
+let qrStream = null;
+let qrScanInterval = null;
 
 function openQRScanner() {
     document.getElementById('qrScannerOverlay').classList.add('active');
     document.getElementById('qrScanStatus').textContent = 'Starting camera...';
     
-    // Clear previous scanner instance
-    document.getElementById('qrReader').innerHTML = '';
+    const video = document.getElementById('qrVideo');
     
-    qrScanner = new Html5Qrcode('qrReader');
-    
-    const config = {
-        fps: 15,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-            // Use 70% of the smaller dimension for scanning area
-            const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.7;
-            return { width: Math.floor(size), height: Math.floor(size) };
-        },
-        aspectRatio: 1,
-        formatsToSupport: [0] // 0 = QR_CODE only, faster scanning
-    };
-    
-    qrScanner.start(
-        { facingMode: 'environment' },
-        config,
-        onQRScanSuccess,
-        () => {} // ignore scan failures
-    ).then(() => {
+    navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    }).then(stream => {
+        qrStream = stream;
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        video.play();
         document.getElementById('qrScanStatus').textContent = 'Point your camera at the QR code on your table';
+        
+        // Start scanning frames
+        qrScanInterval = setInterval(() => scanFrame(), 200);
     }).catch(err => {
         console.error('Camera error:', err);
         document.getElementById('qrScanStatus').innerHTML = 
@@ -1374,13 +1369,32 @@ function openQRScanner() {
     });
 }
 
-function closeQRScanner() {
-    if (qrScanner) {
-        qrScanner.stop().catch(() => {});
-        qrScanner.clear().catch(() => {});
-        qrScanner = null;
+function scanFrame() {
+    const video = document.getElementById('qrVideo');
+    const canvas = document.getElementById('qrCanvas');
+    if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    
+    if (code && code.data) {
+        // QR detected — stop scanning and process
+        clearInterval(qrScanInterval);
+        qrScanInterval = null;
+        onQRScanSuccess(code.data);
     }
-    document.getElementById('qrReader').innerHTML = '';
+}
+
+function closeQRScanner() {
+    if (qrScanInterval) { clearInterval(qrScanInterval); qrScanInterval = null; }
+    if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+    const video = document.getElementById('qrVideo');
+    if (video) { video.srcObject = null; }
     document.getElementById('qrScannerOverlay').classList.remove('active');
 }
 
