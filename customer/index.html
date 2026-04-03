@@ -2,16 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>House Of Nosh — Order</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Poppins', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; overflow-x: hidden; }
+        body { font-family: 'Poppins', sans-serif; background: #f5f5f5; color: #1a1a1a; height: 100dvh; overflow: hidden; }
         
-        /* ===== SCREEN MANAGEMENT ===== */
-        .screen { display: none; min-height: 100vh; }
+        /* ===== APP SHELL ===== */
+        #appShell { display: none; height: 100dvh; flex-direction: column; }
+        #appShell.active { display: flex; }
+        .tab-content { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; flex-direction: column; }
+        .tab-content.active { display: flex; }
+
+        /* ===== BOTTOM NAV ===== */
+        .bottom-nav { display: flex; background: #fff; border-top: 1px solid #eee; padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); z-index: 200; flex-shrink: 0; }
+        .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0; cursor: pointer; border: none; background: none; font-family: 'Poppins', sans-serif; position: relative; transition: all 0.2s; }
+        .bottom-nav-icon { font-size: 22px; line-height: 1; }
+        .bottom-nav-label { font-size: 10px; font-weight: 600; color: #999; margin-top: 2px; }
+        .bottom-nav-item.active .bottom-nav-label { color: #e94560; }
+        .bottom-nav-badge { position: absolute; top: 2px; right: 50%; transform: translateX(18px); min-width: 18px; height: 18px; border-radius: 9px; background: #e94560; color: #fff; font-size: 10px; font-weight: 700; display: none; align-items: center; justify-content: center; padding: 0 5px; }
+        .bottom-nav-badge.visible { display: flex; }
+
+        /* Tab Headers */
+        .cart-tab-header, .orders-tab-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 100; }
+        .cart-title { font-size: 18px; font-weight: 700; }
+        .orders-content { flex: 1; padding: 12px 16px 20px; }
+        .orders-empty { text-align: center; padding: 60px 20px; }
+
+        /* ===== SCREEN MANAGEMENT (for error/loading only) ===== */
+        .screen { display: none; min-height: 100dvh; }
         .screen.active { display: flex; flex-direction: column; }
 
         /* ===== WELCOME / OTP SCREENS ===== */
@@ -39,8 +64,8 @@
 
         /* ===== MENU SCREEN ===== */
         .menu-screen { background: #f5f5f5; }
-        .menu-header { position: sticky; top: 0; z-index: 100; background: #fff; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .menu-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .menu-header { position: sticky; top: 0; z-index: 100; background: #fff; padding: 10px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .menu-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
         .menu-outlet-name { font-size: 16px; font-weight: 700; color: #1a1a1a; }
         .menu-table-badge { font-size: 12px; font-weight: 600; color: #e94560; background: #fef0f2; padding: 4px 10px; border-radius: 12px; }
         .menu-search { position: relative; }
@@ -58,7 +83,7 @@
         .subcat-header { padding: 16px 16px 8px; font-size: 15px; font-weight: 700; color: #1a1a1a; background: #f5f5f5; }
 
         /* Menu Items */
-        .menu-items-container { flex: 1; padding: 0 12px 120px; }
+        .menu-items-container { flex: 1; padding: 0 12px 20px; }
         .menu-item-card { display: flex; gap: 12px; background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .menu-item-img { width: 90px; height: 90px; border-radius: 10px; object-fit: cover; background: #f0f0f0; flex-shrink: 0; }
         .menu-item-img-placeholder { width: 90px; height: 90px; border-radius: 10px; background: linear-gradient(135deg, #f0f0f0, #e8e8e8); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; }
@@ -107,18 +132,9 @@
         .modifier-qty-num { font-size: 20px; font-weight: 700; min-width: 30px; text-align: center; }
         .btn-add-to-cart { width: 100%; padding: 14px; background: #e94560; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
 
-        /* ===== CART BAR ===== */
-        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 150; padding: 12px 16px; background: #fff; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); display: none; }
-        .cart-bar.visible { display: block; }
-        .cart-bar-inner { display: flex; align-items: center; justify-content: space-between; background: #e94560; color: #fff; padding: 12px 16px; border-radius: 12px; cursor: pointer; }
-        .cart-bar-info { font-size: 14px; font-weight: 500; }
-        .cart-bar-action { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-
-        /* ===== CART SCREEN ===== */
-        .cart-screen { background: #f5f5f5; }
-        .cart-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 100; }
-        .back-btn { width: 36px; height: 36px; border: none; background: #f0f0f0; border-radius: 50%; font-size: 18px; cursor: pointer; color: #666; font-family: 'Poppins', sans-serif; }
-        .cart-title { font-size: 18px; font-weight: 700; }
+        /* ===== CART TAB ===== */
+        #tabCart { background: #f5f5f5; }
+        #tabOrders { background: #f5f5f5; }
         .cart-items-list { flex: 1; padding: 12px 16px 160px; }
         .cart-item { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .cart-item-top { display: flex; align-items: flex-start; justify-content: space-between; }
@@ -182,54 +198,71 @@
     <div class="error-subtitle" id="errorSubtitle">Please scan the QR code on your table to start ordering.</div>
 </div>
 
-<!-- ===== SCREEN: MENU ===== -->
-<div id="menuScreen" class="screen menu-screen">
-    <div class="menu-header">
-        <div class="menu-header-top">
-            <span class="menu-outlet-name" id="menuOutletName">House Of Nosh</span>
-            <span class="menu-table-badge" id="menuTableBadge">Table 1</span>
+<!-- ===== APP SHELL ===== -->
+<div id="appShell">
+    <!-- TAB: MENU -->
+    <div id="tabMenu" class="tab-content active">
+        <div class="menu-header">
+            <div class="menu-header-top">
+                <span class="menu-outlet-name" id="menuOutletName">House Of Nosh</span>
+                <span class="menu-table-badge" id="menuTableBadge">Table 1</span>
+            </div>
+            <div class="menu-search">
+                <span class="menu-search-icon">🔍</span>
+                <input type="text" id="menuSearchInput" placeholder="Search menu..." oninput="filterMenu()">
+            </div>
         </div>
-        <div class="menu-search">
-            <span class="menu-search-icon">🔍</span>
-            <input type="text" id="menuSearchInput" placeholder="Search menu..." oninput="filterMenu()">
-        </div>
+        <div class="cat-tabs" id="catTabs"></div>
+        <div class="menu-items-container" id="menuItemsContainer"></div>
     </div>
-    <div class="cat-tabs" id="catTabs"></div>
-    <div class="menu-items-container" id="menuItemsContainer"></div>
-    <div class="cart-bar" id="cartBar">
-        <div class="cart-bar-inner" onclick="showScreen('cartScreen')">
-            <span class="cart-bar-info" id="cartBarInfo">0 items added</span>
-            <span class="cart-bar-action">View Cart →</span>
-        </div>
-    </div>
-    <!-- Session history toggle -->
-    <div style="position:fixed;bottom:70px;right:16px;z-index:140;">
-        <button onclick="showScreen('confirmScreen')" id="historyBtn" style="display:none;width:48px;height:48px;border-radius:50%;background:#1a1a2e;color:#fff;border:none;font-size:20px;box-shadow:0 4px 12px rgba(0,0,0,0.2);cursor:pointer;">📋</button>
-    </div>
-</div>
 
-<!-- ===== SCREEN: CART ===== -->
-<div id="cartScreen" class="screen cart-screen">
-    <div class="cart-header">
-        <button class="back-btn" onclick="showScreen('menuScreen')">←</button>
-        <span class="cart-title">Your Order</span>
+    <!-- TAB: CART -->
+    <div id="tabCart" class="tab-content">
+        <div class="cart-tab-header">
+            <span class="cart-title">Your Order</span>
+            <span class="menu-table-badge" id="cartTableBadge">Table 1</span>
+        </div>
+        <div class="cart-items-list" id="cartItemsList"></div>
+        <div class="cart-place-order" id="cartFooter">
+            <div class="cart-summary" id="cartSummary">Items will be sent to our kitchen</div>
+            <div style="font-size:11px;color:#999;text-align:center;margin-bottom:8px;">* All prices exclusive of applicable Government Taxes</div>
+            <button class="btn btn-primary" id="placeOrderBtn" onclick="placeOrder()">Place Order</button>
+        </div>
     </div>
-    <div class="cart-items-list" id="cartItemsList"></div>
-    <div class="cart-place-order" id="cartFooter">
-        <div class="cart-summary" id="cartSummary">Items will be sent to our kitchen</div>
-        <div style="font-size:11px;color:#999;text-align:center;margin-bottom:8px;">* All prices exclusive of applicable Government Taxes</div>
-        <button class="btn btn-primary" id="placeOrderBtn" onclick="placeOrder()">Place Order</button>
-    </div>
-</div>
 
-<!-- ===== SCREEN: ORDER CONFIRMATION + SESSION HISTORY ===== -->
-<div id="confirmScreen" class="screen confirm-screen">
-    <div class="confirm-icon" id="confirmIcon">✅</div>
-    <div class="confirm-title" id="confirmTitle">Order Placed!</div>
-    <div class="confirm-subtitle" id="confirmSubtitle">Your order has been sent to our team. They'll enter it right away.</div>
-    <div id="confirmOrderCard" class="confirm-order-card"></div>
-    <button class="btn btn-primary btn-add-more outline" onclick="showScreen('menuScreen')" style="max-width:400px;">Add More Items</button>
-    <div class="session-history" id="sessionHistory"></div>
+    <!-- TAB: ORDERS -->
+    <div id="tabOrders" class="tab-content">
+        <div class="orders-tab-header">
+            <span class="cart-title">Your Orders</span>
+        </div>
+        <div class="orders-content" id="ordersContent">
+            <div class="orders-empty" id="ordersEmpty">
+                <div style="font-size:48px;margin-bottom:12px;">📋</div>
+                <div style="font-size:15px;font-weight:600;color:#333;margin-bottom:4px;">No orders yet</div>
+                <div style="font-size:13px;color:#888;">Your placed orders will appear here</div>
+            </div>
+            <div id="confirmBanner" style="display:none;"></div>
+            <div class="session-history" id="sessionHistory"></div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav" id="bottomNav">
+        <button class="bottom-nav-item active" onclick="switchTab('menu')" id="navMenu">
+            <span class="bottom-nav-icon">🍽️</span>
+            <span class="bottom-nav-label">Menu</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('cart')" id="navCart">
+            <span class="bottom-nav-icon">🛒</span>
+            <span class="bottom-nav-label">Cart</span>
+            <span class="bottom-nav-badge" id="cartBadge">0</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('orders')" id="navOrders">
+            <span class="bottom-nav-icon">📋</span>
+            <span class="bottom-nav-label">Orders</span>
+            <span class="bottom-nav-badge" id="ordersBadge">0</span>
+        </button>
+    </nav>
 </div>
 
 <!-- ===== SCAN INSTRUCTIONS MODAL ===== -->
@@ -524,24 +557,52 @@ function clearCartStorage() {
 }
 
 // ============================================================
-// SCREEN MANAGEMENT
+// SCREEN & TAB MANAGEMENT
 // ============================================================
+let activeTab = 'menu';
+
+function switchTab(tab) {
+    activeTab = tab;
+    ['menu', 'cart', 'orders'].forEach(t => {
+        const el = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (el) el.classList.toggle('active', t === tab);
+    });
+    document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
+    const navBtn = document.getElementById('nav' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    if (navBtn) navBtn.classList.add('active');
+    
+    if (tab === 'cart') {
+        renderCart();
+        updatePlaceOrderBtn();
+    }
+    if (tab === 'orders') renderSessionHistory();
+    if (tab === 'menu') updateCartBadge();
+    
+    trackPixelEvent('InitiateCheckout', tab === 'cart' ? { num_items: cart.reduce((s,c) => s + c.qty, 0), currency: 'INR' } : {});
+}
+
+function showAppShell() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('appShell').classList.add('active');
+    switchTab('menu');
+}
+
 function showScreen(id) {
+    // Only for error screen now
+    document.getElementById('appShell').classList.remove('active');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    if (id === 'menuScreen') updateCartBar();
-    if (id === 'confirmScreen') renderSessionHistory();
+}
+function showError(title, subtitle) {
+    document.getElementById('errorTitle').textContent = title;
+    document.getElementById('errorSubtitle').textContent = subtitle;
+    showScreen('errorScreen');
 }
 function showLoading(msg) {
     document.getElementById('loadingText').textContent = msg || 'Please wait...';
     document.getElementById('loadingOverlay').classList.add('active');
 }
 function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
-function showError(title, subtitle) {
-    document.getElementById('errorTitle').textContent = title;
-    document.getElementById('errorSubtitle').textContent = subtitle;
-    showScreen('errorScreen');
-}
 
 // ============================================================
 // INIT — Parse QR params, load menu, go straight to browsing
@@ -610,7 +671,7 @@ async function init() {
         updateAuthScreens();
         await loadMenu();
         hideLoading();
-        showScreen('menuScreen');
+        showAppShell();
 
     } catch (err) {
         console.error('Init error:', err);
@@ -622,6 +683,7 @@ async function init() {
 function updateAuthScreens() {
     document.getElementById('menuOutletName').textContent = outletName;
     document.getElementById('menuTableBadge').textContent = tableName;
+    document.getElementById('cartTableBadge').textContent = browseMode ? '📋 Browse' : tableName;
 }
 
 // ============================================================
@@ -1168,29 +1230,51 @@ function getCartItemCount(itemId) {
 // ============================================================
 // CART
 // ============================================================
-function updateCartBar() {
-    const bar = document.getElementById('cartBar');
+function updateCartBar() { updateCartBadge(); }
+function updateCartBadge() {
     const totalItems = cart.reduce((sum, c) => sum + c.qty, 0);
-    
+    const badge = document.getElementById('cartBadge');
     if (totalItems > 0) {
-        bar.classList.add('visible');
-        if (browseMode) {
-            document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Tap to scan table QR`;
-        } else {
-            document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} added`;
-        }
+        badge.textContent = totalItems;
+        badge.classList.add('visible');
     } else {
-        bar.classList.remove('visible');
+        badge.classList.remove('visible');
     }
-
-    // Show history button if there are past orders
-    const histBtn = document.getElementById('historyBtn');
-    if (sessionOrders.length > 0) {
-        histBtn.style.display = 'block';
-    }
-
-    // Persist cart to localStorage
+    // Persist cart
     saveCartToStorage();
+}
+
+function updatePlaceOrderBtn() {
+    const btn = document.getElementById('placeOrderBtn');
+    if (browseMode) {
+        btn.textContent = '📷 Scan Table QR to Place Order';
+        btn.style.background = '#e94560';
+        btn.style.color = '#fff';
+    } else if (!isWithinOrderingHours()) {
+        const hours = getOrderingHoursText();
+        btn.textContent = '🕐 Ordering opens ' + hours;
+        btn.style.background = '#333';
+        btn.style.color = '#f0a500';
+    } else {
+        btn.textContent = 'Place Order';
+        btn.style.background = '#e94560';
+        btn.style.color = '#fff';
+    }
+}
+
+function updateOrdersBadge() {
+    const activeOrders = sessionOrders.filter(o => o.status === 'new' || o.status === 'accepted');
+    const badge = document.getElementById('ordersBadge');
+    if (activeOrders.length > 0) {
+        badge.textContent = activeOrders.length;
+        badge.classList.add('visible');
+    } else {
+        badge.classList.remove('visible');
+    }
+    // Hide empty state if orders exist
+    if (sessionOrders.length > 0) {
+        document.getElementById('ordersEmpty').style.display = 'none';
+    }
 }
 
 function renderCart() {
@@ -1291,31 +1375,6 @@ function cartQty(idx, delta) {
     renderCart();
     updateCartBar();
 }
-
-// Override showScreen to render cart when switching
-const _origShowScreen = showScreen;
-showScreen = function(id) {
-    _origShowScreen(id);
-    if (id === 'cartScreen') {
-        renderCart();
-        trackPixelEvent('InitiateCheckout', { num_items: cart.reduce((s,c) => s + c.qty, 0), currency: 'INR' });
-        const btn = document.getElementById('placeOrderBtn');
-        if (browseMode) {
-            btn.textContent = '📷 Scan Table QR to Place Order';
-            btn.style.background = '#e94560';
-            btn.style.color = '#fff';
-        } else if (!isWithinOrderingHours()) {
-            const hours = getOrderingHoursText();
-            btn.textContent = '🕐 Ordering opens ' + hours;
-            btn.style.background = '#333';
-            btn.style.color = '#f0a500';
-        } else {
-            btn.textContent = 'Place Order';
-            btn.style.background = '#e94560';
-            btn.style.color = '#fff';
-        }
-    }
-};
 
 // ============================================================
 // PLACE ORDER (checks session, shows OTP if first order)
@@ -1594,9 +1653,9 @@ async function submitOrder() {
         
         hideLoading();
 
-        // Show confirmation
+        // Show confirmation in orders tab
         renderOrderConfirmation(orderNumber, placedItems);
-        showScreen('confirmScreen');
+        switchTab('orders');
 
     } catch (err) {
         hideLoading();
@@ -1606,23 +1665,28 @@ async function submitOrder() {
 }
 
 function renderOrderConfirmation(orderNumber, items) {
-    document.getElementById('confirmIcon').textContent = '✅';
-    document.getElementById('confirmTitle').textContent = 'Order Placed!';
-    document.getElementById('confirmSubtitle').textContent = `Order #${orderNumber} · ${tableName}\nOur staff will enter your order shortly.`;
-
-    // Show just-placed order (no prices)
-    const card = document.getElementById('confirmOrderCard');
-    card.innerHTML = `
-        <div class="confirm-order-header">Order #${orderNumber} · Just now</div>
-        ${items.map(c => `
-            <div class="confirm-order-item">
-                <span class="confirm-order-qty">${c.qty}×</span>
-                <span class="confirm-order-name">${c.name}</span>
-            </div>
-            ${c.modifiers.length ? `<div class="confirm-order-mods">${c.modifiers.map(m => m.option).join(', ')}</div>` : ''}
-            ${c.instructions ? `<div class="confirm-order-mods" style="color:#e94560;font-style:italic;">"${c.instructions}"</div>` : ''}
-        `).join('')}
+    const banner = document.getElementById('confirmBanner');
+    banner.style.display = 'block';
+    banner.innerHTML = `
+        <div style="background:#e8f5e9;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:32px;margin-bottom:8px;">✅</div>
+            <div style="font-size:16px;font-weight:700;color:#2e7d32;">Order #${orderNumber} Placed!</div>
+            <div style="font-size:13px;color:#555;margin-top:4px;">${tableName} · Our staff will enter your order shortly</div>
+        </div>
+        <div class="confirm-order-card" style="margin-bottom:16px;">
+            <div class="confirm-order-header">Order #${orderNumber} · Just now</div>
+            ${items.map(c => `
+                <div class="confirm-order-item">
+                    <span class="confirm-order-qty">${c.qty}×</span>
+                    <span class="confirm-order-name">${c.name}</span>
+                </div>
+                ${c.modifiers.length ? `<div class="confirm-order-mods">${c.modifiers.map(m => m.option).join(', ')}</div>` : ''}
+                ${c.instructions ? `<div class="confirm-order-mods" style="color:#e94560;font-style:italic;">"${c.instructions}"</div>` : ''}
+            `).join('')}
+        </div>
+        <button class="btn btn-primary" onclick="switchTab('menu')" style="max-width:400px;">+ Add More Items</button>
     `;
+    document.getElementById('ordersEmpty').style.display = 'none';
 }
 
 // ============================================================
@@ -1636,11 +1700,9 @@ async function startOrdersListener() {
         .orderBy('createdAt', 'desc')
         .onSnapshot(snapshot => {
             sessionOrders = snapshot.docs.map(d => d.data());
-            updateCartBar(); // show/hide history button
-            // If on confirm screen, re-render
-            if (document.getElementById('confirmScreen').classList.contains('active')) {
-                renderSessionHistory();
-            }
+            updateCartBadge();
+            updateOrdersBadge();
+            if (activeTab === 'orders') renderSessionHistory();
         });
 
     // Also listen for session deactivation (cashier cleared table)
@@ -1657,10 +1719,8 @@ async function startOrdersListener() {
                 customerName = '';
                 localStorage.removeItem('nosh_qr_session');
                 updateCartBar();
-                // If on confirm screen, go back to menu
-                if (document.getElementById('confirmScreen').classList.contains('active')) {
-                    showScreen('menuScreen');
-                }
+                // Go back to menu tab
+                switchTab('menu');
             }
         });
 }
