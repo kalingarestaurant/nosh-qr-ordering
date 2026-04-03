@@ -1069,6 +1069,42 @@ function clearSearch() {
 // ADD TO CART / MODIFIER POPUP
 // ============================================================
 // Quick-add from card button (no popup)
+function renderItemCard(item) {
+    const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
+    const imgHtml = item.imageUrl 
+        ? `<img class="menu-item-img" src="${item.imageUrl}" alt="${item.name}" loading="lazy">`
+        : `<div class="menu-item-img-placeholder">🍽️</div>`;
+    
+    const cartItem = getCartItemCount(item.id);
+    const addBtnHtml = cartItem > 0
+        ? `<div class="item-qty-control">
+            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',-1)">−</button>
+            <span class="item-qty-num">${cartItem}</span>
+            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',1)">+</button>
+           </div>`
+        : `<button class="btn-add" onclick="event.stopPropagation();addItem('${item.id}')">ADD</button>`;
+
+    const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
+    
+    return `
+    <div class="menu-item-card" onclick="openItemDetail('${item.id}')">
+        ${imgHtml}
+        <div class="menu-item-info">
+            <div>
+                <div class="menu-item-name">
+                    ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
+                    ${item.name}
+                </div>
+                ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
+            </div>
+            <div class="menu-item-bottom">
+                <span class="menu-item-price">₹${Math.round(item.price)}</span>
+                ${addBtnHtml}
+            </div>
+        </div>
+    </div>`;
+}
+
 function addItem(itemId) {
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
