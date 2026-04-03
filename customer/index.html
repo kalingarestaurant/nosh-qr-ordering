@@ -231,6 +231,18 @@
     <div class="session-history" id="sessionHistory"></div>
 </div>
 
+<!-- ===== QR SCANNER MODAL ===== -->
+<div class="modal-overlay" id="qrScannerOverlay" style="background:rgba(0,0,0,0.95);">
+    <div style="width:100%;max-width:400px;padding:20px;text-align:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="font-size:18px;font-weight:700;color:#fff;">📷 Scan Table QR</div>
+            <button onclick="closeQRScanner()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button>
+        </div>
+        <div id="qrReader" style="width:100%;border-radius:12px;overflow:hidden;"></div>
+        <div id="qrScanStatus" style="font-size:13px;color:#888;margin-top:12px;">Point your camera at the QR code on your table</div>
+    </div>
+</div>
+
 <!-- ===== OTP MODAL (shown when placing first order) ===== -->
 <div class="modal-overlay" id="otpModalOverlay">
     <div class="modifier-modal" style="max-width:400px;padding:28px 20px;">
@@ -290,6 +302,10 @@
         <div class="loading-text" id="loadingText">Please wait...</div>
     </div>
 </div>
+
+<!-- ===== FIREBASE SDK ===== -->
+<!-- ===== QR SCANNER ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
 <!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -357,6 +373,30 @@ const CUSTOMER_PORTAL_URL = "https://order.houseofnosh.in";
 // ============================================================
 firebase.initializeApp(FIREBASE_CONFIG);
 const db = firebase.firestore();
+
+// ============================================================
+// META PIXEL (loaded dynamically from outlet config)
+// ============================================================
+let metaPixelActive = false;
+
+function initMetaPixel(pixelId) {
+    if (!pixelId || metaPixelActive) return;
+    // Inject Meta Pixel base code
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', pixelId);
+    fbq('track', 'PageView');
+    metaPixelActive = true;
+    console.log('Meta Pixel initialized:', pixelId);
+}
+
+function trackPixelEvent(event, data) {
+    if (!metaPixelActive || typeof fbq !== 'function') return;
+    try { fbq('track', event, data || {}); } catch(e) {}
+}
 
 // ============================================================
 // IST HELPERS (same as Nosh Waitlist)
@@ -515,6 +555,10 @@ async function init() {
         }
         outletName = outletDoc.data().name;
         outletOrderingHours = outletDoc.data().orderingHours || [];
+
+        // Load Meta Pixel if configured
+        const pixelId = outletDoc.data().metaPixelId || '';
+        if (pixelId) initMetaPixel(pixelId);
 
         // 1b. Check OTP setting
         try {
@@ -898,12 +942,13 @@ function addItem(itemId) {
     }
     updateCartBar();
     renderMenuItems();
-}
-
-// Detail popup — shows photo, description, modifiers, qty, add
+    trackPixelEvent('AddToCart', { content_name: item.name, value: item.price, currency: 'INR' });
+} — shows photo, description, modifiers, qty, add
 function openItemDetail(itemId) {
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
+
+    trackPixelEvent('ViewContent', { content_name: item.name, content_type: 'menu_item', value: item.price, currency: 'INR' });
 
     const modal = document.getElementById('modifierModal');
     const content = document.getElementById('modifierModalContent');
@@ -1083,9 +1128,8 @@ function addFromModifier() {
     closeModifierPopup();
     updateCartBar();
     renderMenuItems();
-}
-
-// Quick qty change from menu card (only for items without modifiers)
+    trackPixelEvent('AddToCart', { content_name: item.name, value: item.price * qty, currency: 'INR' });
+} from menu card (only for items without modifiers)
 function quickQty(itemId, delta) {
     // Find the LAST cart entry for this item (simple items only)
     for (let i = cart.length - 1; i >= 0; i--) {
@@ -1113,7 +1157,7 @@ function updateCartBar() {
     if (totalItems > 0) {
         bar.classList.add('visible');
         if (browseMode) {
-            document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Scan table QR to order`;
+            document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Tap to scan table QR`;
         } else {
             document.getElementById('cartBarInfo').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} added`;
         }
@@ -1189,11 +1233,12 @@ showScreen = function(id) {
     _origShowScreen(id);
     if (id === 'cartScreen') {
         renderCart();
+        trackPixelEvent('InitiateCheckout', { num_items: cart.reduce((s,c) => s + c.qty, 0), currency: 'INR' });
         const btn = document.getElementById('placeOrderBtn');
         if (browseMode) {
-            btn.textContent = '📱 Scan Table QR to Place Order';
-            btn.style.background = '#333';
-            btn.style.color = '#888';
+            btn.textContent = '📷 Scan Table QR to Place Order';
+            btn.style.background = '#e94560';
+            btn.style.color = '#fff';
         } else if (!isWithinOrderingHours()) {
             const hours = getOrderingHoursText();
             btn.textContent = '🕐 Ordering opens ' + hours;
@@ -1213,9 +1258,9 @@ showScreen = function(id) {
 async function placeOrder() {
     if (cart.length === 0) return;
 
-    // Browse mode — cannot place order without table
+    // Browse mode — open QR scanner
     if (browseMode) {
-        alert('Please scan the QR code on your table to place the order.\n\nYour cart has been saved — it will be here when you scan!');
+        openQRScanner();
         return;
     }
 
@@ -1234,6 +1279,95 @@ async function placeOrder() {
 
     // Session exists — place order directly
     await submitOrder();
+}
+
+// ============================================================
+// QR SCANNER (for browse mode → table mode transition)
+// ============================================================
+let qrScanner = null;
+
+function openQRScanner() {
+    document.getElementById('qrScannerOverlay').classList.add('active');
+    document.getElementById('qrScanStatus').textContent = 'Starting camera...';
+    
+    qrScanner = new Html5Qrcode('qrReader');
+    qrScanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        onQRScanSuccess,
+        () => {} // ignore scan failures (every frame without QR)
+    ).then(() => {
+        document.getElementById('qrScanStatus').textContent = 'Point your camera at the QR code on your table';
+    }).catch(err => {
+        console.error('Camera error:', err);
+        document.getElementById('qrScanStatus').innerHTML = 'Camera access denied.<br><span style="font-size:11px;">Please allow camera permission and try again, or scan the QR using your phone\'s camera app.</span>';
+    });
+}
+
+function closeQRScanner() {
+    if (qrScanner) {
+        qrScanner.stop().catch(() => {});
+        qrScanner.clear();
+        qrScanner = null;
+    }
+    document.getElementById('qrScannerOverlay').classList.remove('active');
+}
+
+async function onQRScanSuccess(decodedText) {
+    // Stop scanning immediately
+    if (qrScanner) {
+        qrScanner.stop().catch(() => {});
+    }
+    
+    console.log('QR scanned:', decodedText);
+    document.getElementById('qrScanStatus').textContent = 'QR detected! Loading...';
+    
+    try {
+        // Parse URL params from scanned QR
+        const url = new URL(decodedText);
+        const scannedOutlet = url.searchParams.get('o');
+        const scannedTable = url.searchParams.get('t');
+        
+        if (!scannedOutlet || !scannedTable) {
+            document.getElementById('qrScanStatus').innerHTML = '❌ Invalid QR code. Please scan the QR on your table.';
+            setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 2000);
+            return;
+        }
+        
+        // Check if same outlet
+        if (scannedOutlet !== outletId) {
+            document.getElementById('qrScanStatus').innerHTML = '❌ This QR is for a different restaurant.<br>You browsed: ' + outletName;
+            setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 3000);
+            return;
+        }
+        
+        // Verify table exists
+        const tableDoc = await db.collection('qr_tables').doc(scannedTable).get();
+        if (!tableDoc.exists || !tableDoc.data().isActive) {
+            document.getElementById('qrScanStatus').innerHTML = '❌ This table is not active. Ask staff for help.';
+            setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 2000);
+            return;
+        }
+        
+        // Switch from browse mode to table mode
+        tableId = scannedTable;
+        tableName = tableDoc.data().tableName;
+        tableNumber = tableDoc.data().tableNumber;
+        browseMode = false;
+        
+        // Update UI
+        updateAuthScreens();
+        closeQRScanner();
+        
+        // Cart is already loaded from localStorage — it persists!
+        // Now show the cart with active Place Order button
+        showScreen('cartScreen');
+        
+    } catch(e) {
+        console.error('QR process error:', e);
+        document.getElementById('qrScanStatus').innerHTML = '❌ Could not read QR. Try again.';
+        setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 2000);
+    }
 }
 
 // Show the OTP modal (phone + verify)
@@ -1469,6 +1603,7 @@ async function submitOrder() {
         const placedItems = [...cart];
         cart = [];
         clearCartStorage();
+        trackPixelEvent('Purchase', { value: Math.round(orderTotal), currency: 'INR', num_items: placedItems.reduce((s,c) => s + c.qty, 0) });
         
         hideLoading();
 
