@@ -179,8 +179,10 @@
     </div>
     <div class="bottom-bar">
         <span style="font-size:12px;color:#888;">Clear Table:</span>
+        <input type="tel" id="quickClearInput" placeholder="Table #" inputmode="numeric" maxlength="5" style="width:70px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:6px;padding:7px 10px;color:#fff;font-size:14px;font-weight:700;font-family:'Poppins',sans-serif;outline:none;text-align:center;" onkeydown="if(event.key==='Enter')quickClearTable()" onfocus="this.style.borderColor='#e94560'" onblur="this.style.borderColor='#2a2d3e'">
+        <span style="font-size:11px;color:#444;">|</span>
         <select id="clearSelect" class="bb-select"></select>
-        <button class="bb-btn" onclick="clearTable()">Clear & End Session</button>
+        <button class="bb-btn" onclick="clearTable()">Clear</button>
     </div>
 </div>
 
@@ -260,7 +262,10 @@ function startDash(){
     document.getElementById('authWrap').style.display='none';document.getElementById('dash').classList.add('on');
     document.getElementById('dOutlet').textContent=selectedOutletName;localStorage.setItem('nosh_cashier_outlet',selectedOutletId);
     setInterval(()=>{document.getElementById('dTime').textContent=getISTTime();},1000);document.getElementById('dTime').textContent=getISTTime();
-    loadAlarmPref();loadMenuItems();loadTables();startListener();
+    loadAlarmPref();loadMenuItems();loadTables();loadTablesData();startListener();
+    // Refresh table data every 30 seconds for quick clear
+    setInterval(()=>{loadTablesData();loadTables();},30000);
+    focusClearInput();
     // Run daily reset check now and every 5 minutes
     dailyResetCheck();
     setInterval(dailyResetCheck, 5*60*1000);
@@ -415,9 +420,9 @@ function openDetail(docId){
     openM('detailModal');
 }
 document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeM('detailModal');});
-async function acceptOrder(id){try{await db.collection('qr_orders').doc(id).update({status:'accepted',acceptedAt:firebase.firestore.FieldValue.serverTimestamp()});closeM('detailModal');stopAlert();toast('✅ Entered into POS');}catch(e){alert('Error: '+e.message);}}
+async function acceptOrder(id){try{await db.collection('qr_orders').doc(id).update({status:'accepted',acceptedAt:firebase.firestore.FieldValue.serverTimestamp()});closeM('detailModal');stopAlert();toast('✅ Entered into POS');focusClearInput();}catch(e){alert('Error: '+e.message);}}
 function openCancel(id,num){cancelDocId=id;document.getElementById('cancelInfo').textContent='Order #'+num;document.getElementById('cancelReason').value='';openM('cancelModal');}
-async function confirmCancel(){const r=document.getElementById('cancelReason').value.trim();if(!r){alert('Enter reason');return;}try{await db.collection('qr_orders').doc(cancelDocId).update({status:'cancelled',cancelledAt:firebase.firestore.FieldValue.serverTimestamp(),cancelReason:r});closeM('cancelModal');stopAlert();toast('Order cancelled');}catch(e){alert('Error: '+e.message);}}
+async function confirmCancel(){const r=document.getElementById('cancelReason').value.trim();if(!r){alert('Enter reason');return;}try{await db.collection('qr_orders').doc(cancelDocId).update({status:'cancelled',cancelledAt:firebase.firestore.FieldValue.serverTimestamp(),cancelReason:r});closeM('cancelModal');stopAlert();toast('Order cancelled');focusClearInput();}catch(e){alert('Error: '+e.message);}}
 
 function toggleSound(){soundEnabled=!soundEnabled;const b=document.getElementById('soundBtn');b.textContent=soundEnabled?'🔔':'🔕';b.classList.toggle('on',soundEnabled);if(!soundEnabled)stopAlert();}
 
@@ -492,14 +497,12 @@ async function loadTables(){
 async function clearTable(){
     const id=document.getElementById('clearSelect').value;
     if(!id){alert('Select a table');return;}
-    if(!confirm('Clear table and end session?'))return;
     try{
         const td=await db.collection('qr_tables').doc(id).get();
         const sid=td.data()?.currentSessionId;
         const tblName=td.data()?.tableName||'';
         if(sid){
             await db.collection('qr_sessions').doc(sid).update({isActive:false}).catch(()=>{});
-            // Mark all orders for this session as cleared (hide from cashier)
             const orderSnap=await db.collection('qr_orders').where('sessionId','==',sid).get();
             const batch=db.batch();
             orderSnap.docs.forEach(d=>{batch.update(d.ref,{cleared:true});});
@@ -507,10 +510,40 @@ async function clearTable(){
         }
         await db.collection('qr_tables').doc(id).update({currentSessionId:''});
         document.getElementById('clearSelect').value='';
-        loadTables(); // refresh dropdown to remove cleared table
+        loadTables();loadTablesData();
         toast('✅ '+tblName+' cleared!');
+        focusClearInput();
     }catch(e){alert('Error: '+e.message);}
 }
+
+async function quickClearTable(){
+    const num=document.getElementById('quickClearInput').value.trim();
+    if(!num)return;
+    const tableNum=parseInt(num);
+    if(isNaN(tableNum)){toast('Enter a valid number','err');focusClearInput();return;}
+    
+    const table=allTablesData.find(t=>t.tableNumber===tableNum);
+    if(!table){toast('❌ Table '+tableNum+' not found','err');focusClearInput();return;}
+    if(!table.currentSessionId){toast('❌ Table '+tableNum+' is not occupied','err');focusClearInput();return;}
+    
+    try{
+        const sid=table.currentSessionId;
+        await db.collection('qr_sessions').doc(sid).update({isActive:false}).catch(()=>{});
+        const orderSnap=await db.collection('qr_orders').where('sessionId','==',sid).get();
+        if(orderSnap.size>0){const batch=db.batch();orderSnap.docs.forEach(d=>{batch.update(d.ref,{cleared:true});});await batch.commit();}
+        await db.collection('qr_tables').doc(table.id||table.docId).update({currentSessionId:''});
+        loadTables();loadTablesData();
+        toast('✅ Table '+tableNum+' cleared!');
+    }catch(e){toast('Error: '+e.message,'err');}
+    focusClearInput();
+}
+
+let allTablesData=[];
+async function loadTablesData(){
+    const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();
+    allTablesData=s.docs.map(d=>({docId:d.id,...d.data()}));
+}
+function focusClearInput(){const inp=document.getElementById('quickClearInput');if(inp){inp.value='';setTimeout(()=>inp.focus(),100);}}
 
 ['availModal','cancelModal','changePinModal','outletModal'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeM(id);});});
 window.addEventListener('DOMContentLoaded',checkAutoLogin);
