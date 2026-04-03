@@ -232,24 +232,30 @@
     <div class="session-history" id="sessionHistory"></div>
 </div>
 
-<!-- ===== QR SCANNER MODAL ===== -->
+<!-- ===== SCAN INSTRUCTIONS MODAL ===== -->
 <div class="modal-overlay" id="qrScannerOverlay" style="background:rgba(0,0,0,0.95);">
-    <div style="width:100%;max-width:400px;padding:20px;text-align:center;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div style="font-size:18px;font-weight:700;color:#fff;">📷 Scan Table QR</div>
+    <div style="width:100%;max-width:380px;padding:24px;text-align:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:18px;font-weight:700;color:#fff;">Scan Table QR</div>
             <button onclick="closeQRScanner()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button>
         </div>
-        <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:250px;">
-            <video id="qrVideo" playsinline autoplay muted style="width:100%;display:block;"></video>
+        <div style="font-size:48px;margin-bottom:16px;">📱</div>
+        <div style="font-size:15px;color:#fff;font-weight:600;margin-bottom:20px;">Your cart is saved!</div>
+        <div style="text-align:left;background:#1a1a2e;border-radius:12px;padding:20px;margin-bottom:16px;">
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;">
+                <div style="min-width:28px;height:28px;border-radius:50%;background:#e94560;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">1</div>
+                <div style="font-size:14px;color:#ccc;padding-top:4px;">Open your <strong style="color:#fff;">Camera app</strong></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;">
+                <div style="min-width:28px;height:28px;border-radius:50%;background:#e94560;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">2</div>
+                <div style="font-size:14px;color:#ccc;padding-top:4px;">Point at the <strong style="color:#fff;">QR code on your table</strong></div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+                <div style="min-width:28px;height:28px;border-radius:50%;background:#e94560;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">3</div>
+                <div style="font-size:14px;color:#ccc;padding-top:4px;">Tap the link that appears — <strong style="color:#fff;">your cart will be ready</strong></div>
+            </div>
         </div>
-        <div id="qrScanStatus" style="font-size:13px;color:#888;margin-top:12px;">Starting camera...</div>
-        <div style="margin-top:14px;">
-            <label style="display:inline-block;padding:12px 24px;background:#e94560;color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">
-                📸 Take Photo of QR
-                <input type="file" accept="image/*" capture="environment" id="qrPhotoInput" onchange="scanFromPhoto(this)" style="display:none;">
-            </label>
-            <div style="font-size:11px;color:#555;margin-top:6px;">Tap to take a photo — works on all devices</div>
-        </div>
+        <div style="font-size:12px;color:#666;">Your selected items are saved and will appear automatically when you scan the table QR.</div>
     </div>
 </div>
 
@@ -314,9 +320,6 @@
 </div>
 
 <!-- ===== FIREBASE SDK ===== -->
-<!-- ===== QR SCANNER ===== -->
-<script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
-
 <!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -1344,118 +1347,14 @@ async function placeOrder() {
 }
 
 // ============================================================
-// QR SCANNER (qr-scanner by Nimiq — WASM decoder, iOS tested)
+// QR SCAN INSTRUCTIONS (guides user to native camera)
 // ============================================================
-let qrScannerInstance = null;
-
 function openQRScanner() {
     document.getElementById('qrScannerOverlay').classList.add('active');
-    document.getElementById('qrScanStatus').textContent = 'Starting camera...';
-    document.getElementById('qrPhotoInput').value = '';
-    
-    const video = document.getElementById('qrVideo');
-    
-    qrScannerInstance = new QrScanner(video, result => {
-        // QR detected
-        const text = typeof result === 'string' ? result : result.data;
-        if (text) {
-            qrScannerInstance.stop();
-            onQRScanSuccess(text);
-        }
-    }, {
-        preferredCamera: 'environment',
-        highlightScanRegion: true,
-        highlightCodeOutline: true,
-        maxScansPerSecond: 5,
-        returnDetailedScanResult: true
-    });
-    
-    qrScannerInstance.start().then(() => {
-        document.getElementById('qrScanStatus').textContent = 'Scanning... hold steady over the QR code';
-    }).catch(err => {
-        console.error('Camera error:', err);
-        document.getElementById('qrScanStatus').innerHTML = 'Camera not available — use <strong>Take Photo</strong> below';
-    });
-}
-
-function scanFromPhoto(input) {
-    if (!input.files || !input.files[0]) return;
-    document.getElementById('qrScanStatus').textContent = 'Processing photo...';
-    
-    QrScanner.scanImage(input.files[0], { returnDetailedScanResult: true })
-        .then(result => {
-            const text = typeof result === 'string' ? result : result.data;
-            if (text) {
-                if (qrScannerInstance) qrScannerInstance.stop();
-                onQRScanSuccess(text);
-            } else {
-                document.getElementById('qrScanStatus').textContent = '❌ No QR found. Try again.';
-                document.getElementById('qrPhotoInput').value = '';
-            }
-        })
-        .catch(err => {
-            console.error('Photo scan error:', err);
-            document.getElementById('qrScanStatus').textContent = '❌ No QR found in photo. Try again with a clearer photo.';
-            document.getElementById('qrPhotoInput').value = '';
-        });
 }
 
 function closeQRScanner() {
-    if (qrScannerInstance) {
-        qrScannerInstance.stop();
-        qrScannerInstance.destroy();
-        qrScannerInstance = null;
-    }
     document.getElementById('qrScannerOverlay').classList.remove('active');
-}
-
-async function onQRScanSuccess(decodedText) {
-    // Stop scanning immediately
-    if (qrScanner) {
-        qrScanner.stop().catch(() => {});
-    }
-    
-    console.log('QR scanned:', decodedText);
-    document.getElementById('qrScanStatus').textContent = 'QR detected! Loading...';
-    
-    try {
-        // Parse URL params from scanned QR
-        const url = new URL(decodedText);
-        const scannedOutlet = url.searchParams.get('o');
-        const scannedTable = url.searchParams.get('t');
-        
-        if (!scannedOutlet || !scannedTable) {
-            document.getElementById('qrScanStatus').textContent = '❌ Invalid QR code. Please scan the QR on your table.';
-            return;
-        }
-        
-        // Check if same outlet
-        if (scannedOutlet !== outletId) {
-            document.getElementById('qrScanStatus').innerHTML = '❌ This QR is for a different restaurant.<br>You browsed: <strong>' + outletName + '</strong>';
-            return;
-        }
-        
-        // Verify table exists
-        const tableDoc = await db.collection('qr_tables').doc(scannedTable).get();
-        if (!tableDoc.exists || !tableDoc.data().isActive) {
-            document.getElementById('qrScanStatus').textContent = '❌ This table is not active. Ask staff for help.';
-            return;
-        }
-        
-        // Switch from browse mode to table mode
-        tableId = scannedTable;
-        tableName = tableDoc.data().tableName;
-        tableNumber = tableDoc.data().tableNumber;
-        browseMode = false;
-        
-        updateAuthScreens();
-        closeQRScanner();
-        showScreen('cartScreen');
-        
-    } catch(e) {
-        console.error('QR process error:', e);
-        document.getElementById('qrScanStatus').textContent = '❌ Could not read QR. Please use your phone\'s camera app to scan.';
-    }
 }
 
 // Show the OTP modal (phone + verify)
