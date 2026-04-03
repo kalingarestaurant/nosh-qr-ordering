@@ -297,6 +297,20 @@
                     </div>
                     <div id="ohStatus" style="font-size:12px;margin-top:8px;"></div>
                 </div>
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">📊 Meta (Facebook) Pixel</div>
+                    <div style="font-size:12px;color:#888;margin-bottom:12px;">Add your Meta Pixel ID to track menu views, add-to-cart, and orders for retargeting ads. Each outlet can have a different Pixel.</div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+                        <label style="font-size:12px;color:#888;">Outlet:</label>
+                        <select class="fi" id="pixelOutletSelect" onchange="loadPixelId()" style="flex:1;min-width:150px;"></select>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input class="fi" id="pixelIdInput" placeholder="Meta Pixel ID (e.g. 1234567890)" style="flex:1;" inputmode="numeric">
+                        <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="savePixelId()">💾 Save</button>
+                        <button style="padding:8px 12px;background:#ff6b6b20;border:1px solid #ff6b6b30;border-radius:6px;color:#ff6b6b;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="clearPixelId()">Clear</button>
+                    </div>
+                    <div id="pixelStatus" style="font-size:12px;margin-top:8px;"></div>
+                </div>
                 <div style="padding:16px 0;font-size:12px;color:#666;">
                     ⚠️ Remember to turn OTP back ON before going live with real customers.
                 </div>
@@ -1784,6 +1798,7 @@ async function loadSettings() {
         
         renderOutletsList();
         initOrderingHours();
+        initPixelConfig();
     } catch(e) {
         console.error('Load settings error:', e);
     }
@@ -2032,6 +2047,45 @@ async function saveOrderingHours() {
         toast('✅ Saved: ' + msg);
         document.getElementById('ohStatus').innerHTML = '<span style="color:#2ecc71;">Saved: ' + msg + '</span>';
     } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// ============================================================
+// META PIXEL CONFIG
+// ============================================================
+function initPixelConfig() {
+    const sel = document.getElementById('pixelOutletSelect');
+    sel.innerHTML = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
+    if (sel.value) loadPixelId();
+}
+
+async function loadPixelId() {
+    const outletId = document.getElementById('pixelOutletSelect').value;
+    if (!outletId) return;
+    try {
+        const doc = await db.collection('qr_outlets').doc(outletId).get();
+        const pixelId = doc.exists ? doc.data().metaPixelId || '' : '';
+        document.getElementById('pixelIdInput').value = pixelId;
+        document.getElementById('pixelStatus').innerHTML = pixelId
+            ? '<span style="color:#2ecc71;">✅ Pixel active: ' + pixelId + '</span>'
+            : '<span style="color:#666;">No pixel set — tracking disabled for this outlet</span>';
+    } catch(e) { console.error(e); }
+}
+
+async function savePixelId() {
+    const outletId = document.getElementById('pixelOutletSelect').value;
+    const pixelId = document.getElementById('pixelIdInput').value.trim();
+    if (!outletId) return;
+    if (pixelId && !/^\d+$/.test(pixelId)) { toast('Pixel ID should be a number', 'err'); return; }
+    try {
+        await db.collection('qr_outlets').doc(outletId).update({ metaPixelId: pixelId });
+        document.getElementById('pixelStatus').innerHTML = '<span style="color:#2ecc71;">✅ Saved: ' + (pixelId || 'cleared') + '</span>';
+        toast('✅ Pixel ID saved');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function clearPixelId() {
+    document.getElementById('pixelIdInput').value = '';
+    await savePixelId();
 }
 
 async function toggleOTPSetting() {
