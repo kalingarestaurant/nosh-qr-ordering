@@ -387,7 +387,11 @@
         </div>
         <!-- Step 1: Upload -->
         <div id="importStep1">
-            <div style="font-size:13px;color:#888;margin-bottom:14px;">Upload an Excel (.xlsx) or CSV file. Auto-detects DotPe and generic formats.</div>
+            <div style="font-size:13px;color:#888;margin-bottom:14px;">Upload an Excel (.xlsx) or CSV file. Items will be added to the master catalog and auto-enabled for the selected outlet.</div>
+            <div class="ff">
+                <label>Import for Outlet *</label>
+                <select class="fi" id="importOutletSelect"></select>
+            </div>
             <div style="font-size:11px;color:#666;margin-bottom:12px;padding:10px;background:#0f1117;border-radius:8px;">
                 <strong>Expected columns:</strong> Item Name, Price, Category, Veg/NonVeg (optional), Description (optional)<br>
                 <strong>DotPe format:</strong> Auto-detected from column headers
@@ -402,13 +406,13 @@
                 <button style="padding:6px 12px;font-size:11px;background:#2a2d3e;border:none;border-radius:6px;color:#888;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="document.getElementById('importStep1').style.display='block';document.getElementById('importStep2').style.display='none';">← Change File</button>
             </div>
             <div style="display:flex;gap:8px;margin-bottom:10px;">
-                <button style="padding:6px 12px;font-size:11px;background:#2ecc7120;border:1px solid #2ecc7130;border-radius:6px;color:#2ecc71;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('new')">🆕 New Only</button>
-                <button style="padding:6px 12px;font-size:11px;background:#f0a50020;border:1px solid #f0a50030;border-radius:6px;color:#f0a500;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('dup')">⚠️ Duplicates</button>
+                <button style="padding:6px 12px;font-size:11px;background:#2ecc7120;border:1px solid #2ecc7130;border-radius:6px;color:#2ecc71;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('new')">🆕 New to Master</button>
+                <button style="padding:6px 12px;font-size:11px;background:#3498db20;border:1px solid #3498db30;border-radius:6px;color:#5dade2;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('dup')">🔗 Already Exist</button>
                 <button style="padding:6px 12px;font-size:11px;background:#2a2d3e;border:none;border-radius:6px;color:#888;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('all')">All</button>
             </div>
             <div id="importPreviewList" style="max-height:350px;overflow-y:auto;"></div>
             <div style="display:flex;gap:8px;margin-top:14px;">
-                <button class="btn btn-primary" onclick="executeImport()">📥 Import New Items</button>
+                <button class="btn btn-primary" onclick="executeImport()">📥 Import & Enable for Outlet</button>
                 <button class="btn" style="background:#2a2d3e;color:#888;" onclick="closeModal('importModal')">Cancel</button>
             </div>
             <div id="importResult" style="font-size:12px;margin-top:10px;"></div>
@@ -1047,12 +1051,18 @@ function openImportModal() {
     document.getElementById('importStep2').style.display = 'none';
     document.getElementById('importResult').innerHTML = '';
     importItems = [];
+    // Populate outlet dropdown
+    document.getElementById('importOutletSelect').innerHTML = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
     document.getElementById('importModal').classList.add('active');
 }
 
 function parseImportFile() {
     const file = document.getElementById('importFile').files[0];
     if (!file) return;
+    if (!document.getElementById('importOutletSelect').value) {
+        document.getElementById('importParseStatus').innerHTML = '<span style="color:#ff6b6b;">Select an outlet first</span>';
+        return;
+    }
     
     const statusEl = document.getElementById('importParseStatus');
     statusEl.innerHTML = '<span style="color:#888;">Parsing file...</span>';
@@ -1129,9 +1139,10 @@ function processImportData(rows, headers) {
     // Show preview
     const newCount = importItems.filter(i => !i.isDuplicate).length;
     const dupCount = importItems.filter(i => i.isDuplicate).length;
+    const outletName = outlets.find(o => (o.id || o.docId) === document.getElementById('importOutletSelect').value)?.name || '';
     
     document.getElementById('importSummary').innerHTML = 
-        `<strong>${importItems.length}</strong> items found · <span style="color:#2ecc71;">${newCount} new</span> · <span style="color:#f0a500;">${dupCount} duplicates (will skip)</span>`;
+        `<strong>${importItems.length}</strong> items for <strong>${outletName}</strong> · <span style="color:#2ecc71;">${newCount} new to master</span> · <span style="color:#5dade2;">${dupCount} already exist (will enable + set price)</span>`;
     
     document.getElementById('importStep1').style.display = 'none';
     document.getElementById('importStep2').style.display = 'block';
@@ -1193,11 +1204,11 @@ function filterImportPreview(filter) {
         const realIdx = importItems.indexOf(item);
         const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : 'egg';
         const dupBadge = item.isDuplicate 
-            ? '<span style="font-size:10px;background:#f0a50020;color:#f0a500;padding:2px 6px;border-radius:4px;margin-left:6px;">DUPLICATE — will skip</span>'
+            ? '<span style="font-size:10px;background:#3498db20;color:#5dade2;padding:2px 6px;border-radius:4px;margin-left:6px;">EXISTS — enable + set price</span>'
             : '<span style="font-size:10px;background:#2ecc7120;color:#2ecc71;padding:2px 6px;border-radius:4px;margin-left:6px;">NEW</span>';
         
         return `
-        <div class="item-row" style="opacity:${item.isDuplicate ? '0.4' : '1'};">
+        <div class="item-row">
             <div class="item-veg ${vegClass}"></div>
             <div class="item-name">${item.name}${dupBadge}</div>
             <div class="item-price">₹${Math.round(item.price)}</div>
@@ -1207,20 +1218,24 @@ function filterImportPreview(filter) {
 }
 
 async function executeImport() {
-    const toImport = importItems.filter(i => !i.isDuplicate);
-    if (toImport.length === 0) { toast('No new items to import', 'err'); return; }
+    if (importItems.length === 0) { toast('No items to import', 'err'); return; }
     
-    if (!confirm('Import ' + toImport.length + ' new items into master menu?')) return;
+    const importOutletId = document.getElementById('importOutletSelect').value;
+    if (!importOutletId) { toast('Select an outlet', 'err'); return; }
+    const outletName = outlets.find(o => (o.id || o.docId) === importOutletId)?.name || importOutletId;
+    
+    const newItems = importItems.filter(i => !i.isDuplicate);
+    const existingItems = importItems.filter(i => i.isDuplicate);
+    
+    if (!confirm(`Import for ${outletName}:\n\n• ${newItems.length} new items → add to master + enable for outlet\n• ${existingItems.length} existing items → enable for outlet + set price\n\nTotal: ${importItems.length} items will be enabled for ${outletName}`)) return;
     
     const resultEl = document.getElementById('importResult');
-    resultEl.innerHTML = '<span style="color:#888;">Importing...</span>';
+    resultEl.innerHTML = '<span style="color:#888;">Starting import...</span>';
     
     try {
-        // Collect unique categories from import
-        const importCats = [...new Set(toImport.map(i => i.category))];
+        // 1. Collect unique categories from import and create missing ones
+        const importCats = [...new Set(importItems.map(i => i.category))];
         const existingCatNames = new Set(categories.map(c => c.name.toLowerCase()));
-        
-        // Create new categories
         let newCatCount = 0;
         for (const catName of importCats) {
             if (!existingCatNames.has(catName.toLowerCase())) {
@@ -1233,44 +1248,87 @@ async function executeImport() {
                 newCatCount++;
             }
         }
-        
-        // Reload categories to get new ones
         if (newCatCount > 0) {
             const catSnap = await db.collection('menu_categories').orderBy('sortOrder').get();
             categories = catSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
         }
-        
-        // Import items in batches
-        let imported = 0;
+        resultEl.innerHTML = '<span style="color:#888;">Categories done. Adding items...</span>';
+
+        // 2. Add NEW items to master catalog
+        let addedCount = 0;
         const BATCH_SIZE = 50;
-        for (let i = 0; i < toImport.length; i += BATCH_SIZE) {
+        const newItemIds = []; // track {itemId, price} for outlet_menu creation
+        
+        for (let i = 0; i < newItems.length; i += BATCH_SIZE) {
             const batch = db.batch();
-            const chunk = toImport.slice(i, i + BATCH_SIZE);
-            
+            const chunk = newItems.slice(i, i + BATCH_SIZE);
             for (const item of chunk) {
                 const id = item.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50) + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
                 const cat = categories.find(c => c.name.toLowerCase() === item.category.toLowerCase());
                 const catId = cat ? (cat.id || cat.docId) : 'uncategorized';
-                
                 batch.set(db.collection('menu_items').doc(id), {
                     id: id, name: item.name, price: item.price,
                     categoryId: catId, subCategoryId: '',
-                    vegType: item.vegType, sortOrder: 0,
-                    description: item.description,
+                    vegType: item.vegType, sortOrder: 0, description: item.description,
                     modifierGroups: [], imageUrl: '',
                     isActive: true, isAvailable: true,
                     outletSpecific: false, outletIds: [],
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                imported++;
+                newItemIds.push({ itemId: id, price: item.price });
+                addedCount++;
             }
             await batch.commit();
-            resultEl.innerHTML = '<span style="color:#888;">Imported ' + imported + '/' + toImport.length + '...</span>';
+            resultEl.innerHTML = '<span style="color:#888;">Added ' + addedCount + '/' + newItems.length + ' new items...</span>';
+        }
+
+        // 3. Reload items to get fresh IDs (including just-added ones)
+        const freshItemSnap = await db.collection('menu_items').get();
+        const freshItems = freshItemSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+
+        // 4. Create outlet_menu entries for ALL imported items
+        resultEl.innerHTML = '<span style="color:#888;">Enabling items for ' + outletName + '...</span>';
+        let enabledCount = 0;
+        
+        // Build list of all items to enable: new + existing matches
+        const toEnable = [];
+        
+        // New items
+        for (const ni of newItemIds) {
+            toEnable.push({ itemId: ni.itemId, price: ni.price });
         }
         
-        resultEl.innerHTML = '<span style="color:#2ecc71;">✅ Done! ' + imported + ' items imported' + (newCatCount > 0 ? ', ' + newCatCount + ' new categories created' : '') + '</span>';
-        toast('✅ ' + imported + ' items imported');
+        // Existing items (find their master ID by name match)
+        for (const ei of existingItems) {
+            const masterItem = freshItems.find(fi => fi.name.toLowerCase().trim() === ei.name.toLowerCase().trim());
+            if (masterItem) {
+                toEnable.push({ itemId: masterItem.id || masterItem.docId, price: ei.price });
+            }
+        }
+        
+        // Batch create outlet_menu entries
+        for (let i = 0; i < toEnable.length; i += BATCH_SIZE) {
+            const batch = db.batch();
+            const chunk = toEnable.slice(i, i + BATCH_SIZE);
+            for (const entry of chunk) {
+                const docId = importOutletId + '__' + entry.itemId;
+                batch.set(db.collection('outlet_menu').doc(docId), {
+                    outletId: importOutletId,
+                    itemId: entry.itemId,
+                    isEnabled: true,
+                    price: entry.price,
+                    variantPrices: null,
+                    addOnPrices: null,
+                    isAvailable: true
+                }, { merge: true });
+                enabledCount++;
+            }
+            await batch.commit();
+        }
+        
+        resultEl.innerHTML = `<span style="color:#2ecc71;">✅ Done!<br>• ${addedCount} new items added to master${newCatCount > 0 ? ' (' + newCatCount + ' new categories)' : ''}<br>• ${enabledCount} items enabled for ${outletName} with prices set</span>`;
+        toast('✅ ' + enabledCount + ' items imported for ' + outletName);
         
         await loadData();
         renderItems();
