@@ -239,12 +239,18 @@
             <div style="font-size:18px;font-weight:700;color:#fff;">📷 Scan Table QR</div>
             <button onclick="closeQRScanner()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button>
         </div>
-        <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;">
+        <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:250px;">
             <video id="qrVideo" playsinline autoplay muted style="width:100%;display:block;"></video>
             <canvas id="qrCanvas" style="display:none;"></canvas>
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:200px;height:200px;border:2px solid #e94560;border-radius:12px;pointer-events:none;"></div>
         </div>
-        <div id="qrScanStatus" style="font-size:13px;color:#888;margin-top:12px;">Point your camera at the QR code on your table</div>
+        <div id="qrScanStatus" style="font-size:13px;color:#888;margin-top:12px;">Starting camera...</div>
+        <div style="margin-top:14px;">
+            <label style="display:inline-block;padding:12px 24px;background:#e94560;color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">
+                📸 Take Photo of QR
+                <input type="file" accept="image/*" capture="environment" id="qrPhotoInput" onchange="scanFromPhoto(this)" style="display:none;">
+            </label>
+            <div style="font-size:11px;color:#555;margin-top:6px;">Tap to take a photo — works on all devices</div>
+        </div>
     </div>
 </div>
 
@@ -1339,58 +1345,98 @@ async function placeOrder() {
 }
 
 // ============================================================
-// QR SCANNER (jsQR — reliable on iOS Safari + Android)
+// QR SCANNER (jsQR — live scan + photo capture fallback)
 // ============================================================
 let qrStream = null;
 let qrScanInterval = null;
+let qrScanned = false;
 
 function openQRScanner() {
+    qrScanned = false;
     document.getElementById('qrScannerOverlay').classList.add('active');
     document.getElementById('qrScanStatus').textContent = 'Starting camera...';
+    document.getElementById('qrPhotoInput').value = '';
     
     const video = document.getElementById('qrVideo');
     
-    navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    }).then(stream => {
+    // Simple constraints — more compatible with iOS
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
         qrStream = stream;
         video.srcObject = stream;
         video.setAttribute('playsinline', 'true');
-        video.play();
-        document.getElementById('qrScanStatus').textContent = 'Point your camera at the QR code on your table';
         
-        // Start scanning frames
-        qrScanInterval = setInterval(() => scanFrame(), 200);
+        // Wait for video to actually start playing before scanning
+        video.onloadedmetadata = () => {
+            video.play().then(() => {
+                document.getElementById('qrScanStatus').textContent = 'Scanning... hold steady over the QR code';
+                qrScanInterval = setInterval(scanFrame, 300);
+            });
+        };
     }).catch(err => {
         console.error('Camera error:', err);
-        document.getElementById('qrScanStatus').innerHTML = 
-            '<div style="margin-bottom:8px;">📷 Camera not available</div>' +
-            '<div style="font-size:12px;color:#888;">Please close this and use your phone\'s camera app to scan the QR code on your table.</div>';
+        document.getElementById('qrScanStatus').innerHTML = 'Camera not available — use the <strong>Take Photo</strong> button below';
     });
 }
 
 function scanFrame() {
+    if (qrScanned) return;
     const video = document.getElementById('qrVideo');
     const canvas = document.getElementById('qrCanvas');
-    if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    if (!video || !video.videoWidth || video.readyState < 2) return;
     
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0);
     
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code && code.data) {
+            qrScanned = true;
+            clearInterval(qrScanInterval);
+            qrScanInterval = null;
+            onQRScanSuccess(code.data);
+        }
+    } catch(e) { /* ignore frame errors */ }
+}
+
+function scanFromPhoto(input) {
+    if (!input.files || !input.files[0]) return;
+    document.getElementById('qrScanStatus').textContent = 'Processing photo...';
     
-    if (code && code.data) {
-        // QR detected — stop scanning and process
-        clearInterval(qrScanInterval);
-        qrScanInterval = null;
-        onQRScanSuccess(code.data);
-    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.getElementById('qrCanvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0);
+            
+            try {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code && code.data) {
+                    onQRScanSuccess(code.data);
+                } else {
+                    document.getElementById('qrScanStatus').textContent = '❌ No QR code found in photo. Try again — make sure the QR is clearly visible.';
+                    document.getElementById('qrPhotoInput').value = '';
+                }
+            } catch(err) {
+                document.getElementById('qrScanStatus').textContent = '❌ Could not process photo. Try again.';
+                document.getElementById('qrPhotoInput').value = '';
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
 }
 
 function closeQRScanner() {
+    qrScanned = false;
     if (qrScanInterval) { clearInterval(qrScanInterval); qrScanInterval = null; }
     if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
     const video = document.getElementById('qrVideo');
