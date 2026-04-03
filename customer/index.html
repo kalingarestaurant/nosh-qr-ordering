@@ -241,7 +241,6 @@
         </div>
         <div style="position:relative;width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:250px;">
             <video id="qrVideo" playsinline autoplay muted style="width:100%;display:block;"></video>
-            <canvas id="qrCanvas" style="display:none;"></canvas>
         </div>
         <div id="qrScanStatus" style="font-size:13px;color:#888;margin-top:12px;">Starting camera...</div>
         <div style="margin-top:14px;">
@@ -316,7 +315,7 @@
 
 <!-- ===== FIREBASE SDK ===== -->
 <!-- ===== QR SCANNER ===== -->
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
 
 <!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1345,102 +1344,68 @@ async function placeOrder() {
 }
 
 // ============================================================
-// QR SCANNER (jsQR — live scan + photo capture fallback)
+// QR SCANNER (qr-scanner by Nimiq — WASM decoder, iOS tested)
 // ============================================================
-let qrStream = null;
-let qrScanInterval = null;
-let qrScanned = false;
+let qrScannerInstance = null;
 
 function openQRScanner() {
-    qrScanned = false;
     document.getElementById('qrScannerOverlay').classList.add('active');
     document.getElementById('qrScanStatus').textContent = 'Starting camera...';
     document.getElementById('qrPhotoInput').value = '';
     
     const video = document.getElementById('qrVideo');
     
-    // Simple constraints — more compatible with iOS
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    .then(stream => {
-        qrStream = stream;
-        video.srcObject = stream;
-        video.setAttribute('playsinline', 'true');
-        
-        // Wait for video to actually start playing before scanning
-        video.onloadedmetadata = () => {
-            video.play().then(() => {
-                document.getElementById('qrScanStatus').textContent = 'Scanning... hold steady over the QR code';
-                qrScanInterval = setInterval(scanFrame, 300);
-            });
-        };
+    qrScannerInstance = new QrScanner(video, result => {
+        // QR detected
+        const text = typeof result === 'string' ? result : result.data;
+        if (text) {
+            qrScannerInstance.stop();
+            onQRScanSuccess(text);
+        }
+    }, {
+        preferredCamera: 'environment',
+        highlightScanRegion: true,
+        highlightCodeOutline: true,
+        maxScansPerSecond: 5,
+        returnDetailedScanResult: true
+    });
+    
+    qrScannerInstance.start().then(() => {
+        document.getElementById('qrScanStatus').textContent = 'Scanning... hold steady over the QR code';
     }).catch(err => {
         console.error('Camera error:', err);
-        document.getElementById('qrScanStatus').innerHTML = 'Camera not available — use the <strong>Take Photo</strong> button below';
+        document.getElementById('qrScanStatus').innerHTML = 'Camera not available — use <strong>Take Photo</strong> below';
     });
-}
-
-function scanFrame() {
-    if (qrScanned) return;
-    const video = document.getElementById('qrVideo');
-    const canvas = document.getElementById('qrCanvas');
-    if (!video || !video.videoWidth || video.readyState < 2) return;
-    
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(video, 0, 0);
-    
-    try {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-        if (code && code.data) {
-            qrScanned = true;
-            clearInterval(qrScanInterval);
-            qrScanInterval = null;
-            onQRScanSuccess(code.data);
-        }
-    } catch(e) { /* ignore frame errors */ }
 }
 
 function scanFromPhoto(input) {
     if (!input.files || !input.files[0]) return;
     document.getElementById('qrScanStatus').textContent = 'Processing photo...';
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.getElementById('qrCanvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.drawImage(img, 0, 0);
-            
-            try {
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
-                if (code && code.data) {
-                    onQRScanSuccess(code.data);
-                } else {
-                    document.getElementById('qrScanStatus').textContent = '❌ No QR code found in photo. Try again — make sure the QR is clearly visible.';
-                    document.getElementById('qrPhotoInput').value = '';
-                }
-            } catch(err) {
-                document.getElementById('qrScanStatus').textContent = '❌ Could not process photo. Try again.';
+    QrScanner.scanImage(input.files[0], { returnDetailedScanResult: true })
+        .then(result => {
+            const text = typeof result === 'string' ? result : result.data;
+            if (text) {
+                if (qrScannerInstance) qrScannerInstance.stop();
+                onQRScanSuccess(text);
+            } else {
+                document.getElementById('qrScanStatus').textContent = '❌ No QR found. Try again.';
                 document.getElementById('qrPhotoInput').value = '';
             }
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(input.files[0]);
+        })
+        .catch(err => {
+            console.error('Photo scan error:', err);
+            document.getElementById('qrScanStatus').textContent = '❌ No QR found in photo. Try again with a clearer photo.';
+            document.getElementById('qrPhotoInput').value = '';
+        });
 }
 
 function closeQRScanner() {
-    qrScanned = false;
-    if (qrScanInterval) { clearInterval(qrScanInterval); qrScanInterval = null; }
-    if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
-    const video = document.getElementById('qrVideo');
-    if (video) { video.srcObject = null; }
+    if (qrScannerInstance) {
+        qrScannerInstance.stop();
+        qrScannerInstance.destroy();
+        qrScannerInstance = null;
+    }
     document.getElementById('qrScannerOverlay').classList.remove('active');
 }
 
