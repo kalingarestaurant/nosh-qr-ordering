@@ -198,7 +198,10 @@
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                 <div class="count-label" id="itemCount">0 items</div>
-                <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="openItemModal()" id="btnAddItem">+ Add Item</button>
+                <div style="display:flex;gap:8px;">
+                    <button style="padding:8px 16px;font-size:12px;background:#3498db15;border:1px solid #3498db30;border-radius:6px;color:#5dade2;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="openImportModal()" id="btnImport" style="display:none;">📥 Import</button>
+                    <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="openItemModal()" id="btnAddItem">+ Add Item</button>
+                </div>
             </div>
             <div id="itemsList"></div>
         </div>
@@ -375,6 +378,44 @@
     </div>
 </div>
 
+<!-- IMPORT MENU MODAL -->
+<div class="modal-overlay" id="importModal">
+    <div class="modal" style="max-width:700px;">
+        <div class="modal-title">
+            <span>📥 Import Menu</span>
+            <button class="modal-close" onclick="closeModal('importModal')">✕</button>
+        </div>
+        <!-- Step 1: Upload -->
+        <div id="importStep1">
+            <div style="font-size:13px;color:#888;margin-bottom:14px;">Upload an Excel (.xlsx) or CSV file. Auto-detects DotPe and generic formats.</div>
+            <div style="font-size:11px;color:#666;margin-bottom:12px;padding:10px;background:#0f1117;border-radius:8px;">
+                <strong>Expected columns:</strong> Item Name, Price, Category, Veg/NonVeg (optional), Description (optional)<br>
+                <strong>DotPe format:</strong> Auto-detected from column headers
+            </div>
+            <input type="file" id="importFile" accept=".xlsx,.xls,.csv" onchange="parseImportFile()" style="width:100%;padding:10px;background:#0f1117;border:1.5px solid #2a2d3e;border-radius:8px;color:#fff;font-size:13px;font-family:'Poppins',sans-serif;">
+            <div id="importParseStatus" style="font-size:12px;margin-top:10px;"></div>
+        </div>
+        <!-- Step 2: Preview -->
+        <div id="importStep2" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div id="importSummary" style="font-size:13px;color:#888;"></div>
+                <button style="padding:6px 12px;font-size:11px;background:#2a2d3e;border:none;border-radius:6px;color:#888;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="document.getElementById('importStep1').style.display='block';document.getElementById('importStep2').style.display='none';">← Change File</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <button style="padding:6px 12px;font-size:11px;background:#2ecc7120;border:1px solid #2ecc7130;border-radius:6px;color:#2ecc71;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('new')">🆕 New Only</button>
+                <button style="padding:6px 12px;font-size:11px;background:#f0a50020;border:1px solid #f0a50030;border-radius:6px;color:#f0a500;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('dup')">⚠️ Duplicates</button>
+                <button style="padding:6px 12px;font-size:11px;background:#2a2d3e;border:none;border-radius:6px;color:#888;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="filterImportPreview('all')">All</button>
+            </div>
+            <div id="importPreviewList" style="max-height:350px;overflow-y:auto;"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;">
+                <button class="btn btn-primary" onclick="executeImport()">📥 Import New Items</button>
+                <button class="btn" style="background:#2a2d3e;color:#888;" onclick="closeModal('importModal')">Cancel</button>
+            </div>
+            <div id="importResult" style="font-size:12px;margin-top:10px;"></div>
+        </div>
+    </div>
+</div>
+
 <!-- ITEM EDIT MODAL -->
 <div class="modal-overlay" id="itemModal">
     <div class="modal">
@@ -487,6 +528,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <!-- MSG91 OTP SDK -->
 <script>
@@ -729,11 +772,13 @@ async function startDashboard() {
         document.getElementById('tabTables').style.display = 'inline-block';
         document.getElementById('tabOutletMenu').style.display = 'inline-block';
         document.getElementById('btnAddItem').style.display = 'inline-block';
+        document.getElementById('btnImport').style.display = 'inline-block';
         document.getElementById('btnAddCat').style.display = 'inline-block';
     } else if (staffRole === 'outlet_manager') {
         document.getElementById('tabOutletMenu').style.display = 'inline-block';
     } else {
         document.getElementById('btnAddItem').style.display = 'none';
+        document.getElementById('btnImport').style.display = 'none';
         document.getElementById('btnAddCat').style.display = 'none';
     }
 
@@ -988,6 +1033,251 @@ function collectModGroups() {
         if (options.length > 0) groups.push({ groupName: name, required, maxSelect, options });
     });
     return groups;
+}
+
+// ============================================================
+// MENU IMPORT (Excel + CSV, auto-detect format)
+// ============================================================
+let importItems = []; // parsed items ready for preview
+
+function openImportModal() {
+    document.getElementById('importFile').value = '';
+    document.getElementById('importParseStatus').innerHTML = '';
+    document.getElementById('importStep1').style.display = 'block';
+    document.getElementById('importStep2').style.display = 'none';
+    document.getElementById('importResult').innerHTML = '';
+    importItems = [];
+    document.getElementById('importModal').classList.add('active');
+}
+
+function parseImportFile() {
+    const file = document.getElementById('importFile').files[0];
+    if (!file) return;
+    
+    const statusEl = document.getElementById('importParseStatus');
+    statusEl.innerHTML = '<span style="color:#888;">Parsing file...</span>';
+    
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    if (ext === 'csv') {
+        // Parse CSV with PapaParse
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (result) => processImportData(result.data, result.meta.fields),
+            error: (err) => { statusEl.innerHTML = '<span style="color:#ff6b6b;">CSV parse error: ' + err.message + '</span>'; }
+        });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+        // Parse Excel with SheetJS
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const wb = XLSX.read(e.target.result, { type: 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                const headers = data.length > 0 ? Object.keys(data[0]) : [];
+                processImportData(data, headers);
+            } catch(err) {
+                statusEl.innerHTML = '<span style="color:#ff6b6b;">Excel parse error: ' + err.message + '</span>';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        statusEl.innerHTML = '<span style="color:#ff6b6b;">Unsupported format. Use .xlsx or .csv</span>';
+    }
+}
+
+function processImportData(rows, headers) {
+    const statusEl = document.getElementById('importParseStatus');
+    if (!rows || rows.length === 0) {
+        statusEl.innerHTML = '<span style="color:#ff6b6b;">No data found in file</span>';
+        return;
+    }
+    
+    // Auto-detect column mapping
+    const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+    const mapping = detectColumnMapping(lowerHeaders, headers);
+    
+    if (!mapping.name) {
+        statusEl.innerHTML = '<span style="color:#ff6b6b;">Could not find item name column. Expected: "Item Name", "Name", "Product Name", or "item_name"</span>';
+        return;
+    }
+    
+    statusEl.innerHTML = '<span style="color:#2ecc71;">Format detected: ' + mapping.format + ' · Mapping columns...</span>';
+    
+    // Parse rows into standard format
+    importItems = [];
+    const existingNames = new Set(items.map(i => i.name.toLowerCase().trim()));
+    
+    for (const row of rows) {
+        const name = String(row[mapping.name] || '').trim();
+        if (!name) continue;
+        
+        const price = parseFloat(row[mapping.price] || 0) || 0;
+        const category = String(row[mapping.category] || 'Uncategorized').trim();
+        const vegType = detectVegType(row[mapping.vegType] || '');
+        const description = String(row[mapping.description] || '').trim();
+        
+        const isDuplicate = existingNames.has(name.toLowerCase().trim());
+        
+        importItems.push({
+            name, price, category, vegType, description,
+            isDuplicate, selected: !isDuplicate // pre-select new items only
+        });
+    }
+    
+    // Show preview
+    const newCount = importItems.filter(i => !i.isDuplicate).length;
+    const dupCount = importItems.filter(i => i.isDuplicate).length;
+    
+    document.getElementById('importSummary').innerHTML = 
+        `<strong>${importItems.length}</strong> items found · <span style="color:#2ecc71;">${newCount} new</span> · <span style="color:#f0a500;">${dupCount} duplicates (will skip)</span>`;
+    
+    document.getElementById('importStep1').style.display = 'none';
+    document.getElementById('importStep2').style.display = 'block';
+    filterImportPreview('all');
+}
+
+function detectColumnMapping(lowerHeaders, originalHeaders) {
+    const mapping = { name: null, price: null, category: null, vegType: null, description: null, format: 'Generic' };
+    
+    // DotPe format detection
+    const dotpeNameIdx = lowerHeaders.findIndex(h => h.includes('item name') || h.includes('product name'));
+    if (dotpeNameIdx >= 0) {
+        mapping.format = 'DotPe';
+        mapping.name = originalHeaders[dotpeNameIdx];
+        mapping.price = originalHeaders[lowerHeaders.findIndex(h => h.includes('price') || h.includes('mrp') || h.includes('selling price'))] || null;
+        mapping.category = originalHeaders[lowerHeaders.findIndex(h => h.includes('category') || h.includes('menu category'))] || null;
+        mapping.vegType = originalHeaders[lowerHeaders.findIndex(h => h.includes('veg') || h.includes('food type') || h.includes('item type'))] || null;
+        mapping.description = originalHeaders[lowerHeaders.findIndex(h => h.includes('description') || h.includes('desc'))] || null;
+        return mapping;
+    }
+    
+    // Generic format
+    for (let i = 0; i < lowerHeaders.length; i++) {
+        const h = lowerHeaders[i];
+        if (!mapping.name && (h === 'name' || h === 'item name' || h === 'item_name' || h === 'product' || h === 'dish' || h === 'menu item')) mapping.name = originalHeaders[i];
+        if (!mapping.price && (h === 'price' || h === 'rate' || h === 'mrp' || h === 'cost' || h === 'amount')) mapping.price = originalHeaders[i];
+        if (!mapping.category && (h === 'category' || h === 'cat' || h === 'section' || h === 'menu category' || h === 'group')) mapping.category = originalHeaders[i];
+        if (!mapping.vegType && (h === 'veg' || h === 'type' || h === 'veg/nonveg' || h === 'veg type' || h === 'food type' || h === 'item type' || h === 'veg/non-veg')) mapping.vegType = originalHeaders[i];
+        if (!mapping.description && (h === 'description' || h === 'desc' || h === 'details' || h === 'info')) mapping.description = originalHeaders[i];
+    }
+    
+    // Fallback: if no name column found, try first column
+    if (!mapping.name && originalHeaders.length > 0) mapping.name = originalHeaders[0];
+    if (!mapping.price && originalHeaders.length > 1) mapping.price = originalHeaders[1];
+    
+    return mapping;
+}
+
+function detectVegType(val) {
+    const v = String(val).toLowerCase().trim();
+    if (v.includes('non') || v.includes('nonveg') || v.includes('non-veg') || v === 'nv') return 'NonVeg';
+    if (v.includes('egg')) return 'Egg';
+    if (v.includes('veg') || v === 'v' || v === 'yes') return 'Veg';
+    return 'Veg'; // default
+}
+
+function filterImportPreview(filter) {
+    let filtered = importItems;
+    if (filter === 'new') filtered = importItems.filter(i => !i.isDuplicate);
+    if (filter === 'dup') filtered = importItems.filter(i => i.isDuplicate);
+    
+    const container = document.getElementById('importPreviewList');
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#555;">No items in this view</div>';
+        return;
+    }
+    
+    container.innerHTML = filtered.map((item, idx) => {
+        const realIdx = importItems.indexOf(item);
+        const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : 'egg';
+        const dupBadge = item.isDuplicate 
+            ? '<span style="font-size:10px;background:#f0a50020;color:#f0a500;padding:2px 6px;border-radius:4px;margin-left:6px;">DUPLICATE — will skip</span>'
+            : '<span style="font-size:10px;background:#2ecc7120;color:#2ecc71;padding:2px 6px;border-radius:4px;margin-left:6px;">NEW</span>';
+        
+        return `
+        <div class="item-row" style="opacity:${item.isDuplicate ? '0.4' : '1'};">
+            <div class="item-veg ${vegClass}"></div>
+            <div class="item-name">${item.name}${dupBadge}</div>
+            <div class="item-price">₹${Math.round(item.price)}</div>
+            <div class="item-cat">${item.category}</div>
+        </div>`;
+    }).join('');
+}
+
+async function executeImport() {
+    const toImport = importItems.filter(i => !i.isDuplicate);
+    if (toImport.length === 0) { toast('No new items to import', 'err'); return; }
+    
+    if (!confirm('Import ' + toImport.length + ' new items into master menu?')) return;
+    
+    const resultEl = document.getElementById('importResult');
+    resultEl.innerHTML = '<span style="color:#888;">Importing...</span>';
+    
+    try {
+        // Collect unique categories from import
+        const importCats = [...new Set(toImport.map(i => i.category))];
+        const existingCatNames = new Set(categories.map(c => c.name.toLowerCase()));
+        
+        // Create new categories
+        let newCatCount = 0;
+        for (const catName of importCats) {
+            if (!existingCatNames.has(catName.toLowerCase())) {
+                const catId = catName.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
+                await db.collection('menu_categories').doc(catId).set({
+                    id: catId, name: catName, sortOrder: categories.length + newCatCount + 1,
+                    isActive: true, subcategories: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                newCatCount++;
+            }
+        }
+        
+        // Reload categories to get new ones
+        if (newCatCount > 0) {
+            const catSnap = await db.collection('menu_categories').orderBy('sortOrder').get();
+            categories = catSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+        }
+        
+        // Import items in batches
+        let imported = 0;
+        const BATCH_SIZE = 50;
+        for (let i = 0; i < toImport.length; i += BATCH_SIZE) {
+            const batch = db.batch();
+            const chunk = toImport.slice(i, i + BATCH_SIZE);
+            
+            for (const item of chunk) {
+                const id = item.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50) + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+                const cat = categories.find(c => c.name.toLowerCase() === item.category.toLowerCase());
+                const catId = cat ? (cat.id || cat.docId) : 'uncategorized';
+                
+                batch.set(db.collection('menu_items').doc(id), {
+                    id: id, name: item.name, price: item.price,
+                    categoryId: catId, subCategoryId: '',
+                    vegType: item.vegType, sortOrder: 0,
+                    description: item.description,
+                    modifierGroups: [], imageUrl: '',
+                    isActive: true, isAvailable: true,
+                    outletSpecific: false, outletIds: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                imported++;
+            }
+            await batch.commit();
+            resultEl.innerHTML = '<span style="color:#888;">Imported ' + imported + '/' + toImport.length + '...</span>';
+        }
+        
+        resultEl.innerHTML = '<span style="color:#2ecc71;">✅ Done! ' + imported + ' items imported' + (newCatCount > 0 ? ', ' + newCatCount + ' new categories created' : '') + '</span>';
+        toast('✅ ' + imported + ' items imported');
+        
+        await loadData();
+        renderItems();
+    } catch(e) {
+        resultEl.innerHTML = '<span style="color:#ff6b6b;">Error: ' + e.message + '</span>';
+        toast('Error: ' + e.message, 'err');
+    }
 }
 
 // Photo management with compression
