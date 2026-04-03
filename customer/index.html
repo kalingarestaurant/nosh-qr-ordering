@@ -86,6 +86,29 @@
 
         /* Menu Items */
         .menu-items-container { flex: 1; padding: 0 12px 20px; }
+
+        /* Category Grid (landing page) */
+        .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+        .cat-tile { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1; cursor: pointer; background: #e8e8e8; }
+        .cat-tile img { width: 100%; height: 100%; object-fit: cover; }
+        .cat-tile-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, transparent 100%); display: flex; align-items: flex-end; padding: 14px; }
+        .cat-tile-name { color: #fff; font-size: 15px; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.5); line-height: 1.2; }
+        .cat-tile-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .cat-tile-count { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+
+        /* Subcategory Tiles (horizontal scroll) */
+        .subcat-tiles { display: flex; gap: 10px; padding: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: #fff; border-bottom: 1px solid #eee; flex-shrink: 0; }
+        .subcat-tiles::-webkit-scrollbar { display: none; }
+        .subcat-tile { flex-shrink: 0; width: 80px; text-align: center; cursor: pointer; }
+        .subcat-tile-img { width: 70px; height: 70px; border-radius: 10px; object-fit: cover; margin: 0 auto 4px; border: 2px solid transparent; transition: border-color 0.2s; }
+        .subcat-tile.active .subcat-tile-img { border-color: #e94560; }
+        .subcat-tile-placeholder { width: 70px; height: 70px; border-radius: 10px; margin: 0 auto 4px; background: linear-gradient(135deg, #f0f0f0, #e0e0e0); display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid transparent; }
+        .subcat-tile.active .subcat-tile-placeholder { border-color: #e94560; }
+        .subcat-tile-name { font-size: 10px; font-weight: 600; color: #666; line-height: 1.2; }
+        .subcat-tile.active .subcat-tile-name { color: #e94560; }
+
+        /* Back button */
+        .back-btn { width: 32px; height: 32px; border: none; background: #f0f0f0; border-radius: 50%; font-size: 16px; cursor: pointer; color: #666; font-family: 'Poppins', sans-serif; flex-shrink: 0; }
         .menu-item-card { display: flex; gap: 12px; background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .menu-item-img { width: 90px; height: 90px; border-radius: 10px; object-fit: cover; background: #f0f0f0; flex-shrink: 0; }
         .menu-item-img-placeholder { width: 90px; height: 90px; border-radius: 10px; background: linear-gradient(135deg, #f0f0f0, #e8e8e8); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; }
@@ -204,18 +227,51 @@
 <div id="appShell">
     <!-- TAB: MENU -->
     <div id="tabMenu" class="tab-content active">
-        <div class="menu-header">
-            <div class="menu-header-top">
-                <span class="menu-outlet-name" id="menuOutletName">House Of Nosh</span>
-                <span class="menu-table-badge" id="menuTableBadge">Table 1</span>
+        <!-- VIEW 1: Category Grid (landing page) -->
+        <div id="menuCatGrid">
+            <div class="menu-header">
+                <div class="menu-header-top">
+                    <span class="menu-outlet-name" id="menuOutletName">House Of Nosh</span>
+                    <span class="menu-table-badge" id="menuTableBadge">Table 1</span>
+                </div>
+                <div class="menu-search">
+                    <span class="menu-search-icon">🔍</span>
+                    <input type="text" id="menuSearchInput" placeholder="Search menu..." oninput="filterMenu()">
+                </div>
             </div>
-            <div class="menu-search">
-                <span class="menu-search-icon">🔍</span>
-                <input type="text" id="menuSearchInput" placeholder="Search menu..." oninput="filterMenu()">
-            </div>
-            <div class="cat-tabs" id="catTabs"></div>
+            <div class="cat-grid" id="catGridContainer"></div>
         </div>
-        <div class="menu-items-container" id="menuItemsContainer"></div>
+
+        <!-- VIEW 2: Category Detail (items + subcategories) -->
+        <div id="menuCatDetail" style="display:none;">
+            <div class="menu-header">
+                <div class="menu-header-top">
+                    <button class="back-btn" onclick="showCatGrid()">←</button>
+                    <span class="menu-outlet-name" id="detailCatName">Starters</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="menu-table-badge" id="detailTableBadge">Table 1</span>
+                    </div>
+                </div>
+                <div class="cat-tabs" id="catTabs"></div>
+            </div>
+            <div id="subcatTiles" class="subcat-tiles"></div>
+            <div class="menu-items-container" id="menuItemsContainer"></div>
+        </div>
+
+        <!-- Search Results overlay -->
+        <div id="menuSearchResults" style="display:none;">
+            <div class="menu-header">
+                <div class="menu-header-top">
+                    <button class="back-btn" onclick="clearSearch()">←</button>
+                    <span class="menu-outlet-name">Search Results</span>
+                </div>
+                <div class="menu-search">
+                    <span class="menu-search-icon">🔍</span>
+                    <input type="text" id="menuSearchInput2" placeholder="Search menu..." oninput="filterMenu()" value="">
+                </div>
+            </div>
+            <div class="menu-items-container" id="searchResultsContainer"></div>
+        </div>
     </div>
 
     <!-- TAB: CART -->
@@ -480,6 +536,7 @@ let menuCategories = [];
 let menuItems = [];
 let cart = []; // { itemId, name, vegType, qty, modifiers: [{group, option, extraPrice}], instructions }
 let activeCategory = '';
+let activeSubcat = '';
 let searchTerm = '';
 let ordersListener = null; // Firestore listener for session orders
 let sessionListener = null; // Firestore listener for session deactivation
@@ -679,6 +736,7 @@ function updateAuthScreens() {
     document.getElementById('menuOutletName').textContent = outletName;
     document.getElementById('menuTableBadge').textContent = tableName;
     document.getElementById('cartTableBadge').textContent = browseMode ? '📋 Browse' : tableName;
+    document.getElementById('detailTableBadge').textContent = browseMode ? '📋 Browse' : tableName;
 }
 
 // ============================================================
@@ -875,116 +933,137 @@ async function loadMenu() {
     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
     // Render
-    renderCategoryTabs();
-    if (menuCategories.length > 0) {
-        activeCategory = menuCategories[0].id;
-        document.querySelector('.cat-tab')?.classList.add('active');
-    }
-    renderMenuItems();
+    renderCatGrid();
+}
+
+function renderCatGrid() {
+    const container = document.getElementById('catGridContainer');
+    const activeCats = menuCategories.filter(c => c.isActive && menuItems.some(i => i.categoryId === c.id));
+    if (activeCats.length === 0) { container.innerHTML = '<div class="no-results">No categories available</div>'; return; }
+    container.innerHTML = activeCats.map(cat => {
+        const count = menuItems.filter(i => i.categoryId === cat.id).length;
+        const imgHtml = cat.imageUrl
+            ? `<img src="${cat.imageUrl}" alt="${cat.name}" loading="lazy">`
+            : `<div class="cat-tile-placeholder"><span class="cat-tile-name">${cat.name}</span></div>`;
+        return `<div class="cat-tile" onclick="selectCategory('${cat.id}')">
+            ${imgHtml}
+            ${cat.imageUrl ? `<div class="cat-tile-overlay"><span class="cat-tile-name">${cat.name}</span></div>` : ''}
+            <div class="cat-tile-count">${count}</div>
+        </div>`;
+    }).join('');
 }
 
 function renderCategoryTabs() {
     const container = document.getElementById('catTabs');
-    container.innerHTML = menuCategories.filter(c => c.isActive).map(cat => {
-        const count = menuItems.filter(i => i.categoryId === cat.id).length;
-        if (count === 0) return '';
-        return `<span class="cat-tab" data-cat="${cat.id}" onclick="selectCategory('${cat.id}')">${cat.name}</span>`;
+    const activeCats = menuCategories.filter(c => c.isActive && menuItems.some(i => i.categoryId === c.id));
+    container.innerHTML = activeCats.map(cat => {
+        const isActive = cat.id === activeCategory;
+        return '<span class="cat-tab ' + (isActive ? 'active' : '') + '" data-cat="' + cat.id + '" onclick="selectCategory(\'' + cat.id + '\')">' + cat.name + '</span>';
     }).join('');
 }
 
 function selectCategory(catId) {
     activeCategory = catId;
-    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`.cat-tab[data-cat="${catId}"]`)?.classList.add('active');
+    activeSubcat = '';
+    const cat = menuCategories.find(c => c.id === catId);
+    document.getElementById('detailCatName').textContent = cat ? cat.name : '';
+    document.getElementById('menuCatGrid').style.display = 'none';
+    document.getElementById('menuSearchResults').style.display = 'none';
+    document.getElementById('menuCatDetail').style.display = 'flex';
+    renderCategoryTabs();
+    renderSubcatTiles();
     renderMenuItems();
-    // Scroll to top of items
-    document.getElementById('menuItemsContainer').scrollTop = 0;
+    document.getElementById('menuCatDetail').scrollTop = 0;
+}
+
+function showCatGrid() {
+    document.getElementById('menuCatDetail').style.display = 'none';
+    document.getElementById('menuSearchResults').style.display = 'none';
+    document.getElementById('menuCatGrid').style.display = 'flex';
+    activeCategory = '';
+    activeSubcat = '';
+}
+
+function renderSubcatTiles() {
+    const container = document.getElementById('subcatTiles');
+    const cat = menuCategories.find(c => c.id === activeCategory);
+    const subcats = cat ? cat.subcategories || [] : [];
+    const visibleSubcats = subcats.filter(sc => menuItems.some(i => i.categoryId === activeCategory && i.subCategoryId === sc.id));
+    if (visibleSubcats.length <= 1) { container.style.display = 'none'; return; }
+    container.style.display = 'flex';
+    let html = '<div class="subcat-tile ' + (!activeSubcat ? 'active' : '') + '" onclick="selectSubcat(\'\')">';
+    html += '<div class="subcat-tile-placeholder">\ud83d\udccb</div><div class="subcat-tile-name">All</div></div>';
+    for (const sc of visibleSubcats) {
+        const isActive = activeSubcat === sc.id;
+        const imgHtml = sc.imageUrl
+            ? '<img class="subcat-tile-img" src="' + sc.imageUrl + '" alt="' + sc.name + '" loading="lazy">'
+            : '<div class="subcat-tile-placeholder">\ud83c\udf7d\ufe0f</div>';
+        html += '<div class="subcat-tile ' + (isActive ? 'active' : '') + '" onclick="selectSubcat(\'' + sc.id + '\')">' + imgHtml + '<div class="subcat-tile-name">' + sc.name + '</div></div>';
+    }
+    container.innerHTML = html;
+}
+
+function selectSubcat(scId) {
+    activeSubcat = scId;
+    renderSubcatTiles();
+    renderMenuItems();
 }
 
 function renderMenuItems() {
     const container = document.getElementById('menuItemsContainer');
     let filtered = menuItems.filter(i => i.categoryId === activeCategory);
-    
-    // Search filter
-    if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        filtered = menuItems.filter(i => 
-            i.name.toLowerCase().includes(term) || 
-            (i.description && i.description.toLowerCase().includes(term))
-        );
-    }
-
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="no-results">No items found</div>';
-        return;
-    }
-
-    // Group by subcategory
+    if (activeSubcat) filtered = filtered.filter(i => i.subCategoryId === activeSubcat);
+    if (filtered.length === 0) { container.innerHTML = '<div class="no-results">No items found</div>'; return; }
     const cat = menuCategories.find(c => c.id === activeCategory);
     const subcats = cat ? cat.subcategories || [] : [];
     let html = '';
-
-    if (searchTerm) {
-        // Search mode — no grouping
-        html = filtered.map(item => renderItemCard(item)).join('');
-    } else if (subcats.length > 0) {
-        // Group by subcategory
+    if (!activeSubcat && subcats.length > 0) {
         for (const sc of subcats) {
             const scItems = filtered.filter(i => i.subCategoryId === sc.id);
             if (scItems.length === 0) continue;
-            html += `<div class="subcat-header">${sc.name}</div>`;
+            html += '<div class="subcat-header">' + sc.name + '</div>';
             html += scItems.map(item => renderItemCard(item)).join('');
         }
-        // Items without subcategory
         const noSubcat = filtered.filter(i => !i.subCategoryId);
-        if (noSubcat.length > 0) {
-            html += noSubcat.map(item => renderItemCard(item)).join('');
-        }
+        if (noSubcat.length > 0) html += noSubcat.map(item => renderItemCard(item)).join('');
     } else {
         html = filtered.map(item => renderItemCard(item)).join('');
     }
-
     container.innerHTML = html;
 }
 
-function renderItemCard(item) {
-    const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
-    const imgHtml = item.imageUrl 
-        ? `<img class="menu-item-img" src="${item.imageUrl}" alt="${item.name}" loading="lazy">`
-        : `<div class="menu-item-img-placeholder">🍽️</div>`;
-    
-    const cartItem = getCartItemCount(item.id);
-    const addBtnHtml = cartItem > 0
-        ? `<div class="item-qty-control">
-            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',-1)">−</button>
-            <span class="item-qty-num">${cartItem}</span>
-            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',1)">+</button>
-           </div>`
-        : `<button class="btn-add" onclick="event.stopPropagation();addItem('${item.id}')">ADD</button>`;
-
-    return `
-    <div class="menu-item-card" onclick="openItemDetail('${item.id}')">
-        ${imgHtml}
-        <div class="menu-item-info">
-            <div>
-                <div class="menu-item-name">
-                    ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
-                    ${item.name}
-                </div>
-                ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
-            </div>
-            <div class="menu-item-bottom">
-                <span class="menu-item-price">₹${Math.round(item.price)}</span>
-                ${addBtnHtml}
-            </div>
-        </div>
-    </div>`;
-}
-
 function filterMenu() {
-    searchTerm = document.getElementById('menuSearchInput').value.trim();
-    renderMenuItems();
+    const input1 = document.getElementById('menuSearchInput');
+    const input2 = document.getElementById('menuSearchInput2');
+    searchTerm = (input1 ? input1.value : '').trim() || (input2 ? input2.value : '').trim();
+    if (searchTerm) {
+        document.getElementById('menuCatGrid').style.display = 'none';
+        document.getElementById('menuCatDetail').style.display = 'none';
+        document.getElementById('menuSearchResults').style.display = 'flex';
+        if (input1) input1.value = searchTerm;
+        if (input2) input2.value = searchTerm;
+        const term = searchTerm.toLowerCase();
+        const results = menuItems.filter(i => i.name.toLowerCase().includes(term) || (i.description && i.description.toLowerCase().includes(term)));
+        const container = document.getElementById('searchResultsContainer');
+        container.innerHTML = results.length === 0
+            ? '<div class="no-results">No items found</div>'
+            : results.map(item => renderItemCard(item)).join('');
+    } else {
+        clearSearch();
+    }
 }
+
+function clearSearch() {
+    searchTerm = '';
+    const i1 = document.getElementById('menuSearchInput');
+    const i2 = document.getElementById('menuSearchInput2');
+    if (i1) i1.value = '';
+    if (i2) i2.value = '';
+    document.getElementById('menuSearchResults').style.display = 'none';
+    if (activeCategory) document.getElementById('menuCatDetail').style.display = 'flex';
+    else document.getElementById('menuCatGrid').style.display = 'flex';
+}
+
 
 // ============================================================
 // ADD TO CART / MODIFIER POPUP
