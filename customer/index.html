@@ -1343,26 +1343,44 @@ function openQRScanner() {
     document.getElementById('qrScannerOverlay').classList.add('active');
     document.getElementById('qrScanStatus').textContent = 'Starting camera...';
     
+    // Clear previous scanner instance
+    document.getElementById('qrReader').innerHTML = '';
+    
     qrScanner = new Html5Qrcode('qrReader');
+    
+    const config = {
+        fps: 15,
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            // Use 70% of the smaller dimension for scanning area
+            const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.7;
+            return { width: Math.floor(size), height: Math.floor(size) };
+        },
+        aspectRatio: 1,
+        formatsToSupport: [0] // 0 = QR_CODE only, faster scanning
+    };
+    
     qrScanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        config,
         onQRScanSuccess,
-        () => {} // ignore scan failures (every frame without QR)
+        () => {} // ignore scan failures
     ).then(() => {
         document.getElementById('qrScanStatus').textContent = 'Point your camera at the QR code on your table';
     }).catch(err => {
         console.error('Camera error:', err);
-        document.getElementById('qrScanStatus').innerHTML = 'Camera access denied.<br><span style="font-size:11px;">Please allow camera permission and try again, or scan the QR using your phone\'s camera app.</span>';
+        document.getElementById('qrScanStatus').innerHTML = 
+            '<div style="margin-bottom:8px;">📷 Camera not available</div>' +
+            '<div style="font-size:12px;color:#888;">Please close this and use your phone\'s camera app to scan the QR code on your table.</div>';
     });
 }
 
 function closeQRScanner() {
     if (qrScanner) {
         qrScanner.stop().catch(() => {});
-        qrScanner.clear();
+        qrScanner.clear().catch(() => {});
         qrScanner = null;
     }
+    document.getElementById('qrReader').innerHTML = '';
     document.getElementById('qrScannerOverlay').classList.remove('active');
 }
 
@@ -1382,23 +1400,20 @@ async function onQRScanSuccess(decodedText) {
         const scannedTable = url.searchParams.get('t');
         
         if (!scannedOutlet || !scannedTable) {
-            document.getElementById('qrScanStatus').innerHTML = '❌ Invalid QR code. Please scan the QR on your table.';
-            setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 2000);
+            document.getElementById('qrScanStatus').textContent = '❌ Invalid QR code. Please scan the QR on your table.';
             return;
         }
         
         // Check if same outlet
         if (scannedOutlet !== outletId) {
-            document.getElementById('qrScanStatus').innerHTML = '❌ This QR is for a different restaurant.<br>You browsed: ' + outletName;
-            setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 3000);
+            document.getElementById('qrScanStatus').innerHTML = '❌ This QR is for a different restaurant.<br>You browsed: <strong>' + outletName + '</strong>';
             return;
         }
         
         // Verify table exists
         const tableDoc = await db.collection('qr_tables').doc(scannedTable).get();
         if (!tableDoc.exists || !tableDoc.data().isActive) {
-            document.getElementById('qrScanStatus').innerHTML = '❌ This table is not active. Ask staff for help.';
-            setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 2000);
+            document.getElementById('qrScanStatus').textContent = '❌ This table is not active. Ask staff for help.';
             return;
         }
         
@@ -1408,18 +1423,13 @@ async function onQRScanSuccess(decodedText) {
         tableNumber = tableDoc.data().tableNumber;
         browseMode = false;
         
-        // Update UI
         updateAuthScreens();
         closeQRScanner();
-        
-        // Cart is already loaded from localStorage — it persists!
-        // Now show the cart with active Place Order button
         showScreen('cartScreen');
         
     } catch(e) {
         console.error('QR process error:', e);
-        document.getElementById('qrScanStatus').innerHTML = '❌ Could not read QR. Try again.';
-        setTimeout(() => { qrScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onQRScanSuccess, () => {}); }, 2000);
+        document.getElementById('qrScanStatus').textContent = '❌ Could not read QR. Please use your phone\'s camera app to scan.';
     }
 }
 
