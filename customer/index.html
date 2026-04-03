@@ -217,6 +217,7 @@
     <div class="cart-items-list" id="cartItemsList"></div>
     <div class="cart-place-order" id="cartFooter">
         <div class="cart-summary" id="cartSummary">Items will be sent to our kitchen</div>
+        <div style="font-size:11px;color:#999;text-align:center;margin-bottom:8px;">* All prices exclusive of applicable Government Taxes</div>
         <button class="btn btn-primary" id="placeOrderBtn" onclick="placeOrder()">Place Order</button>
     </div>
 </div>
@@ -937,13 +938,15 @@ function addItem(itemId) {
     } else {
         cart.push({
             itemId: item.id, name: item.name, vegType: item.vegType,
-            price: item.price, qty: 1, modifiers: [], instructions: ''
+            categoryId: item.categoryId, price: item.price, qty: 1, modifiers: [], instructions: ''
         });
     }
     updateCartBar();
     renderMenuItems();
     trackPixelEvent('AddToCart', { content_name: item.name, value: item.price, currency: 'INR' });
-} — shows photo, description, modifiers, qty, add
+}
+
+// Detail popup
 function openItemDetail(itemId) {
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
@@ -1119,6 +1122,7 @@ function addFromModifier() {
         itemId: item.id,
         name: item.name,
         vegType: item.vegType,
+        categoryId: item.categoryId,
         price: item.price,
         qty: qty,
         modifiers: modifiers,
@@ -1129,7 +1133,9 @@ function addFromModifier() {
     updateCartBar();
     renderMenuItems();
     trackPixelEvent('AddToCart', { content_name: item.name, value: item.price * qty, currency: 'INR' });
-} from menu card (only for items without modifiers)
+}
+
+// Quick qty change from menu card
 function quickQty(itemId, delta) {
     // Find the LAST cart entry for this item (simple items only)
     for (let i = cart.length - 1; i >= 0; i--) {
@@ -1193,9 +1199,11 @@ function renderCart() {
         document.getElementById('cartSummary').textContent = `${totalItems} item${totalItems > 1 ? 's' : ''} · Will be sent to our kitchen`;
     }
 
-    container.innerHTML = cart.map((c, idx) => {
+    // Render cart items
+    let itemsHtml = cart.map((c, idx) => {
         const vegClass = c.vegType === 'Veg' ? 'veg' : c.vegType === 'NonVeg' ? 'nonveg' : c.vegType === 'Egg' ? 'egg' : '';
         const modsText = c.modifiers.map(m => m.option).join(', ');
+        const itemTotal = (c.price + c.modifiers.reduce((s, m) => s + (m.extraPrice || 0), 0)) * c.qty;
         
         return `
         <div class="cart-item">
@@ -1214,9 +1222,54 @@ function renderCart() {
                     <span class="item-qty-num">${c.qty}</span>
                     <button class="item-qty-btn" onclick="cartQty(${idx},1)">+</button>
                 </div>
+                <span style="font-size:13px;color:#888;">₹${Math.round(itemTotal)}</span>
             </div>
         </div>`;
     }).join('');
+
+    // Calculate tax breakdown
+    let subtotal = 0;
+    const taxGroups = {}; // { rate: subtotalForThatRate }
+    
+    for (const c of cart) {
+        const itemTotal = (c.price + c.modifiers.reduce((s, m) => s + (m.extraPrice || 0), 0)) * c.qty;
+        subtotal += itemTotal;
+        
+        // Look up GST rate from category
+        const cat = menuCategories.find(cat => cat.id === c.categoryId);
+        const rate = (cat && cat.gstRate !== undefined) ? cat.gstRate : 5;
+        
+        if (!taxGroups[rate]) taxGroups[rate] = 0;
+        taxGroups[rate] += itemTotal;
+    }
+    
+    let totalTax = 0;
+    let taxHtml = '';
+    const rates = Object.keys(taxGroups).sort((a, b) => parseFloat(a) - parseFloat(b));
+    
+    for (const rate of rates) {
+        const taxAmt = taxGroups[rate] * (parseFloat(rate) / 100);
+        totalTax += taxAmt;
+        taxHtml += `<div style="display:flex;justify-content:space-between;font-size:13px;color:#888;margin-bottom:4px;">
+            <span>Taxes (${rate}%)</span><span>₹${Math.round(taxAmt)}</span>
+        </div>`;
+    }
+    
+    const grandTotal = subtotal + totalTax;
+    
+    // Add totals section
+    itemsHtml += `
+    <div style="border-top:1.5px solid #e0e0e0;margin-top:12px;padding-top:12px;">
+        <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:4px;">
+            <span>Subtotal</span><span>₹${Math.round(subtotal)}</span>
+        </div>
+        ${taxHtml}
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#1a1a1a;margin-top:8px;padding-top:8px;border-top:1px solid #eee;">
+            <span>Total</span><span>₹${Math.round(grandTotal)}</span>
+        </div>
+    </div>`;
+
+    container.innerHTML = itemsHtml;
 }
 
 function removeCartItem(idx) { cart.splice(idx, 1); renderCart(); updateCartBar(); }
