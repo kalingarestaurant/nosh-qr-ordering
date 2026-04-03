@@ -314,6 +314,38 @@
                     </div>
                     <div id="pixelStatus" style="font-size:12px;margin-top:8px;"></div>
                 </div>
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:8px;">📋 Modifier Templates</div>
+                    <div style="font-size:12px;color:#888;margin-bottom:12px;">Reusable modifier groups you can quickly apply to any item. Prices are defaults — editable per item.</div>
+                    <div class="card" style="padding:12px;margin-bottom:10px;">
+                        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Add Template</div>
+                        <div class="frow">
+                            <div class="ff"><label>Template Name *</label><input class="fi" id="mtName" placeholder="e.g. Liquor Pours"></div>
+                            <div class="ff"><label>Type</label>
+                                <select class="fi" id="mtType">
+                                    <option value="variant">Variant (pick 1, replaces price)</option>
+                                    <option value="addon">Add-on (optional, adds to price)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="ff"><label>Required?</label>
+                            <select class="fi" id="mtRequired" style="width:120px;">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div id="mtOptions">
+                            <div style="font-size:12px;color:#888;margin-bottom:6px;">Options:</div>
+                        </div>
+                        <button style="padding:6px 12px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;margin-bottom:10px;" onclick="addMtOption()">+ Add Option</button>
+                        <div>
+                            <input type="hidden" id="mtEditId" value="">
+                            <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="saveModTemplate()">💾 Save Template</button>
+                            <button style="padding:8px 16px;font-size:12px;background:#2a2d3e;border:none;border-radius:6px;color:#888;cursor:pointer;font-family:'Poppins',sans-serif;display:none;" id="mtCancelBtn" onclick="clearMtForm()">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="mtList"></div>
+                </div>
                 <div style="padding:16px 0;font-size:12px;color:#666;">
                     ⚠️ Remember to turn OTP back ON before going live with real customers.
                 </div>
@@ -464,7 +496,12 @@
         <div class="ff">
             <label>Modifier Groups</label>
             <div id="imModGroups"></div>
-            <button type="button" style="padding:6px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;margin-top:6px;font-family:'Poppins',sans-serif;" onclick="addModGroup()">+ Add Modifier Group</button>
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+                <button type="button" style="padding:6px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="addModGroup()">+ Add Modifier Group</button>
+                <select id="applyTemplateSelect" onchange="applyModTemplate(this.value);this.value='';" style="padding:6px 10px;background:#3498db15;border:1px solid #3498db30;border-radius:6px;color:#5dade2;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;outline:none;">
+                    <option value="">📋 Apply Template...</option>
+                </select>
+            </div>
         </div>
 
         <input type="hidden" id="imEditId" value="">
@@ -793,15 +830,17 @@ async function startDashboard() {
 }
 
 async function loadData() {
-    const [catSnap, itemSnap, outletSnap] = await Promise.all([
+    const [catSnap, itemSnap, outletSnap, mtSnap] = await Promise.all([
         db.collection('menu_categories').orderBy('sortOrder').get(),
         db.collection('menu_items').get(),
-        db.collection('qr_outlets').get()
+        db.collection('qr_outlets').get(),
+        db.collection('modifier_templates').orderBy('sortOrder').get()
     ]);
     categories = catSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
     items = itemSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
     items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     outlets = outletSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    modTemplates = mtSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
 
     // Populate category filter
     const sel = document.getElementById('itemCatFilter');
@@ -810,6 +849,9 @@ async function loadData() {
     // Populate outlet selects
     const sSel = document.getElementById('sOutlet');
     if (sSel) sSel.innerHTML = '<option value="all">All Outlets</option>' + outlets.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+    
+    // Populate template dropdown in item modal
+    populateTemplateDropdown();
 }
 
 // ============================================================
@@ -1590,6 +1632,150 @@ async function deleteCat(docId, name) {
 }
 
 // ============================================================
+// MODIFIER TEMPLATES
+// ============================================================
+let modTemplates = [];
+
+async function loadModTemplates() {
+    const snap = await db.collection('modifier_templates').orderBy('sortOrder').get();
+    modTemplates = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    renderMtList();
+    populateTemplateDropdown();
+}
+
+function renderMtList() {
+    const container = document.getElementById('mtList');
+    if (!modTemplates.length) {
+        container.innerHTML = '<div style="font-size:12px;color:#555;padding:8px 0;">No templates yet. Create one above.</div>';
+        return;
+    }
+    container.innerHTML = modTemplates.map(t => {
+        const typeLabel = t.type === 'variant' ? '🔄 Variant' : '➕ Add-on';
+        const optNames = (t.options || []).map(o => o.name + (o.extraPrice ? ' ₹' + o.extraPrice : '')).join(', ');
+        return `
+        <div class="item-row">
+            <div class="item-name"><strong>${t.name}</strong></div>
+            <div style="font-size:11px;color:#888;flex:1;margin:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${typeLabel} · ${t.required ? 'Req' : 'Opt'} · ${optNames}</div>
+            <div class="item-actions">
+                <button class="btn-edit" onclick="editModTemplate('${t.docId}')">Edit</button>
+                <button class="btn-del" onclick="deleteModTemplate('${t.docId}','${t.name.replace(/'/g,"\\'")}')">Del</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function clearMtForm() {
+    document.getElementById('mtName').value = '';
+    document.getElementById('mtType').value = 'variant';
+    document.getElementById('mtRequired').value = 'true';
+    document.getElementById('mtEditId').value = '';
+    document.getElementById('mtOptions').innerHTML = '<div style="font-size:12px;color:#888;margin-bottom:6px;">Options:</div>';
+    document.getElementById('mtCancelBtn').style.display = 'none';
+}
+
+function addMtOption(name, price) {
+    const container = document.getElementById('mtOptions');
+    const idx = container.querySelectorAll('.mt-opt-row').length;
+    const row = document.createElement('div');
+    row.className = 'mt-opt-row';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+    row.innerHTML = `
+        <input class="fi mt-opt-name" placeholder="Option name" value="${name || ''}" style="flex:1;padding:6px 8px;font-size:12px;">
+        <input class="fi mt-opt-price" type="number" placeholder="₹ Price" value="${price || ''}" style="width:80px;padding:6px 8px;font-size:12px;" inputmode="numeric">
+        <button onclick="this.parentElement.remove();" style="background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:16px;padding:0 4px;">✕</button>
+    `;
+    container.appendChild(row);
+}
+
+function editModTemplate(docId) {
+    const t = modTemplates.find(x => x.docId === docId);
+    if (!t) return;
+    document.getElementById('mtName').value = t.name;
+    document.getElementById('mtType').value = t.type || 'variant';
+    document.getElementById('mtRequired').value = String(t.required !== false);
+    document.getElementById('mtEditId').value = docId;
+    document.getElementById('mtCancelBtn').style.display = 'inline-block';
+    // Populate options
+    document.getElementById('mtOptions').innerHTML = '<div style="font-size:12px;color:#888;margin-bottom:6px;">Options:</div>';
+    (t.options || []).forEach(o => addMtOption(o.name, o.extraPrice));
+    window.scrollTo(0, document.getElementById('mtName').offsetTop - 100);
+}
+
+async function saveModTemplate() {
+    const name = document.getElementById('mtName').value.trim();
+    if (!name) { toast('Enter template name', 'err'); return; }
+    
+    const type = document.getElementById('mtType').value;
+    const required = document.getElementById('mtRequired').value === 'true';
+    const editId = document.getElementById('mtEditId').value;
+    
+    // Collect options
+    const options = [];
+    document.querySelectorAll('.mt-opt-row').forEach(row => {
+        const optName = row.querySelector('.mt-opt-name').value.trim();
+        const optPrice = parseFloat(row.querySelector('.mt-opt-price').value) || 0;
+        if (optName) options.push({ name: optName, extraPrice: optPrice });
+    });
+    
+    if (options.length === 0) { toast('Add at least one option', 'err'); return; }
+    
+    const data = {
+        name, type, required,
+        maxSelect: type === 'variant' ? 1 : options.length,
+        options, sortOrder: modTemplates.length + 1,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    try {
+        if (editId) {
+            await db.collection('modifier_templates').doc(editId).update(data);
+            toast('✅ Template updated');
+        } else {
+            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('modifier_templates').add(data);
+            toast('✅ Template created');
+        }
+        clearMtForm();
+        await loadModTemplates();
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function deleteModTemplate(docId, name) {
+    if (!confirm('Delete template "' + name + '"?')) return;
+    try {
+        await db.collection('modifier_templates').doc(docId).delete();
+        toast('🗑️ Template deleted');
+        await loadModTemplates();
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function populateTemplateDropdown() {
+    const sel = document.getElementById('applyTemplateSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">📋 Apply Template...</option>' +
+        modTemplates.map(t => `<option value="${t.docId}">${t.name} (${t.type === 'variant' ? 'Variant' : 'Add-on'})</option>`).join('');
+}
+
+function applyModTemplate(docId) {
+    if (!docId) return;
+    const t = modTemplates.find(x => x.docId === docId);
+    if (!t) return;
+    
+    // Add as a new modifier group to the item modal
+    const container = document.getElementById('imModGroups');
+    const gIdx = container.querySelectorAll('.mod-group').length;
+    
+    addModGroupHTML(container, {
+        groupName: t.name,
+        required: t.required,
+        maxSelect: t.maxSelect || (t.type === 'variant' ? 1 : t.options.length),
+        options: t.options.map(o => ({ name: o.name, extraPrice: o.extraPrice }))
+    }, gIdx);
+    
+    toast('✅ Applied: ' + t.name);
+}
+
+// ============================================================
 // OUTLET MENU (per-outlet item enable/disable + price overrides)
 // ============================================================
 let outletMenuData = {}; // { itemId: { isEnabled, price, variantPrices, addOnPrices } }
@@ -2151,6 +2337,7 @@ async function loadSettings() {
         renderOutletsList();
         initOrderingHours();
         initPixelConfig();
+        loadModTemplates();
     } catch(e) {
         console.error('Load settings error:', e);
     }
