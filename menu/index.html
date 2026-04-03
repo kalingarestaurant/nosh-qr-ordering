@@ -484,6 +484,7 @@
         </div>
         <div class="ff"><label>Category Name *</label><input class="fi" id="cmName" placeholder="e.g. Starters"></div>
         <div class="ff"><label>Sort Order</label><input class="fi" id="cmSort" type="number" placeholder="1" inputmode="numeric"></div>
+        <div class="ff"><label>Tax Rate (%)</label><input class="fi" id="cmGstRate" type="number" placeholder="5" inputmode="numeric" step="0.1"><div style="font-size:10px;color:#666;margin-top:4px;">GST for food (5%), VAT for alcohol (varies). Shown in cart.</div></div>
         <div class="ff">
             <label>Subcategories (one per line)</label>
             <textarea class="fi" id="cmSubcats" placeholder="Veg Kabab&#10;Chicken Kababs&#10;Seafood" rows="4"></textarea>
@@ -1527,10 +1528,12 @@ function openCatModal(editId) {
         if (!cat) return;
         document.getElementById('cmName').value = cat.name;
         document.getElementById('cmSort').value = cat.sortOrder || '';
+        document.getElementById('cmGstRate').value = cat.gstRate !== undefined ? cat.gstRate : 5;
         document.getElementById('cmSubcats').value = (cat.subcategories || []).map(s => s.name).join('\n');
     } else {
         document.getElementById('cmName').value = '';
         document.getElementById('cmSort').value = '';
+        document.getElementById('cmGstRate').value = '5';
         document.getElementById('cmSubcats').value = '';
     }
     document.getElementById('catModal').classList.add('active');
@@ -1542,6 +1545,7 @@ async function saveCat() {
     const editId = document.getElementById('cmEditId').value;
     const name = document.getElementById('cmName').value.trim();
     const sortOrder = parseInt(document.getElementById('cmSort').value) || 0;
+    const gstRate = parseFloat(document.getElementById('cmGstRate').value) || 5;
     const subcatLines = document.getElementById('cmSubcats').value.trim().split('\n').filter(s => s.trim());
 
     if (!name) { toast('Enter name', 'err'); return; }
@@ -1553,7 +1557,7 @@ async function saveCat() {
     }));
 
     const data = {
-        name, sortOrder, isActive: true, subcategories,
+        name, sortOrder, gstRate, isActive: true, subcategories,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
