@@ -22,6 +22,12 @@
         #tabCart.active { overflow: hidden; }
         #tabOrders.active { overflow-y: auto; }
 
+        /* Place Order Bar (floating above nav) */
+        .place-order-bar { display: none; padding: 6px 12px 0; flex-shrink: 0; background: #fff; }
+        .place-order-bar.visible { display: block; }
+        .place-order-bar-inner { background: #1a1a1a; color: #fff; padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; }
+        .place-order-bar-text { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+
         /* ===== BOTTOM NAV ===== */
         .bottom-nav { display: flex; background: #fff; border-top: 1px solid #eee; padding: 2px 0 calc(2px + env(safe-area-inset-bottom)); z-index: 200; flex-shrink: 0; }
         .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 0; cursor: pointer; border: none; background: none; font-family: 'Poppins', sans-serif; position: relative; transition: all 0.2s; }
@@ -293,7 +299,10 @@
     <!-- TAB: CART -->
     <div id="tabCart" class="tab-content">
         <div class="cart-tab-header">
-            <span class="cart-title">Your Order</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button class="back-btn" onclick="switchTab('menu')">←</button>
+                <span class="cart-title">Your Order</span>
+            </div>
             <span class="menu-table-badge" id="cartTableBadge">Table 1</span>
         </div>
         <div class="cart-items-list" id="cartItemsList"></div>
@@ -320,16 +329,18 @@
         </div>
     </div>
 
+    <!-- PLACE ORDER BAR (above nav, shown when cart has items) -->
+    <div id="placeOrderBar" class="place-order-bar">
+        <div class="place-order-bar-inner" onclick="switchTab('cart')">
+            <span class="place-order-bar-text" id="placeOrderBarText">PLACE ORDER (1 Item)</span>
+        </div>
+    </div>
+
     <!-- BOTTOM NAV -->
     <nav class="bottom-nav" id="bottomNav">
         <button class="bottom-nav-item active" onclick="switchTab('menu')" id="navMenu">
             <span class="bottom-nav-icon">🍽️</span>
             <span class="bottom-nav-label">Menu</span>
-        </button>
-        <button class="bottom-nav-item" onclick="switchTab('cart')" id="navCart">
-            <span class="bottom-nav-icon">🛒</span>
-            <span class="bottom-nav-label">Cart</span>
-            <span class="bottom-nav-badge" id="cartBadge">0</span>
         </button>
         <button class="bottom-nav-item" onclick="switchTab('orders')" id="navOrders">
             <span class="bottom-nav-icon">📋</span>
@@ -643,21 +654,23 @@ function switchTab(tab) {
         const el = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
         if (el) el.classList.toggle('active', t === tab);
     });
+    // Highlight nav button (cart has no nav button)
     document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
-    const navBtn = document.getElementById('nav' + tab.charAt(0).toUpperCase() + tab.slice(1));
-    if (navBtn) navBtn.classList.add('active');
+    if (tab === 'menu') document.getElementById('navMenu').classList.add('active');
+    if (tab === 'orders') document.getElementById('navOrders').classList.add('active');
     
+    // Hide place order bar when in cart
     if (tab === 'cart') {
+        document.getElementById('placeOrderBar').classList.remove('visible');
         renderCart();
         updatePlaceOrderBtn();
+        trackPixelEvent('InitiateCheckout', { num_items: cart.reduce((s,c) => s + c.qty, 0), currency: 'INR' });
     }
     if (tab === 'orders') renderSessionHistory();
     if (tab === 'menu') {
         showCatGrid();
         updateCartBadge();
     }
-    
-    trackPixelEvent('InitiateCheckout', tab === 'cart' ? { num_items: cart.reduce((s,c) => s + c.qty, 0), currency: 'INR' } : {});
 }
 
 function showAppShell() {
@@ -1391,14 +1404,13 @@ function getCartItemCount(itemId) {
 function updateCartBar() { updateCartBadge(); }
 function updateCartBadge() {
     const totalItems = cart.reduce((sum, c) => sum + c.qty, 0);
-    const badge = document.getElementById('cartBadge');
-    if (totalItems > 0) {
-        badge.textContent = totalItems;
-        badge.classList.add('visible');
+    const bar = document.getElementById('placeOrderBar');
+    if (totalItems > 0 && activeTab !== 'cart') {
+        bar.classList.add('visible');
+        document.getElementById('placeOrderBarText').textContent = `PLACE ORDER (${totalItems} Item${totalItems > 1 ? 's' : ''})`;
     } else {
-        badge.classList.remove('visible');
+        bar.classList.remove('visible');
     }
-    // Persist cart
     saveCartToStorage();
 }
 
