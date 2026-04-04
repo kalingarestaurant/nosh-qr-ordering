@@ -26,20 +26,20 @@
         .place-order-bar { display: none; padding: 6px 12px 0; flex-shrink: 0; background: #fff; }
         .place-order-bar.visible { display: block; }
         .place-order-bar-inner { background: #1a1a1a; color: #fff; padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; }
-        .place-order-bar-text { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+        .place-order-bar-text { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
 
         /* ===== BOTTOM NAV ===== */
         .bottom-nav { display: flex; background: #fff; border-top: 1px solid #eee; padding: 2px 0 calc(2px + env(safe-area-inset-bottom)); z-index: 200; flex-shrink: 0; }
         .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 0; cursor: pointer; border: none; background: none; font-family: 'Poppins', sans-serif; position: relative; transition: all 0.2s; }
         .bottom-nav-icon { font-size: 20px; line-height: 1; }
-        .bottom-nav-label { font-size: 9px; font-weight: 600; color: #999; margin-top: 1px; }
+        .bottom-nav-label { font-size: 11px; font-weight: 600; color: #999; margin-top: 1px; }
         .bottom-nav-item.active .bottom-nav-label { color: #e94560; }
         .bottom-nav-badge { position: absolute; top: 2px; right: 50%; transform: translateX(18px); min-width: 18px; height: 18px; border-radius: 9px; background: #e94560; color: #fff; font-size: 10px; font-weight: 700; display: none; align-items: center; justify-content: center; padding: 0 5px; }
         .bottom-nav-badge.visible { display: flex; }
 
         /* Tab Headers */
         .cart-tab-header, .orders-tab-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 100; }
-        .cart-title { font-size: 16px; font-weight: 700; }
+        .cart-title { font-size: 18px; font-weight: 700; }
         .orders-content { flex: 1; padding: 12px 16px 20px; }
         .orders-empty { text-align: center; padding: 60px 20px; }
 
@@ -74,16 +74,16 @@
         .menu-screen { background: #f5f5f5; }
         .menu-header { background: #fff; padding: 4px 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); flex-shrink: 0; z-index: 100; }
         .menu-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
-        .menu-outlet-name { font-size: 15px; font-weight: 700; color: #1a1a1a; }
-        .menu-table-badge { font-size: 11px; font-weight: 600; color: #e94560; background: #fef0f2; padding: 3px 8px; border-radius: 10px; }
+        .menu-outlet-name { font-size: 18px; font-weight: 700; color: #1a1a1a; }
+        .menu-table-badge { font-size: 13px; font-weight: 600; color: #e94560; background: #fef0f2; padding: 3px 8px; border-radius: 10px; }
         .menu-search { position: relative; }
-        .menu-search input { width: 100%; padding: 6px 12px 6px 32px; border: 1px solid #e8e8e8; border-radius: 6px; font-size: 12px; font-family: 'Poppins', sans-serif; outline: none; background: #f8f8f8; }
+        .menu-search input { width: 100%; padding: 6px 12px 6px 32px; border: 1px solid #e8e8e8; border-radius: 6px; font-size: 14px; font-family: 'Poppins', sans-serif; outline: none; background: #f8f8f8; }
         .menu-search input:focus { border-color: #e94560; background: #fff; }
         .menu-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; }
 
         /* Veg Only Toggle */
         .veg-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; }
-        .veg-toggle-label { font-size: 11px; font-weight: 600; color: #0a8f0a; }
+        .veg-toggle-label { font-size: 13px; font-weight: 600; color: #0a8f0a; }
         .veg-toggle-switch { width: 36px; height: 20px; border-radius: 10px; background: #ccc; position: relative; transition: background 0.2s; }
         .veg-toggle-switch.on { background: #0a8f0a; }
         .veg-toggle-switch::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: transform 0.2s; }
@@ -92,11 +92,11 @@
         /* Category Tabs */
         .cat-tabs { background: #fff; border-bottom: 1px solid #eee; overflow-x: auto; white-space: nowrap; padding: 0 6px; margin-top: 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .cat-tabs::-webkit-scrollbar { display: none; }
-        .cat-tab { display: inline-block; padding: 4px 10px; font-size: 11px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 2.5px solid transparent; transition: all 0.2s; }
+        .cat-tab { display: inline-block; padding: 5px 12px; font-size: 13px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 2.5px solid transparent; transition: all 0.2s; }
         .cat-tab.active { color: #e94560; border-bottom-color: #e94560; font-weight: 600; }
 
         /* Subcategory Header */
-        .subcat-header { padding: 6px 10px 2px; font-size: 13px; font-weight: 700; color: #1a1a1a; background: #f5f5f5; }
+        .subcat-header { padding: 6px 10px 2px; font-size: 16px; font-weight: 700; color: #1a1a1a; background: #f5f5f5; }
 
         /* Menu Items */
         .menu-items-container { flex: 1; padding: 0 6px 8px; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -109,9 +109,9 @@
         .cat-tile { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 3/2; cursor: pointer; background: #e8e8e8; }
         .cat-tile img { width: 100%; height: 100%; object-fit: cover; }
         .cat-tile-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 50%, transparent 100%); display: flex; align-items: flex-end; justify-content: center; padding: 8px; }
-        .cat-tile-name { color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.5); line-height: 1.2; text-align: center; }
+        .cat-tile-name { color: #fff; font-size: 16px; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,0.5); line-height: 1.2; text-align: center; }
         .cat-tile-placeholder { width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .cat-tile-count { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.5); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 8px; }
+        .cat-tile-count { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.5); color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 8px; }
 
         /* Subcategory Tiles (horizontal scroll) — compact */
         .subcat-tiles { display: flex; gap: 6px; padding: 4px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: #fff; border-bottom: 1px solid #eee; flex-shrink: 0; }
@@ -121,7 +121,7 @@
         .subcat-tile.active .subcat-tile-img { border-color: #e94560; }
         .subcat-tile-placeholder { width: 46px; height: 46px; border-radius: 6px; margin: 0 auto 2px; background: linear-gradient(135deg, #f0f0f0, #e0e0e0); display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid transparent; }
         .subcat-tile.active .subcat-tile-placeholder { border-color: #e94560; }
-        .subcat-tile-name { font-size: 9px; font-weight: 600; color: #666; line-height: 1.2; }
+        .subcat-tile-name { font-size: 11px; font-weight: 600; color: #666; line-height: 1.2; }
         .subcat-tile.active .subcat-tile-name { color: #e94560; }
 
         /* Back button */
@@ -129,10 +129,10 @@
         .menu-item-card { display: flex; gap: 8px; background: #fff; border-radius: 8px; padding: 8px; margin-bottom: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
         .menu-item-img { width: 70px; height: 70px; border-radius: 6px; object-fit: cover; background: #f0f0f0; flex-shrink: 0; }
         .menu-item-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
-        .menu-item-name { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 1px; display: flex; align-items: center; gap: 5px; }
-        .menu-item-desc { font-size: 11px; color: #888; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .menu-item-name { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 1px; display: flex; align-items: center; gap: 5px; }
+        .menu-item-desc { font-size: 13px; color: #888; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .menu-item-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 3px; }
-        .menu-item-price { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+        .menu-item-price { font-size: 15px; font-weight: 600; color: #1a1a1a; }
         .menu-item-compact { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 6px; padding: 6px 10px; margin-bottom: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); cursor: pointer; border-bottom: 1px solid #f5f5f5; }
         .menu-item-compact-left { flex: 1; min-width: 0; }
         .veg-badge { display: inline-block; width: 16px; height: 16px; border: 1.5px solid; border-radius: 3px; position: relative; flex-shrink: 0; }
@@ -140,7 +140,7 @@
         .veg-badge.veg { border-color: #0a8f0a; } .veg-badge.veg::after { background: #0a8f0a; }
         .veg-badge.nonveg { border-color: #b71c1c; } .veg-badge.nonveg::after { background: #b71c1c; }
         .veg-badge.egg { border-color: #f9a825; } .veg-badge.egg::after { background: #f9a825; }
-        .btn-add { padding: 6px 20px; border: 1.5px solid #e94560; border-radius: 8px; background: #fff; color: #e94560; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
+        .btn-add { padding: 7px 22px; border: 1.5px solid #e94560; border-radius: 8px; background: #fff; color: #e94560; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
         .btn-add:active { background: #e94560; color: #fff; }
         .item-qty-control { display: flex; align-items: center; gap: 0; border: 1.5px solid #e94560; border-radius: 8px; overflow: hidden; }
         .item-qty-btn { width: 32px; height: 32px; border: none; background: #e94560; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; }
@@ -157,7 +157,7 @@
         .modifier-close { width: 32px; height: 32px; border: none; background: #f0f0f0; border-radius: 50%; font-size: 18px; cursor: pointer; color: #666; }
         .modifier-group { margin-bottom: 20px; }
         .modifier-group-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
-        .modifier-group-subtitle { font-size: 12px; color: #999; margin-bottom: 10px; }
+        .modifier-group-subtitle { font-size: 14px; color: #999; margin-bottom: 10px; }
         .modifier-option { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
         .modifier-option-left { display: flex; align-items: center; gap: 10px; }
         .modifier-radio, .modifier-check { width: 20px; height: 20px; border: 2px solid #ccc; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
@@ -165,8 +165,8 @@
         .modifier-radio.selected, .modifier-check.selected { border-color: #e94560; background: #e94560; }
         .modifier-radio.selected::after { content: ''; width: 8px; height: 8px; background: #fff; border-radius: 50%; }
         .modifier-check.selected::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 700; }
-        .modifier-option-name { font-size: 14px; color: #1a1a1a; }
-        .modifier-option-price { font-size: 13px; color: #888; }
+        .modifier-option-name { font-size: 16px; color: #1a1a1a; }
+        .modifier-option-price { font-size: 15px; color: #888; }
         .modifier-instructions { margin-bottom: 16px; }
         .modifier-instructions textarea { width: 100%; padding: 12px; border: 1.5px solid #e8e8e8; border-radius: 10px; font-size: 14px; font-family: 'Poppins', sans-serif; resize: none; height: 70px; outline: none; }
         .modifier-instructions textarea:focus { border-color: #e94560; }
@@ -273,6 +273,10 @@
                         <span class="veg-toggle-label">Veg</span>
                         <div class="veg-toggle-switch" id="vegToggle2"></div>
                     </div>
+                </div>
+                <div class="menu-search">
+                    <span class="menu-search-icon">🔍</span>
+                    <input type="text" id="detailSearchInput" placeholder="Search in menu..." oninput="filterDetailItems()">
                 </div>
                 <div class="cat-tabs" id="catTabs"></div>
             </div>
@@ -565,6 +569,7 @@ let cart = []; // { itemId, name, vegType, qty, modifiers: [{group, option, extr
 let activeCategory = '';
 let activeSubcat = '';
 let searchTerm = '';
+let detailSearchTerm = '';
 let vegOnly = false;
 let ordersListener = null; // Firestore listener for session orders
 let sessionListener = null; // Firestore listener for session deactivation
@@ -1044,6 +1049,9 @@ function renderCategoryTabs() {
 function selectCategory(catId) {
     activeCategory = catId;
     activeSubcat = '';
+    detailSearchTerm = '';
+    const detailInput = document.getElementById('detailSearchInput');
+    if (detailInput) detailInput.value = '';
     const cat = menuCategories.find(c => c.id === catId);
     document.getElementById('detailCatName').textContent = cat ? cat.name : '';
     document.getElementById('menuCatGrid').style.display = 'none';
@@ -1088,15 +1096,42 @@ function selectSubcat(scId) {
     renderMenuItems();
 }
 
+let detailSearchTimer = null;
+function filterDetailItems() {
+    const input = document.getElementById('detailSearchInput');
+    detailSearchTerm = (input ? input.value : '').trim().toLowerCase();
+    clearTimeout(detailSearchTimer);
+    detailSearchTimer = setTimeout(() => {
+        renderMenuItems();
+        // Refocus input (iOS Safari loses focus on DOM changes)
+        const el = document.getElementById('detailSearchInput');
+        if (el && document.activeElement !== el) {
+            el.focus();
+            // Move cursor to end
+            const len = el.value.length;
+            el.setSelectionRange(len, len);
+        }
+    }, 200);
+}
+
 function renderMenuItems() {
     const container = document.getElementById('menuItemsContainer');
     let filtered = getVegFilteredItems(menuItems).filter(i => i.categoryId === activeCategory);
     if (activeSubcat) filtered = filtered.filter(i => i.subCategoryId === activeSubcat);
+    
+    // Apply detail search within category
+    if (detailSearchTerm) {
+        filtered = filtered.filter(i => 
+            i.name.toLowerCase().includes(detailSearchTerm) || 
+            (i.description && i.description.toLowerCase().includes(detailSearchTerm))
+        );
+    }
+    
     if (filtered.length === 0) { container.innerHTML = '<div class="no-results">No items found</div>'; return; }
     const cat = menuCategories.find(c => c.id === activeCategory);
     const subcats = cat ? cat.subcategories || [] : [];
     let html = '';
-    if (!activeSubcat && subcats.length > 0) {
+    if (!activeSubcat && !detailSearchTerm && subcats.length > 0) {
         for (const sc of subcats) {
             const scItems = filtered.filter(i => i.subCategoryId === sc.id);
             if (scItems.length === 0) continue;
@@ -1111,25 +1146,34 @@ function renderMenuItems() {
     container.innerHTML = html;
 }
 
+let gridSearchTimer = null;
 function filterMenu() {
-    const input1 = document.getElementById('menuSearchInput');
-    const input2 = document.getElementById('menuSearchInput2');
-    searchTerm = (input1 ? input1.value : '').trim() || (input2 ? input2.value : '').trim();
-    if (searchTerm) {
-        document.getElementById('menuCatGrid').style.display = 'none';
-        document.getElementById('menuCatDetail').style.display = 'none';
-        document.getElementById('menuSearchResults').style.display = 'flex';
-        if (input1) input1.value = searchTerm;
-        if (input2) input2.value = searchTerm;
-        const term = searchTerm.toLowerCase();
-        const results = getVegFilteredItems(menuItems).filter(i => i.name.toLowerCase().includes(term) || (i.description && i.description.toLowerCase().includes(term)));
-        const container = document.getElementById('searchResultsContainer');
-        container.innerHTML = results.length === 0
-            ? '<div class="no-results">No items found</div>'
-            : results.map(item => renderItemCard(item)).join('');
-    } else {
-        clearSearch();
-    }
+    clearTimeout(gridSearchTimer);
+    gridSearchTimer = setTimeout(() => {
+        const input1 = document.getElementById('menuSearchInput');
+        const input2 = document.getElementById('menuSearchInput2');
+        searchTerm = (input1 ? input1.value : '').trim() || (input2 ? input2.value : '').trim();
+        if (searchTerm) {
+            document.getElementById('menuCatGrid').style.display = 'none';
+            document.getElementById('menuCatDetail').style.display = 'none';
+            document.getElementById('menuSearchResults').style.display = 'flex';
+            if (input1) input1.value = searchTerm;
+            if (input2) input2.value = searchTerm;
+            const term = searchTerm.toLowerCase();
+            const results = getVegFilteredItems(menuItems).filter(i => i.name.toLowerCase().includes(term) || (i.description && i.description.toLowerCase().includes(term)));
+            const container = document.getElementById('searchResultsContainer');
+            container.innerHTML = results.length === 0
+                ? '<div class="no-results">No items found</div>'
+                : results.map(item => renderItemCard(item)).join('');
+            // Refocus active input
+            const active = document.activeElement;
+            if (active && (active.id === 'menuSearchInput' || active.id === 'menuSearchInput2')) {
+                setTimeout(() => { active.focus(); }, 10);
+            }
+        } else {
+            clearSearch();
+        }
+    }, 200);
 }
 
 function clearSearch() {
@@ -1159,7 +1203,7 @@ function renderItemCard(item) {
            </div>`
         : `<button class="btn-add" onclick="event.stopPropagation();addItem('${item.id}')">ADD</button>`;
     const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
-    const customLabel = hasModifiers ? '<div style="font-size:9px;color:#888;text-align:center;">customizable</div>' : '';
+    const customLabel = hasModifiers ? '<div style="font-size:11px;color:#888;text-align:center;">customizable</div>' : '';
     
     // For variant items, show first option's price
     let displayPrice = item.price;
