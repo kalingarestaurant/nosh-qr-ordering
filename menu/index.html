@@ -70,6 +70,7 @@
         .item-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .item-price { font-size: 13px; color: #888; min-width: 50px; text-align: right; }
         .item-cat { font-size: 10px; color: #666; min-width: 80px; }
+        .item-subcat { font-size: 10px; color: #555; min-width: 80px; }
         .toggle { position: relative; width: 40px; height: 22px; background: #333; border-radius: 11px; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
         .toggle.on { background: #2ecc71; }
         .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
@@ -904,6 +905,7 @@ function renderItems() {
     document.getElementById('itemsList').innerHTML = filtered.map(item => {
         const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
         const cat = categories.find(c => c.id === item.categoryId);
+        const subcat = cat && item.subCategoryId ? (cat.subcategories || []).find(s => s.id === item.subCategoryId) : null;
         const availClass = item.isAvailable ? 'on' : '';
 
         return `
@@ -912,6 +914,7 @@ function renderItems() {
             <div class="item-name" title="${item.name}">${item.name}</div>
             <div class="item-price">₹${Math.round(item.price || 0)}</div>
             <div class="item-cat">${cat ? cat.name : ''}</div>
+            <div class="item-subcat">${subcat ? subcat.name : ''}</div>
             <div class="toggle ${availClass}" onclick="toggleAvail('${item.docId}', ${!item.isAvailable})" title="${item.isAvailable ? 'Available' : 'Unavailable (86\'d)'}"></div>
             ${staffRole === 'super_admin' ? `
             <div class="item-actions">
