@@ -1129,9 +1129,15 @@ function renderItemCard(item) {
         : `<button class="btn-add" onclick="event.stopPropagation();addItem('${item.id}')">ADD</button>`;
     const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
     const customLabel = hasModifiers ? '<div style="font-size:9px;color:#888;text-align:center;">customizable</div>' : '';
+    
+    // For variant items, show first option's price
+    let displayPrice = item.price;
+    const variantGroup = hasModifiers ? item.modifierGroups.find(mg => mg.type === 'variant') : null;
+    if (variantGroup && variantGroup.options.length > 0 && variantGroup.options[0].extraPrice > 0) {
+        displayPrice = variantGroup.options[0].extraPrice;
+    }
 
     if (item.imageUrl) {
-        // WITH PHOTO — card with image
         return `
         <div class="menu-item-card" onclick="openItemDetail('${item.id}')">
             <img class="menu-item-img" src="${item.imageUrl}" alt="${item.name}" loading="lazy">
@@ -1144,13 +1150,12 @@ function renderItemCard(item) {
                     ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
                 </div>
                 <div class="menu-item-bottom">
-                    <span class="menu-item-price">₹${Math.round(item.price)}</span>
+                    <span class="menu-item-price">₹${Math.round(displayPrice)}</span>
                     <div>${addBtnHtml}${customLabel}</div>
                 </div>
             </div>
         </div>`;
     } else {
-        // NO PHOTO — compact row
         return `
         <div class="menu-item-compact" onclick="openItemDetail('${item.id}')">
             <div class="menu-item-compact-left">
@@ -1159,7 +1164,7 @@ function renderItemCard(item) {
                     ${item.name}
                 </div>
                 ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
-                <div class="menu-item-price" style="margin-top:2px;">₹${Math.round(item.price)}</div>
+                <div class="menu-item-price" style="margin-top:2px;">₹${Math.round(displayPrice)}</div>
             </div>
             <div style="flex-shrink:0;text-align:center;">${addBtnHtml}${customLabel}</div>
         </div>`;
@@ -1202,6 +1207,14 @@ function openItemDetail(itemId) {
     const content = document.getElementById('modifierModalContent');
     const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
 
+    // For variant items, show first option's price
+    const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
+    const variantGroup = hasModifiers ? item.modifierGroups.find(mg => mg.type === 'variant') : null;
+    let detailPrice = item.price;
+    if (variantGroup && variantGroup.options.length > 0 && variantGroup.options[0].extraPrice > 0) {
+        detailPrice = variantGroup.options[0].extraPrice;
+    }
+
     let html = `
         <div class="modifier-header">
             <div>
@@ -1209,7 +1222,7 @@ function openItemDetail(itemId) {
                     ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
                     ${item.name}
                 </div>
-                <div style="font-size:14px;font-weight:600;color:#e94560;margin-top:4px;">₹${Math.round(item.price)}</div>
+                <div style="font-size:14px;font-weight:600;color:#e94560;margin-top:4px;">₹${Math.round(detailPrice)}</div>
             </div>
             <button class="modifier-close" onclick="closeModifierPopup()">✕</button>
         </div>`;
@@ -1228,13 +1241,21 @@ function openItemDetail(itemId) {
     if (item.modifierGroups && item.modifierGroups.length > 0) {
         item.modifierGroups.forEach((mg, gIdx) => {
             const isRadio = mg.maxSelect === 1;
+            const isVariant = mg.type === 'variant';
             html += `<div class="modifier-group">
                 <div class="modifier-group-title">${mg.groupName}</div>
                 <div class="modifier-group-subtitle">${mg.required ? 'Required' : 'Optional'} · ${isRadio ? 'Select one' : `Select up to ${mg.maxSelect}`}</div>`;
             
             mg.options.forEach((opt, oIdx) => {
                 const elClass = isRadio ? 'modifier-radio' : 'modifier-check';
-                const priceText = opt.extraPrice > 0 ? `+₹${Math.round(opt.extraPrice)}` : '';
+                let priceText = '';
+                if (isVariant) {
+                    // Variant: show as absolute price
+                    priceText = opt.extraPrice > 0 ? `₹${Math.round(opt.extraPrice)}` : '';
+                } else {
+                    // Add-on: show as +price
+                    priceText = opt.extraPrice > 0 ? `+₹${Math.round(opt.extraPrice)}` : '';
+                }
                 html += `
                 <div class="modifier-option" onclick="toggleModifier(${gIdx}, ${oIdx}, ${isRadio}, ${mg.maxSelect})">
                     <div class="modifier-option-left">
@@ -1351,24 +1372,33 @@ function addFromModifier() {
 
     // Build modifier list
     const modifiers = [];
+    let variantPrice = null; // if a variant is selected, this replaces base price
     for (const [gIdx, optIndices] of Object.entries(selections)) {
         const mg = item.modifierGroups[parseInt(gIdx)];
+        const isVariant = mg.type === 'variant';
         for (const oIdx of optIndices) {
             const opt = mg.options[oIdx];
             modifiers.push({
                 group: mg.groupName,
                 option: opt.name,
-                extraPrice: opt.extraPrice
+                extraPrice: opt.extraPrice,
+                type: isVariant ? 'variant' : 'addon'
             });
+            if (isVariant && opt.extraPrice > 0) {
+                variantPrice = opt.extraPrice;
+            }
         }
     }
+
+    // For variants, the selected option price IS the item price
+    const effectivePrice = variantPrice !== null ? variantPrice : item.price;
 
     cart.push({
         itemId: item.id,
         name: item.name,
         vegType: item.vegType,
         categoryId: item.categoryId,
-        price: item.price,
+        price: effectivePrice,
         qty: qty,
         modifiers: modifiers,
         instructions: instructions
@@ -1469,7 +1499,7 @@ function renderCart() {
     let itemsHtml = cart.map((c, idx) => {
         const vegClass = c.vegType === 'Veg' ? 'veg' : c.vegType === 'NonVeg' ? 'nonveg' : c.vegType === 'Egg' ? 'egg' : '';
         const modsText = c.modifiers.map(m => m.option).join(', ');
-        const itemTotal = (c.price + c.modifiers.reduce((s, m) => s + (m.extraPrice || 0), 0)) * c.qty;
+        const itemTotal = (c.price + c.modifiers.filter(m => m.type !== 'variant').reduce((s, m) => s + (m.extraPrice || 0), 0)) * c.qty;
         
         return `
         <div class="cart-item">
@@ -1496,7 +1526,7 @@ function renderCart() {
     // Calculate tax breakdown
     let subtotal = 0;
     for (const c of cart) {
-        const itemTotal = (c.price + c.modifiers.reduce((s, m) => s + (m.extraPrice || 0), 0)) * c.qty;
+        const itemTotal = (c.price + c.modifiers.filter(m => m.type !== 'variant').reduce((s, m) => s + (m.extraPrice || 0), 0)) * c.qty;
         subtotal += itemTotal;
     }
     
@@ -1751,7 +1781,7 @@ async function submitOrder() {
 
         // Calculate total (for cashier reference only)
         const orderTotal = cart.reduce((sum, c) => {
-            const itemTotal = c.price + c.modifiers.reduce((ms, m) => ms + (m.extraPrice || 0), 0);
+            const itemTotal = c.price + c.modifiers.filter(m => m.type !== 'variant').reduce((ms, m) => ms + (m.extraPrice || 0), 0);
             return sum + (itemTotal * c.qty);
         }, 0);
 
