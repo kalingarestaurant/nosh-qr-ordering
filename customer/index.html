@@ -1412,16 +1412,18 @@ function addFromModifier() {
 
 // Quick qty change from menu card
 function quickQty(itemId, delta) {
-    // Find the LAST cart entry for this item (simple items only)
+    // Find the LAST cart entry for this item (any entry, with or without modifiers)
     for (let i = cart.length - 1; i >= 0; i--) {
-        if (cart[i].itemId === itemId && cart[i].modifiers.length === 0) {
+        if (cart[i].itemId === itemId) {
             cart[i].qty += delta;
             if (cart[i].qty <= 0) cart.splice(i, 1);
             break;
         }
     }
     updateCartBar();
-    renderMenuItems();
+    // Re-render whichever view is active
+    if (activeCategory) renderMenuItems();
+    else renderCatGrid();
 }
 
 function getCartItemCount(itemId) {
