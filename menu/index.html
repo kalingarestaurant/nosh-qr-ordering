@@ -71,6 +71,11 @@
         .item-price { font-size: 13px; color: #888; min-width: 50px; text-align: right; }
         .item-cat { font-size: 10px; color: #666; min-width: 80px; }
         .item-subcat { font-size: 10px; color: #555; min-width: 80px; }
+        .item-pos { font-size: 11px; font-weight: 700; color: #888; min-width: 28px; text-align: center; }
+        .item-reorder { display: flex; gap: 2px; }
+        .reorder-btn { width: 24px; height: 24px; border: 1px solid #2a2d3e; background: #1e2030; color: #888; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        .reorder-btn:hover:not(:disabled) { background: #3498db30; color: #5dade2; border-color: #3498db50; }
+        .reorder-btn:disabled { opacity: 0.3; cursor: default; }
         .toggle { position: relative; width: 40px; height: 22px; background: #333; border-radius: 11px; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
         .toggle.on { background: #2ecc71; }
         .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
@@ -193,8 +198,11 @@
         <div id="tab-items">
             <div class="search-bar">
                 <input class="fi" type="text" id="itemSearch" placeholder="🔍 Search items..." oninput="renderItems()">
-                <select class="fi" id="itemCatFilter" onchange="renderItems()">
+                <select class="fi" id="itemCatFilter" onchange="onCatFilterChange()" style="min-width:140px;">
                     <option value="">All Categories</option>
+                </select>
+                <select class="fi" id="itemSubcatFilter" onchange="renderItems()" style="min-width:140px;">
+                    <option value="">All Subcategories</option>
                 </select>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -885,13 +893,62 @@ function showTab(name) {
 // ============================================================
 // MENU ITEMS
 // ============================================================
+async function moveItem(docId, currentIdx, direction) {
+    // Get currently filtered + sorted list
+    const catFilter = document.getElementById('itemCatFilter').value;
+    const subcatFilter = document.getElementById('itemSubcatFilter').value;
+    let filtered = items.filter(i => {
+        if (catFilter && i.categoryId !== catFilter) return false;
+        if (subcatFilter && i.subCategoryId !== subcatFilter) return false;
+        return true;
+    }).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+    const targetIdx = currentIdx + direction;
+    if (targetIdx < 0 || targetIdx >= filtered.length) return;
+
+    const itemA = filtered[currentIdx];
+    const itemB = filtered[targetIdx];
+
+    // Swap sortOrder values
+    const orderA = itemA.sortOrder || currentIdx;
+    const orderB = itemB.sortOrder || targetIdx;
+
+    try {
+        await Promise.all([
+            db.collection('menu_items').doc(itemA.docId).update({ sortOrder: orderB }),
+            db.collection('menu_items').doc(itemB.docId).update({ sortOrder: orderA })
+        ]);
+        // Update local
+        const localA = items.find(i => i.docId === itemA.docId);
+        const localB = items.find(i => i.docId === itemB.docId);
+        if (localA) localA.sortOrder = orderB;
+        if (localB) localB.sortOrder = orderA;
+        renderItems();
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function onCatFilterChange() {
+    const catId = document.getElementById('itemCatFilter').value;
+    const subcatSel = document.getElementById('itemSubcatFilter');
+    subcatSel.innerHTML = '<option value="">All Subcategories</option>';
+    if (catId) {
+        const cat = categories.find(c => c.id === catId);
+        if (cat && cat.subcategories) {
+            subcatSel.innerHTML += cat.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        }
+    }
+    renderItems();
+}
+
 function renderItems() {
     const search = (document.getElementById('itemSearch').value || '').toLowerCase();
     const catFilter = document.getElementById('itemCatFilter').value;
+    const subcatFilter = document.getElementById('itemSubcatFilter').value;
 
     let filtered = items.filter(i => {
         if (search && !i.name.toLowerCase().includes(search)) return false;
         if (catFilter && i.categoryId !== catFilter) return false;
+        if (subcatFilter && i.subCategoryId !== subcatFilter) return false;
         return true;
     });
 
@@ -902,20 +959,32 @@ function renderItems() {
         return;
     }
 
-    document.getElementById('itemsList').innerHTML = filtered.map(item => {
+    // Sort by sortOrder when filtered by category
+    const showReorder = catFilter && !search;
+    if (showReorder) filtered.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+    document.getElementById('itemsList').innerHTML = filtered.map((item, idx) => {
         const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
         const cat = categories.find(c => c.id === item.categoryId);
         const subcat = cat && item.subCategoryId ? (cat.subcategories || []).find(s => s.id === item.subCategoryId) : null;
         const availClass = item.isAvailable ? 'on' : '';
+        const posHtml = showReorder ? `<div class="item-pos">${idx + 1}</div>` : '';
+        const reorderHtml = showReorder && staffRole === 'super_admin' ? `
+            <div class="item-reorder">
+                <button class="reorder-btn" onclick="moveItem('${item.docId}',${idx},-1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+                <button class="reorder-btn" onclick="moveItem('${item.docId}',${idx},1)" ${idx === filtered.length - 1 ? 'disabled' : ''}>↓</button>
+            </div>` : '';
 
         return `
         <div class="item-row">
+            ${posHtml}
             <div class="item-veg ${vegClass}"></div>
             <div class="item-name" title="${item.name}">${item.name}</div>
             <div class="item-price">₹${Math.round(item.price || 0)}</div>
             <div class="item-cat">${cat ? cat.name : ''}</div>
             <div class="item-subcat">${subcat ? subcat.name : ''}</div>
             <div class="toggle ${availClass}" onclick="toggleAvail('${item.docId}', ${!item.isAvailable})" title="${item.isAvailable ? 'Available' : 'Unavailable (86\'d)'}"></div>
+            ${reorderHtml}
             ${staffRole === 'super_admin' ? `
             <div class="item-actions">
                 <button class="btn-edit" onclick="editItem('${item.docId}')">Edit</button>
