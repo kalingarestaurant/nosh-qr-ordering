@@ -59,27 +59,28 @@
         .tile-r2{display:flex;justify-content:space-between;font-size:11px;color:#666;}
         .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;justify-content:center;align-items:center;}
         .modal-bg.on{display:flex;}
-        .modal-box{background:#1a1c2e;border-radius:16px;padding:20px;width:95%;max-width:480px;max-height:85vh;overflow-y:auto;}
-        .od-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-        .od-title{font-size:20px;font-weight:800;color:#fff;}
-        .od-x{background:none;border:none;color:#888;font-size:22px;cursor:pointer;}
-        .od-info{display:flex;gap:14px;margin-bottom:14px;font-size:12px;color:#888;flex-wrap:wrap;}
-        .od-items{border-top:1px solid #252840;padding-top:10px;}
-        .od-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #1e2030;}
-        .od-qty{font-size:14px;font-weight:700;color:#e94560;min-width:32px;}
+        .modal-box{background:#1a1c2e;border-radius:16px;padding:24px;width:95%;max-width:620px;max-height:85vh;overflow-y:auto;}
+        .od-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+        .od-title{font-size:26px;font-weight:800;color:#fff;}
+        .od-title-sub{font-size:13px;font-weight:500;color:#666;margin-top:2px;}
+        .od-x{background:none;border:none;color:#888;font-size:26px;cursor:pointer;}
+        .od-info{display:flex;gap:16px;margin-bottom:16px;font-size:14px;color:#888;flex-wrap:wrap;}
+        .od-items{border-top:1px solid #252840;padding-top:12px;}
+        .od-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #1e2030;}
+        .od-qty{font-size:18px;font-weight:700;color:#e94560;min-width:36px;}
         .od-det{flex:1;}
-        .od-name{font-size:13px;font-weight:600;color:#e8e8e8;display:flex;align-items:center;gap:5px;}
-        .od-mods{font-size:11px;color:#f0a500;margin-top:2px;}
-        .od-instr{font-size:11px;color:#e94560;font-style:italic;margin-top:2px;}
-        .od-price{font-size:12px;color:#888;}
-        .vd{width:12px;height:12px;border:1.5px solid;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
-        .vd::after{content:'';width:6px;height:6px;border-radius:50%;}
+        .od-name{font-size:16px;font-weight:600;color:#e8e8e8;display:flex;align-items:center;gap:6px;}
+        .od-mods{font-size:13px;color:#f0a500;margin-top:3px;}
+        .od-instr{font-size:13px;color:#e94560;font-style:italic;margin-top:3px;}
+        .od-price{font-size:15px;color:#aaa;font-weight:600;}
+        .vd{width:14px;height:14px;border:1.5px solid;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+        .vd::after{content:'';width:7px;height:7px;border-radius:50%;}
         .vd.veg{border-color:#0a8f0a;}.vd.veg::after{background:#0a8f0a;}
         .vd.nonveg{border-color:#ff4444;}.vd.nonveg::after{background:#ff4444;}
         .vd.egg{border-color:#f9a825;}.vd.egg::after{background:#f9a825;}
-        .od-total{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #252840;margin-top:6px;}
-        .od-actions{display:flex;gap:10px;margin-top:14px;}
-        .od-btn{flex:1;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;}
+        .od-total{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:1px solid #252840;margin-top:8px;}
+        .od-actions{display:flex;gap:12px;margin-top:16px;}
+        .od-btn{flex:1;padding:16px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;}
         .od-accept{background:#2ecc71;color:#fff;}
         .od-cancel{background:#1e2030;color:#ff6b6b;border:1px solid #ff6b6b30;}
         .bottom-bar{padding:8px 16px;background:#161822;border-top:1px solid #1e2030;display:flex;align-items:center;gap:10px;flex-shrink:0;}
@@ -411,12 +412,12 @@ function openDetail(docId){
     }).join('');
     const acts=isNew?`<div class="od-actions"><button class="od-btn od-accept" onclick="acceptOrder('${o.docId}')">✓ Entered into POS</button><button class="od-btn od-cancel" onclick="closeM('detailModal');openCancel('${o.docId}',${o.orderNumber})">Cancel</button></div>`:'';
     document.getElementById('detailContent').innerHTML=`
-        <div class="od-head"><div class="od-title">Order #${o.orderNumber}</div><button class="od-x" onclick="closeM('detailModal')">✕</button></div>
-        <div style="${badge};display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;margin-bottom:12px;">${badgeTxt}</div>
-        <div class="od-info"><span>🪑 ${o.tableName||'Table '+o.tableNumber}</span><span>🕐 ${o.createdAtIST||''}</span>${o.customerName?`<span>👤 ${o.customerName}</span>`:''}${dph?`<span>📱 ${dph}</span>`:''}</div>
+        <div class="od-head"><div><div class="od-title">🪑 ${o.tableName||'Table '+o.tableNumber}</div><div class="od-title-sub">Order #${o.orderNumber}</div></div><button class="od-x" onclick="closeM('detailModal')">✕</button></div>
+        <div style="${badge};display:inline-block;padding:4px 12px;border-radius:8px;font-size:13px;font-weight:700;margin-bottom:14px;">${badgeTxt}</div>
+        <div class="od-info"><span>🕐 ${o.createdAtIST||''}</span>${o.customerName?`<span>👤 ${o.customerName}</span>`:''}${dph?`<span>📱 ${dph}</span>`:''}</div>
         <div class="od-items">${itemsH}</div>
-        <div class="od-total"><span style="color:#888;">Total (ref)</span><span style="font-size:17px;font-weight:800;">₹${Math.round(o.orderTotal||0)}</span></div>
-        ${isCan&&o.cancelReason?`<div style="font-size:12px;color:#ff6b6b;margin-top:10px;padding:8px;background:#ff6b6b10;border-radius:8px;">Cancelled: ${o.cancelReason}</div>`:''}${acts}`;
+        <div class="od-total"><span style="color:#888;font-size:16px;">Total (ref)</span><span style="font-size:22px;font-weight:800;">₹${Math.round(o.orderTotal||0)}</span></div>
+        ${isCan&&o.cancelReason?`<div style="font-size:14px;color:#ff6b6b;margin-top:12px;padding:10px;background:#ff6b6b10;border-radius:8px;">Cancelled: ${o.cancelReason}</div>`:''}${acts}`;
     openM('detailModal');
 }
 document.getElementById('detailModal').addEventListener('click',function(e){if(e.target===this)closeM('detailModal');});
