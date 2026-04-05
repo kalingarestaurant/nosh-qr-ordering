@@ -228,8 +228,7 @@
             <div class="card" style="padding:12px 16px;">
                 <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Manage Menus</div>
                 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-                    <input class="fi" id="newMenuName" placeholder="Menu name (e.g. House of Nosh)" style="flex:1;min-width:150px;">
-                    <input class="fi" id="newMenuId" placeholder="Short ID (e.g. house_of_nosh)" style="flex:1;min-width:120px;">
+                    <input class="fi" id="newMenuName" placeholder="Menu name (e.g. House of Nosh)" style="flex:1;min-width:200px;">
                     <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="addMenu()">+ Add Menu</button>
                 </div>
                 <div id="menusList" style="margin-bottom:10px;"></div>
@@ -258,8 +257,7 @@
                 <div class="card-title">🏪 Manage Outlets (Physical Restaurants)</div>
                 <div style="font-size:12px;color:#888;margin-bottom:12px;">Each outlet is a physical restaurant. Assign a menu to each outlet. Customers and WhatsApp will show the outlet name.</div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                    <input class="fi" id="newOutletName" placeholder="Restaurant name" style="flex:1;min-width:150px;">
-                    <input class="fi" id="newOutletId" placeholder="Short ID (e.g. level_5)" style="flex:1;min-width:120px;">
+                    <input class="fi" id="newOutletName" placeholder="Restaurant name (e.g. Level 5)" style="flex:1;min-width:200px;">
                     <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="addOutlet()">+ Add Outlet</button>
                 </div>
                 <div id="outletsList"></div>
@@ -2067,17 +2065,15 @@ function renderMenusList() {
 
 async function addMenu() {
     const name = document.getElementById('newMenuName').value.trim();
-    let id = document.getElementById('newMenuId').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
     if (!name) { toast('Enter menu name', 'err'); return; }
-    if (!id) { id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_'); }
-    if (menus.find(m => m.id === id)) { toast('Menu ID already exists', 'err'); return; }
+    const id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
+    if (menus.find(m => m.id === id)) { toast('Menu "' + name + '" already exists', 'err'); return; }
     try {
         await db.collection('qr_menus').doc(id).set({
             id: id, name: name, isActive: true,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('newMenuName').value = '';
-        document.getElementById('newMenuId').value = '';
         await loadMenus();
         renderMenusList();
         populateMenuSelects();
@@ -2804,13 +2800,11 @@ function copyMenuLink(outletId) {
 
 async function addOutlet() {
     const name = document.getElementById('newOutletName').value.trim();
-    let id = document.getElementById('newOutletId').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
     if (!name) { toast('Enter outlet name', 'err'); return; }
-    if (!id) { id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_'); }
+    const id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
     
-    // Check if ID already exists
     const existing = outlets.find(o => (o.id || o.docId) === id);
-    if (existing) { toast('Outlet ID "' + id + '" already exists', 'err'); return; }
+    if (existing) { toast('Outlet "' + name + '" already exists', 'err'); return; }
     
     try {
         await db.collection('qr_outlets').doc(id).set({
@@ -2818,10 +2812,9 @@ async function addOutlet() {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         document.getElementById('newOutletName').value = '';
-        document.getElementById('newOutletId').value = '';
         await loadData();
         renderOutletsList();
-        toast('✅ Outlet added: ' + name);
+        toast('✅ Outlet added: ' + name + ' (ID: ' + id + ')');
     } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
