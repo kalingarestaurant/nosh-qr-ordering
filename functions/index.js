@@ -21,7 +21,7 @@ function sendWhatsApp(phone, templateId, variables) {
     if (cleanPhone.startsWith("+")) cleanPhone = cleanPhone.substring(1);
 
     const payload = JSON.stringify({
-      integrated_number: "919124411441", // Update with your Nosh WhatsApp number
+      integrated_number: "15558535556", // Update with your Nosh WhatsApp number
       content_type: "template",
       payload: {
         to: cleanPhone,
