@@ -916,19 +916,30 @@ async function createSession(phone) {
 const MENU_CACHE_HOURS = 2;
 
 async function loadMenu() {
-    // Check cache first
     const cacheKey = 'menuCache_' + menuId;
-    try {
-        const cached = JSON.parse(localStorage.getItem(cacheKey));
-        if (cached && (Date.now() - cached.ts) < MENU_CACHE_HOURS * 60 * 60 * 1000) {
-            menuCategories = cached.categories;
-            menuItems = cached.items;
-            console.log('Menu loaded from cache (' + menuItems.length + ' items)');
-            menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-            renderCatGrid();
-            return;
-        }
-    } catch(e) { /* cache miss */ }
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceRefresh = urlParams.has('clearcache') || urlParams.has('refresh');
+    
+    // Clear cache if requested
+    if (forceRefresh) {
+        localStorage.removeItem(cacheKey);
+        console.log('Cache cleared by URL param');
+    }
+    
+    // Check cache
+    if (!forceRefresh) {
+        try {
+            const cached = JSON.parse(localStorage.getItem(cacheKey));
+            if (cached && (Date.now() - cached.ts) < MENU_CACHE_HOURS * 60 * 60 * 1000) {
+                menuCategories = cached.categories;
+                menuItems = cached.items;
+                console.log('Menu loaded from cache (' + menuItems.length + ' items)');
+                menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                renderCatGrid();
+                return;
+            }
+        } catch(e) { /* cache miss */ }
+    }
 
     // Load from Firestore
     await loadMenuFromFirestore();
