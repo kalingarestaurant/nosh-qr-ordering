@@ -1049,12 +1049,15 @@ function renderCategoryTabs() {
 
 function selectCategory(catId) {
     activeCategory = catId;
-    activeSubcat = '';
     detailSearchTerm = '';
     const detailInput = document.getElementById('detailSearchInput');
     if (detailInput) detailInput.value = '';
     const cat = menuCategories.find(c => c.id === catId);
     document.getElementById('detailCatName').textContent = cat ? cat.name : '';
+    // Default to first visible subcategory
+    const subcats = cat ? cat.subcategories || [] : [];
+    const visibleSubcats = subcats.filter(sc => getVegFilteredItems(menuItems).some(i => i.categoryId === catId && i.subCategoryId === sc.id));
+    activeSubcat = visibleSubcats.length > 1 ? visibleSubcats[0].id : '';
     document.getElementById('menuCatGrid').style.display = 'none';
     document.getElementById('menuSearchResults').style.display = 'none';
     document.getElementById('menuCatDetail').style.display = 'flex';
@@ -1079,8 +1082,7 @@ function renderSubcatTiles() {
     const visibleSubcats = subcats.filter(sc => getVegFilteredItems(menuItems).some(i => i.categoryId === activeCategory && i.subCategoryId === sc.id));
     if (visibleSubcats.length <= 1) { container.style.display = 'none'; return; }
     container.style.display = 'flex';
-    let html = '<div class="subcat-tile ' + (!activeSubcat ? 'active' : '') + '" onclick="selectSubcat(\'\')">';
-    html += '<div class="subcat-tile-placeholder">\ud83d\udccb</div><div class="subcat-tile-name">All</div></div>';
+    let html = '';
     for (const sc of visibleSubcats) {
         const isActive = activeSubcat === sc.id;
         const imgHtml = sc.imageUrl
