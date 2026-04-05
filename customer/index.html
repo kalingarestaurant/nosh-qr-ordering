@@ -12,24 +12,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Poppins', sans-serif; background: #f5f5f5; color: #1a1a1a; height: 100dvh; overflow: hidden; }
+        body { font-family: 'Poppins', sans-serif; background: #f5f5f5; color: #1a1a1a; }
         
         /* ===== APP SHELL ===== */
-        #appShell { display: none; height: 100vh; height: 100dvh; flex-direction: column; overflow: hidden; }
+        #appShell { display: none; min-height: 100dvh; flex-direction: column; padding-bottom: 90px; }
         #appShell.active { display: flex; flex-direction: column; }
-        .tab-content { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; flex-direction: column; min-height: 0; }
+        .tab-content { display: none; flex: 1; flex-direction: column; min-height: 0; }
         .tab-content.active { display: flex; }
-        #tabCart.active { overflow: hidden; }
-        #tabOrders.active { overflow-y: auto; }
+        #tabCart.active { }
+        #tabOrders.active { }
 
-        /* Place Order Bar (floating above nav) */
-        .place-order-bar { display: none; padding: 6px 12px 0; flex-shrink: 0; background: #fff; }
+        /* Place Order Bar (fixed above nav) */
+        .place-order-bar { display: none; position: fixed; bottom: 44px; left: 0; right: 0; padding: 6px 12px; background: #fff; z-index: 199; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); bottom: calc(44px + env(safe-area-inset-bottom, 0px)); }
         .place-order-bar.visible { display: block; }
         .place-order-bar-inner { background: #1a1a1a; color: #fff; padding: 12px; border-radius: 10px; text-align: center; cursor: pointer; }
         .place-order-bar-text { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
 
-        /* ===== BOTTOM NAV ===== */
-        .bottom-nav { display: flex; background: #fff; border-top: 1px solid #eee; padding: 2px 0 calc(2px + env(safe-area-inset-bottom)); z-index: 200; flex-shrink: 0; }
+        /* ===== BOTTOM NAV (fixed) ===== */
+        .bottom-nav { display: flex; background: #fff; border-top: 1px solid #eee; padding: 2px 0 calc(2px + env(safe-area-inset-bottom)); z-index: 200; position: fixed; bottom: 0; left: 0; right: 0; }
         .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 0; cursor: pointer; border: none; background: none; font-family: 'Poppins', sans-serif; position: relative; transition: all 0.2s; }
         .bottom-nav-icon { font-size: 20px; line-height: 1; }
         .bottom-nav-label { font-size: 11px; font-weight: 600; color: #999; margin-top: 1px; }
@@ -72,7 +72,7 @@
 
         /* ===== MENU SCREEN ===== */
         .menu-screen { background: #f5f5f5; }
-        .menu-header { background: #fff; padding: 4px 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); flex-shrink: 0; z-index: 100; }
+        .menu-header { background: #fff; padding: 4px 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); z-index: 100; position: sticky; top: 0; }
         .menu-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
         .menu-outlet-name { font-size: 18px; font-weight: 700; color: #1a1a1a; }
         .menu-table-badge { font-size: 13px; font-weight: 600; color: #e94560; background: #fef0f2; padding: 3px 8px; border-radius: 10px; }
@@ -99,12 +99,12 @@
         .subcat-header { padding: 6px 10px 2px; font-size: 16px; font-weight: 700; color: #1a1a1a; background: #f5f5f5; }
 
         /* Menu Items */
-        .menu-items-container { flex: 1; padding: 0 6px 8px; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .menu-items-container { flex: 1; padding: 0 6px 8px; }
 
         /* Category Grid (landing page) */
-        #menuCatGrid, #menuCatDetail, #menuSearchResults { flex: 1; display: none; flex-direction: column; min-height: 0; }
-        #menuCatGrid { display: flex; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        #menuCatDetail .menu-header, #menuSearchResults .menu-header { flex-shrink: 0; }
+        #menuCatGrid, #menuCatDetail, #menuSearchResults { flex: 1; display: none; flex-direction: column; }
+        #menuCatGrid { display: flex; }
+        #menuCatDetail .menu-header, #menuSearchResults .menu-header { position: sticky; top: 0; z-index: 100; }
         .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px; }
         .cat-tile { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 3/2; cursor: pointer; background: #e8e8e8; }
         .cat-tile img { width: 100%; height: 100%; object-fit: cover; }
@@ -114,7 +114,7 @@
         .cat-tile-count { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.5); color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 8px; }
 
         /* Subcategory Tiles (horizontal scroll) — compact */
-        .subcat-tiles { display: flex; gap: 6px; padding: 4px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: #fff; border-bottom: 1px solid #eee; flex-shrink: 0; }
+        .subcat-tiles { display: flex; gap: 6px; padding: 4px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: #fff; border-bottom: 1px solid #eee; position: sticky; top: 80px; z-index: 99; }
         .subcat-tiles::-webkit-scrollbar { display: none; }
         .subcat-tile { flex-shrink: 0; width: 56px; text-align: center; cursor: pointer; }
         .subcat-tile-img { width: 46px; height: 46px; border-radius: 6px; object-fit: cover; margin: 0 auto 2px; border: 2px solid transparent; transition: border-color 0.2s; }
@@ -655,6 +655,7 @@ let activeTab = 'menu';
 
 function switchTab(tab) {
     activeTab = tab;
+    window.scrollTo(0, 0);
     ['menu', 'cart', 'orders'].forEach(t => {
         const el = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
         if (el) el.classList.toggle('active', t === tab);
@@ -1060,7 +1061,7 @@ function selectCategory(catId) {
     renderCategoryTabs();
     renderSubcatTiles();
     renderMenuItems();
-    document.getElementById('menuCatDetail').scrollTop = 0;
+    window.scrollTo(0, 0);
 }
 
 function showCatGrid() {
