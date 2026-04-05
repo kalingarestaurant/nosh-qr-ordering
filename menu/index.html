@@ -187,7 +187,8 @@
     </div>
     <div class="tabs" id="tabsBar">
         <button class="tab active" onclick="showTab('items')">🍽️ Master Menu</button>
-        <button class="tab" onclick="showTab('outletmenu')" id="tabOutletMenu" style="display:none;">🏪 Outlet Menu</button>
+        <button class="tab" onclick="showTab('outletmenu')" id="tabOutletMenu" style="display:none;">📋 Menus</button>
+        <button class="tab" onclick="showTab('outlets')" id="tabOutlets" style="display:none;">🏪 Outlets</button>
         <button class="tab" onclick="showTab('categories')">📂 Categories</button>
         <button class="tab" onclick="showTab('settings')" id="tabSettings" style="display:none;">⚙️ Settings</button>
         <button class="tab" onclick="showTab('tables')" id="tabTables" style="display:none;">🪑 Tables</button>
@@ -225,8 +226,15 @@
         <!-- OUTLET MENU TAB -->
         <div id="tab-outletmenu" style="display:none;">
             <div class="card" style="padding:12px 16px;">
-                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                    <label style="font-size:13px;font-weight:600;color:#888;white-space:nowrap;">Select Outlet:</label>
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Manage Menus</div>
+                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                    <input class="fi" id="newMenuName" placeholder="Menu name (e.g. House of Nosh)" style="flex:1;min-width:150px;">
+                    <input class="fi" id="newMenuId" placeholder="Short ID (e.g. house_of_nosh)" style="flex:1;min-width:120px;">
+                    <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="addMenu()">+ Add Menu</button>
+                </div>
+                <div id="menusList" style="margin-bottom:10px;"></div>
+                <div style="border-top:1px solid #1e2030;padding-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <label style="font-size:13px;font-weight:600;color:#888;white-space:nowrap;">Edit Menu:</label>
                     <select class="fi" id="omOutletSelect" onchange="loadOutletMenu()" style="flex:1;min-width:180px;"></select>
                     <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:11px;" onclick="bulkEnableAll()">✅ Enable All</button>
                     <button style="padding:8px 14px;font-size:11px;background:#2a2d3e;border:none;border-radius:6px;color:#888;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="bulkDisableAll()">❌ Disable All</button>
@@ -243,6 +251,45 @@
                 <div class="count-label" id="omEnabledCount">0 enabled</div>
             </div>
             <div id="omList"></div>
+        </div>
+        <!-- OUTLETS TAB -->
+        <div id="tab-outlets" style="display:none;">
+            <div class="card">
+                <div class="card-title">🏪 Manage Outlets (Physical Restaurants)</div>
+                <div style="font-size:12px;color:#888;margin-bottom:12px;">Each outlet is a physical restaurant. Assign a menu to each outlet. Customers and WhatsApp will show the outlet name.</div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <input class="fi" id="newOutletName" placeholder="Restaurant name" style="flex:1;min-width:150px;">
+                    <input class="fi" id="newOutletId" placeholder="Short ID (e.g. level_5)" style="flex:1;min-width:120px;">
+                    <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="addOutlet()">+ Add Outlet</button>
+                </div>
+                <div id="outletsList"></div>
+            </div>
+            <div class="card" style="margin-top:12px;">
+                <div class="card-title">🕐 Ordering Hours</div>
+                <div style="font-size:12px;color:#888;margin-bottom:12px;">Set when customers can place orders per outlet.</div>
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+                    <label style="font-size:12px;color:#888;">Outlet:</label>
+                    <select class="fi" id="ohOutletSelect" onchange="loadOrderingHours()" style="flex:1;"></select>
+                </div>
+                <div id="ohSlots"></div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button style="padding:8px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="addTimeSlot()">+ Add Time Slot</button>
+                    <button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:12px;" onclick="saveOrderingHours()">💾 Save Hours</button>
+                    <button style="padding:8px 14px;background:#2ecc7120;border:1px solid #2ecc7130;border-radius:6px;color:#2ecc71;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="setOpenAllDay()">🟢 Open All Day</button>
+                </div>
+                <div id="ohStatus" style="font-size:12px;margin-top:8px;"></div>
+            </div>
+            <div class="card" style="margin-top:12px;">
+                <div class="card-title">📊 Meta (Facebook) Pixel</div>
+                <div style="font-size:12px;color:#888;margin-bottom:12px;">Add Meta Pixel ID per outlet for ad tracking.</div>
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                    <label style="font-size:12px;color:#888;">Outlet:</label>
+                    <select class="fi" id="pixelOutletSelect" onchange="loadPixelId()" style="flex:1;"></select>
+                    <input class="fi" id="pixelIdInput" placeholder="Meta Pixel ID" style="flex:1;" inputmode="numeric">
+                    <button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:12px;" onclick="savePixelId()">💾 Save</button>
+                </div>
+                <div id="pixelStatus" style="font-size:12px;margin-top:8px;"></div>
+            </div>
         </div>
         <!-- SETTINGS TAB -->
         <div id="tab-settings" style="display:none;">
@@ -284,44 +331,6 @@
                     <div style="font-size:12px;color:#888;margin-top:4px;">Downloads each photo, compresses to 800px/70% JPEG, re-uploads. Saves bandwidth for customers.</div>
                     <button class="btn btn-primary" style="width:auto;padding:10px 20px;margin-top:10px;font-size:13px;" onclick="recompressAllPhotos()">🔄 Re-compress All Photos</button>
                     <div id="recompressStatus" style="font-size:12px;color:#888;margin-top:8px;max-height:200px;overflow-y:auto;"></div>
-                </div>
-                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
-                    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">🏪 Manage Outlets</div>
-                    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                        <input class="fi" id="newOutletName" placeholder="Outlet name" style="flex:1;min-width:150px;">
-                        <input class="fi" id="newOutletId" placeholder="Short ID (e.g. cafe_xyz)" style="flex:1;min-width:120px;">
-                        <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="addOutlet()">+ Add Outlet</button>
-                    </div>
-                    <div id="outletsList"></div>
-                </div>
-                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
-                    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">🕐 Ordering Hours</div>
-                    <div style="font-size:12px;color:#888;margin-bottom:12px;">Set when customers can place orders. They can browse the menu anytime, but ordering is blocked outside these hours.</div>
-                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
-                        <label style="font-size:12px;color:#888;">Outlet:</label>
-                        <select class="fi" id="ohOutletSelect" onchange="loadOrderingHours()" style="flex:1;"></select>
-                    </div>
-                    <div id="ohSlots"></div>
-                    <div style="display:flex;gap:8px;margin-top:10px;">
-                        <button style="padding:8px 14px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="addTimeSlot()">+ Add Time Slot</button>
-                        <button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:12px;" onclick="saveOrderingHours()">💾 Save Hours</button>
-                        <button style="padding:8px 14px;background:#2ecc7120;border:1px solid #2ecc7130;border-radius:6px;color:#2ecc71;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="setOpenAllDay()">🟢 Open All Day</button>
-                    </div>
-                    <div id="ohStatus" style="font-size:12px;margin-top:8px;"></div>
-                </div>
-                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
-                    <div style="font-size:14px;font-weight:600;margin-bottom:12px;">📊 Meta (Facebook) Pixel</div>
-                    <div style="font-size:12px;color:#888;margin-bottom:12px;">Add your Meta Pixel ID to track menu views, add-to-cart, and orders for retargeting ads. Each outlet can have a different Pixel.</div>
-                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-                        <label style="font-size:12px;color:#888;">Outlet:</label>
-                        <select class="fi" id="pixelOutletSelect" onchange="loadPixelId()" style="flex:1;min-width:150px;"></select>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <input class="fi" id="pixelIdInput" placeholder="Meta Pixel ID (e.g. 1234567890)" style="flex:1;" inputmode="numeric">
-                        <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="savePixelId()">💾 Save</button>
-                        <button style="padding:8px 12px;background:#ff6b6b20;border:1px solid #ff6b6b30;border-radius:6px;color:#ff6b6b;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="clearPixelId()">Clear</button>
-                    </div>
-                    <div id="pixelStatus" style="font-size:12px;margin-top:8px;"></div>
                 </div>
                 <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
                 <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
@@ -449,9 +458,9 @@
         </div>
         <!-- Step 1: Upload -->
         <div id="importStep1">
-            <div style="font-size:13px;color:#888;margin-bottom:14px;">Upload an Excel (.xlsx) or CSV file. Items will be added to the master catalog and auto-enabled for the selected outlet.</div>
+            <div style="font-size:13px;color:#888;margin-bottom:14px;">Upload an Excel (.xlsx) or CSV file. New items are added to master catalog. All items are enabled for the selected menu.</div>
             <div class="ff">
-                <label>Import for Outlet *</label>
+                <label>Import for Menu *</label>
                 <select class="fi" id="importOutletSelect"></select>
             </div>
             <div style="font-size:11px;color:#666;margin-bottom:12px;padding:10px;background:#0f1117;border-radius:8px;">
@@ -854,11 +863,13 @@ async function startDashboard() {
         document.getElementById('tabSettings').style.display = 'inline-block';
         document.getElementById('tabTables').style.display = 'inline-block';
         document.getElementById('tabOutletMenu').style.display = 'inline-block';
+        document.getElementById('tabOutlets').style.display = 'inline-block';
         document.getElementById('btnAddItem').style.display = 'inline-block';
         document.getElementById('btnImport').style.display = 'inline-block';
         document.getElementById('btnAddCat').style.display = 'inline-block';
     } else if (staffRole === 'outlet_manager') {
         document.getElementById('tabOutletMenu').style.display = 'inline-block';
+        document.getElementById('tabOutlets').style.display = 'inline-block';
     } else {
         document.getElementById('btnAddItem').style.display = 'none';
         document.getElementById('btnImport').style.display = 'none';
@@ -871,17 +882,19 @@ async function startDashboard() {
 }
 
 async function loadData() {
-    const [catSnap, itemSnap, outletSnap, mtSnap] = await Promise.all([
+    const [catSnap, itemSnap, outletSnap, mtSnap, menuSnap] = await Promise.all([
         db.collection('menu_categories').orderBy('sortOrder').get(),
         db.collection('menu_items').get(),
         db.collection('qr_outlets').get(),
-        db.collection('modifier_templates').orderBy('sortOrder').get()
+        db.collection('modifier_templates').orderBy('sortOrder').get(),
+        db.collection('qr_menus').get()
     ]);
     categories = catSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
     items = itemSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
     items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     outlets = outletSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
     modTemplates = mtSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    menus = menuSnap.docs.map(d => ({ docId: d.id, ...d.data() }));
 
     // Populate category filter
     const sel = document.getElementById('itemCatFilter');
@@ -899,7 +912,7 @@ async function loadData() {
 // TABS
 // ============================================================
 function showTab(name) {
-    ['items', 'outletmenu', 'categories', 'settings', 'tables', 'staff'].forEach(t => {
+    ['items', 'outletmenu', 'outlets', 'categories', 'settings', 'tables', 'staff'].forEach(t => {
         const el = document.getElementById('tab-' + t);
         if (el) el.style.display = t === name ? 'block' : 'none';
     });
@@ -909,6 +922,7 @@ function showTab(name) {
     if (name === 'settings') loadSettings();
     if (name === 'tables') loadTablesTab();
     if (name === 'outletmenu') initOutletMenu();
+    if (name === 'outlets') loadOutletsTab();
 }
 
 // ============================================================
@@ -1206,7 +1220,7 @@ function openImportModal() {
     document.getElementById('importResult').innerHTML = '';
     importItems = [];
     // Populate outlet dropdown
-    document.getElementById('importOutletSelect').innerHTML = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
+    document.getElementById('importOutletSelect').innerHTML = menus.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
     document.getElementById('importModal').classList.add('active');
 }
 
@@ -1293,7 +1307,7 @@ function processImportData(rows, headers) {
     // Show preview
     const newCount = importItems.filter(i => !i.isDuplicate).length;
     const dupCount = importItems.filter(i => i.isDuplicate).length;
-    const outletName = outlets.find(o => (o.id || o.docId) === document.getElementById('importOutletSelect').value)?.name || '';
+    const outletName = menus.find(m => m.id === document.getElementById('importOutletSelect').value)?.name || '';
     
     document.getElementById('importSummary').innerHTML = 
         `<strong>${importItems.length}</strong> items for <strong>${outletName}</strong> · <span style="color:#2ecc71;">${newCount} new to master</span> · <span style="color:#5dade2;">${dupCount} already exist (will enable + set price)</span>`;
@@ -1376,12 +1390,12 @@ async function executeImport() {
     
     const importOutletId = document.getElementById('importOutletSelect').value;
     if (!importOutletId) { toast('Select an outlet', 'err'); return; }
-    const outletName = outlets.find(o => (o.id || o.docId) === importOutletId)?.name || importOutletId;
+    const outletName = menus.find(m => m.id === importOutletId)?.name || importOutletId;
     
     const newItems = importItems.filter(i => !i.isDuplicate);
     const existingItems = importItems.filter(i => i.isDuplicate);
     
-    if (!confirm(`Import for ${outletName}:\n\n• ${newItems.length} new items → add to master + enable for outlet\n• ${existingItems.length} existing items → enable for outlet + set price\n\nTotal: ${importItems.length} items will be enabled for ${outletName}`)) return;
+    if (!confirm(`Import for ${outletName} menu:\n\n• ${newItems.length} new items → add to master + enable for menu\n• ${existingItems.length} existing items → enable for menu + set price\n\nTotal: ${importItems.length} items will be enabled for ${outletName}`)) return;
     
     const resultEl = document.getElementById('importResult');
     resultEl.innerHTML = '<span style="color:#888;">Starting import...</span>';
@@ -2021,15 +2035,94 @@ function applyModTemplate(docId) {
 let outletMenuData = {}; // { itemId: { isEnabled, price, variantPrices, addOnPrices } }
 let omSelectedOutlet = '';
 
+// ============================================================
+// MENUS TAB
+// ============================================================
+let menus = [];
+
+async function loadMenus() {
+    const snap = await db.collection('qr_menus').get();
+    menus = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+}
+
+function renderMenusList() {
+    const container = document.getElementById('menusList');
+    if (!menus.length) {
+        container.innerHTML = '<div style="font-size:12px;color:#555;">No menus yet. Create one above.</div>';
+        return;
+    }
+    container.innerHTML = menus.map(m => {
+        const outletCount = outlets.filter(o => o.menuId === m.id).length;
+        return `<div class="item-row">
+            <div class="item-name"><strong>${m.name}</strong></div>
+            <div style="font-size:11px;color:#666;min-width:80px;">${m.id}</div>
+            <div style="font-size:10px;color:#888;">${outletCount} outlet${outletCount !== 1 ? 's' : ''}</div>
+            <div class="item-actions">
+                <button class="btn-edit" onclick="editMenuName('${m.docId}','${(m.name||'').replace(/'/g,"\\'")}')">Edit</button>
+                <button class="btn-del" onclick="deleteMenu('${m.docId}','${(m.name||'').replace(/'/g,"\\'")}')">Del</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function addMenu() {
+    const name = document.getElementById('newMenuName').value.trim();
+    let id = document.getElementById('newMenuId').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+    if (!name) { toast('Enter menu name', 'err'); return; }
+    if (!id) { id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_'); }
+    if (menus.find(m => m.id === id)) { toast('Menu ID already exists', 'err'); return; }
+    try {
+        await db.collection('qr_menus').doc(id).set({
+            id: id, name: name, isActive: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('newMenuName').value = '';
+        document.getElementById('newMenuId').value = '';
+        await loadMenus();
+        renderMenusList();
+        populateMenuSelects();
+        toast('✅ Menu created: ' + name);
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function editMenuName(docId, currentName) {
+    const newName = prompt('Rename menu:', currentName);
+    if (!newName || newName.trim() === currentName) return;
+    db.collection('qr_menus').doc(docId).update({ name: newName.trim() })
+        .then(() => { toast('✅ Renamed'); loadMenus().then(() => { renderMenusList(); populateMenuSelects(); }); })
+        .catch(e => toast('Error: ' + e.message, 'err'));
+}
+
+async function deleteMenu(docId, name) {
+    const outletCount = outlets.filter(o => o.menuId === docId).length;
+    if (outletCount > 0) { toast(`Cannot delete — ${outletCount} outlet(s) use this menu`, 'err'); return; }
+    if (!confirm('Delete menu "' + name + '"?')) return;
+    try {
+        await db.collection('qr_menus').doc(docId).delete();
+        toast('🗑️ Deleted');
+        await loadMenus();
+        renderMenusList();
+        populateMenuSelects();
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function populateMenuSelects() {
+    // Populate menu select in Menus tab
+    const omSel = document.getElementById('omOutletSelect');
+    if (omSel) omSel.innerHTML = menus.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    // Populate menu source dropdown in outlet list
+    renderOutletsList();
+}
+
 function initOutletMenu() {
-    // Populate outlet dropdown
-    const sel = document.getElementById('omOutletSelect');
-    sel.innerHTML = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
+    populateMenuSelects();
+    renderMenusList();
     
     // Populate category filter
     const catSel = document.getElementById('omCatFilter');
     catSel.innerHTML = '<option value="">All Categories</option>' + categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     
+    const sel = document.getElementById('omOutletSelect');
     if (sel.value) loadOutletMenu();
 }
 
@@ -2594,9 +2687,6 @@ async function loadSettings() {
             document.getElementById('resetHourSelect').value = outDoc.data().resetHour;
         }
         
-        renderOutletsList();
-        initOrderingHours();
-        initPixelConfig();
         loadModTemplates();
         loadTemplate();
     } catch(e) {
@@ -2604,26 +2694,28 @@ async function loadSettings() {
     }
 }
 
+function loadOutletsTab() {
+    renderOutletsList();
+    initOrderingHours();
+    initPixelConfig();
+}
+
 function renderOutletsList() {
     const container = document.getElementById('outletsList');
     if (!outlets.length) {
-        container.innerHTML = '<div style="font-size:12px;color:#555;">No outlets yet</div>';
+        container.innerHTML = '<div style="font-size:12px;color:#555;">No outlets yet. Add a restaurant above.</div>';
         return;
     }
-    const menuOptions = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
     container.innerHTML = outlets.map(o => {
         const id = o.id || o.docId;
-        const menuId = o.menuId || id;
+        const menuId = o.menuId || '';
         return `
         <div class="item-row" style="flex-wrap:wrap;">
             <div class="item-name"><strong>${o.name}</strong></div>
-            <div style="font-size:11px;color:#666;min-width:80px;">${id}</div>
-            <select onchange="saveOutletMenuId('${o.docId}',this.value)" style="padding:3px 6px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#f0a500;font-size:10px;min-width:100px;">
-                <option value="${id}" ${menuId===id?'selected':''}>Own menu</option>
-                ${outlets.filter(x=>(x.id||x.docId)!==id).map(x=>{
-                    const xid=x.id||x.docId;
-                    return `<option value="${xid}" ${menuId===xid?'selected':''}>${x.name} menu</option>`;
-                }).join('')}
+            <div style="font-size:11px;color:#666;min-width:70px;">${id}</div>
+            <select onchange="saveOutletMenuId('${o.docId}',this.value)" style="padding:3px 6px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#f0a500;font-size:10px;min-width:120px;">
+                <option value="" ${!menuId?'selected':''}>No menu assigned</option>
+                ${menus.map(m => `<option value="${m.id}" ${menuId===m.id?'selected':''}>${m.name}</option>`).join('')}
             </select>
             <div class="toggle ${o.isActive ? 'on' : ''}" onclick="toggleOutletActive('${o.docId}', ${!o.isActive})" title="${o.isActive ? 'Active' : 'Inactive'}"></div>
             <div class="item-actions">
