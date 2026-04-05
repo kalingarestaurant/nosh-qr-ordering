@@ -1209,18 +1209,9 @@ function clearSearch() {
 // Quick-add from card button (no popup)
 function renderItemCard(item) {
     const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
-    const cartItem = getCartItemCount(item.id);
-    const addBtnHtml = cartItem > 0
-        ? `<div class="item-qty-control">
-            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',-1)">−</button>
-            <span class="item-qty-num">${cartItem}</span>
-            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${item.id}',1)">+</button>
-           </div>`
-        : `<button class="btn-add" onclick="event.stopPropagation();addItem('${item.id}')">ADD</button>`;
     const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
     const customLabel = hasModifiers ? '<div style="font-size:11px;color:#888;text-align:center;">customizable</div>' : '';
     
-    // For variant items, show first option's price
     let displayPrice = item.price;
     const variantGroup = hasModifiers ? item.modifierGroups.find(mg => mg.type === 'variant') : null;
     if (variantGroup && variantGroup.options.length > 0 && variantGroup.options[0].extraPrice > 0) {
@@ -1241,7 +1232,7 @@ function renderItemCard(item) {
                 </div>
                 <div class="menu-item-bottom">
                     <span class="menu-item-price">₹${Math.round(displayPrice)}</span>
-                    <div>${addBtnHtml}${customLabel}</div>
+                    <div id="ibtn_${item.id}">${getItemBtnHtml(item.id)}${customLabel}</div>
                 </div>
             </div>
         </div>`;
@@ -1256,9 +1247,29 @@ function renderItemCard(item) {
                 ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
                 <div class="menu-item-price" style="margin-top:2px;">₹${Math.round(displayPrice)}</div>
             </div>
-            <div style="flex-shrink:0;text-align:center;">${addBtnHtml}${customLabel}</div>
+            <div id="ibtn_${item.id}" style="flex-shrink:0;text-align:center;">${getItemBtnHtml(item.id)}${customLabel}</div>
         </div>`;
     }
+}
+
+function getItemBtnHtml(itemId) {
+    const cartItem = getCartItemCount(itemId);
+    return cartItem > 0
+        ? `<div class="item-qty-control">
+            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${itemId}',-1)">−</button>
+            <span class="item-qty-num">${cartItem}</span>
+            <button class="item-qty-btn" onclick="event.stopPropagation();quickQty('${itemId}',1)">+</button>
+           </div>`
+        : `<button class="btn-add" onclick="event.stopPropagation();addItem('${itemId}')">ADD</button>`;
+}
+
+function updateItemBtn(itemId) {
+    const el = document.getElementById('ibtn_' + itemId);
+    if (!el) return;
+    const item = menuItems.find(i => i.id === itemId);
+    const hasModifiers = item && item.modifierGroups && item.modifierGroups.length > 0;
+    const customLabel = hasModifiers ? '<div style="font-size:11px;color:#888;text-align:center;">customizable</div>' : '';
+    el.innerHTML = getItemBtnHtml(itemId) + customLabel;
 }
 
 function addItem(itemId) {
@@ -1282,7 +1293,7 @@ function addItem(itemId) {
         });
     }
     updateCartBar();
-    renderMenuItems();
+    updateItemBtn(item.id);
     trackPixelEvent('AddToCart', { content_name: item.name, value: item.price, currency: 'INR' });
 }
 
@@ -1496,13 +1507,12 @@ function addFromModifier() {
 
     closeModifierPopup();
     updateCartBar();
-    renderMenuItems();
+    updateItemBtn(item.id);
     trackPixelEvent('AddToCart', { content_name: item.name, value: item.price * qty, currency: 'INR' });
 }
 
 // Quick qty change from menu card
 function quickQty(itemId, delta) {
-    // Find the LAST cart entry for this item (any entry, with or without modifiers)
     for (let i = cart.length - 1; i >= 0; i--) {
         if (cart[i].itemId === itemId) {
             cart[i].qty += delta;
@@ -1511,9 +1521,7 @@ function quickQty(itemId, delta) {
         }
     }
     updateCartBar();
-    // Re-render whichever view is active
-    if (activeCategory) renderMenuItems();
-    else renderCatGrid();
+    updateItemBtn(itemId);
 }
 
 function getCartItemCount(itemId) {
