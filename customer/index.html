@@ -554,6 +554,7 @@ function getISTTimestamp() { return getIST().getTime(); }
 // STATE
 // ============================================================
 let outletId = '';
+let menuId = '';
 let tableId = '';
 let browseMode = false; // true when menu-only link (no table assigned)
 let outletName = '';
@@ -725,7 +726,18 @@ async function init() {
             return;
         }
         outletName = outletDoc.data().name;
+        menuId = outletDoc.data().menuId || outletId;
         outletOrderingHours = outletDoc.data().orderingHours || [];
+
+        // Resolve zone name from table number (e.g. Table 105 → "Babylon Rooftop")
+        const tableZones = outletDoc.data().tableZones || [];
+        if (tableZones.length > 0 && tableNumber) {
+            const tNum = parseInt(tableNumber);
+            const zone = tableZones.find(z => tNum >= z.start && tNum <= z.end);
+            if (zone && zone.name) {
+                outletName = zone.name;
+            }
+        }
 
         const pixelId = outletDoc.data().metaPixelId || '';
         if (pixelId) initMetaPixel(pixelId);
@@ -905,7 +917,7 @@ const MENU_CACHE_HOURS = 2;
 
 async function loadMenu() {
     // Check cache first
-    const cacheKey = 'menuCache_' + outletId;
+    const cacheKey = 'menuCache_' + menuId;
     try {
         const cached = JSON.parse(localStorage.getItem(cacheKey));
         if (cached && (Date.now() - cached.ts) < MENU_CACHE_HOURS * 60 * 60 * 1000) {
@@ -944,12 +956,12 @@ async function loadMenuFromFirestore() {
     
     let allItems = itemSnap.docs.map(d => d.data());
 
-    // Load outlet-specific overrides
+    // Load outlet-specific overrides (using menuId for shared menus)
     let outletOverrides = {};
     let hasOutletMenu = false;
     try {
         const omSnap = await db.collection('outlet_menu')
-            .where('outletId', '==', outletId)
+            .where('outletId', '==', menuId)
             .get();
         omSnap.docs.forEach(d => {
             const data = d.data();
