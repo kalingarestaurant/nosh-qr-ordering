@@ -217,6 +217,7 @@ function closeM(id){document.getElementById(id).classList.remove('on');}
 
 let staffPhone='',staffRole='',staffOutletIds=[],selectedOutletId='',selectedOutletName='';
 let allOrders=[],allMenuItems=[],ordersListener=null,soundEnabled=true,lastNewCount=0,alertInt=null,cancelDocId='';
+let multiOutletMode=false,activeOutlets=[],multiListeners=[];
 
 async function doLogin(){
     const ph=document.getElementById('inpPhone').value.trim(),pin=document.getElementById('inpPin').value.trim();
@@ -256,6 +257,17 @@ async function pickOutlet(){
     if(staffOutletIds.includes('all')){const s=await db.collection('qr_outlets').where('isActive','==',true).get();outs=s.docs.map(d=>d.data());}
     else{for(const id of staffOutletIds){const d=await db.collection('qr_outlets').doc(id).get();if(d.exists&&d.data().isActive)outs.push(d.data());}}
     if(!outs.length){document.getElementById('loginErr').textContent='No outlets assigned';return;}
+    
+    // Order Entry Cashier — multi-outlet mode
+    if(staffRole==='order_entry_cashier'){
+        multiOutletMode=true;
+        activeOutlets=outs;
+        selectedOutletId=outs[0].id;
+        selectedOutletName='Order Entry';
+        startDash();
+        return;
+    }
+    
     if(outs.length===1){selectedOutletId=outs[0].id;selectedOutletName=outs[0].name;startDash();return;}
     document.getElementById('outletSelect').innerHTML=outs.map(o=>`<option value="${o.id}">${o.name}</option>`).join('');
     document.getElementById('authWrap').style.display='none';openM('outletModal');
@@ -270,7 +282,7 @@ async function checkAutoLogin(){
     if(lo){const od=await db.collection('qr_outlets').doc(lo).get();if(od.exists&&od.data().isActive){selectedOutletId=lo;selectedOutletName=od.data().name;startDash();return;}}
     await pickOutlet();}catch(e){console.error(e);}
 }
-function doLogout(){localStorage.removeItem('nosh_cashier');localStorage.removeItem('nosh_cashier_outlet');if(ordersListener)ordersListener();location.reload();}
+function doLogout(){localStorage.removeItem('nosh_cashier');localStorage.removeItem('nosh_cashier_outlet');if(ordersListener)ordersListener();multiListeners.forEach(u=>u());multiListeners=[];location.reload();}
 
 function startDash(){
     document.getElementById('authWrap').style.display='none';document.getElementById('dash').classList.add('on');
@@ -384,9 +396,29 @@ function getYesterdayISTDate(){
     return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
 }
 function startListener(){
-    ordersListener=db.collection('qr_orders').where('outletId','==',selectedOutletId).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
-        .onSnapshot(snap=>{allOrders=snap.docs.map(d=>({docId:d.id,...d.data()}));render();
-        const nc=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;});
+    if(multiOutletMode){
+        // Multi-outlet: one listener per outlet, merge results
+        const ordersByOutlet={};
+        activeOutlets.forEach(o=>{
+            ordersByOutlet[o.id]=[];
+            const unsub=db.collection('qr_orders').where('outletId','==',o.id).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
+                .onSnapshot(snap=>{
+                    ordersByOutlet[o.id]=snap.docs.map(d=>({docId:d.id,...d.data(),_outletName:o.name}));
+                    // Merge all outlets
+                    allOrders=[];
+                    Object.values(ordersByOutlet).forEach(arr=>allOrders.push(...arr));
+                    allOrders.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+                    render();
+                    const nc=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;
+                    if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;
+                });
+            multiListeners.push(unsub);
+        });
+    } else {
+        ordersListener=db.collection('qr_orders').where('outletId','==',selectedOutletId).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
+            .onSnapshot(snap=>{allOrders=snap.docs.map(d=>({docId:d.id,...d.data()}));render();
+            const nc=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;});
+    }
 }
 function render(){
     const q=(document.getElementById('orderSearch').value||'').toLowerCase().trim();
@@ -409,8 +441,9 @@ function render(){
 function tile(o,cls){
     const items=(o.items||[]).slice(0,3).map(i=>i.qty+'× '+i.name).join(', ');
     const more=(o.items||[]).length>3?' +'+(o.items.length-3)+' more':'';
+    const outletLabel=multiOutletMode&&o._outletName?`<span style="font-size:9px;color:#f0a500;background:#f0a50015;padding:1px 6px;border-radius:4px;">${o._outletName}</span>`:'';
     return `<div class="tile ${cls}${cls==='new'?' pulse':''}" onclick="openDetail('${o.docId}')">
-        <div class="tile-r1"><span class="tile-tbl">🪑 ${o.tableName||'Table '+o.tableNumber}</span><span class="tile-num">#${o.orderNumber}</span></div>
+        <div class="tile-r1"><span class="tile-tbl">🪑 ${o.tableName||'Table '+o.tableNumber}</span>${outletLabel}<span class="tile-num">#${o.orderNumber}</span></div>
         <div class="tile-items">${items}${more}</div>
         <div class="tile-r2"><span>${o.createdAtIST||''}</span>${o.customerName?`<span>👤 ${o.customerName}</span>`:''}<span>${o.itemCount||0} item${(o.itemCount||0)>1?'s':''}</span></div>
         ${cls==='cancelled'?'<div style="font-size:10px;color:#ff6b6b;margin-top:3px;">Cancelled</div>':''}
@@ -571,9 +604,18 @@ function filterAvail(){const q=(document.getElementById('availSearch').value||''
 async function toggleAvail(id,v){try{await db.collection('menu_items').doc(id).update({isAvailable:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});const i=allMenuItems.find(x=>x.docId===id);if(i)i.isAvailable=v;filterAvail();toast(v?'✅ Available':'🚫 86\'d');}catch(e){toast('Error','err');}}
 
 async function loadTables(){
-    const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();
-    const t=s.docs.map(d=>d.data()).filter(t=>t.isActive && t.currentSessionId).sort((a,b)=>a.tableNumber-b.tableNumber);
-    document.getElementById('clearSelect').innerHTML='<option value="">Select...</option>'+t.map(t=>`<option value="${t.id}">${t.tableName}</option>`).join('');
+    let t=[];
+    if(multiOutletMode){
+        for(const o of activeOutlets){
+            const s=await db.collection('qr_tables').where('outletId','==',o.id).get();
+            t.push(...s.docs.map(d=>d.data()).filter(x=>x.isActive&&x.currentSessionId));
+        }
+    } else {
+        const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();
+        t=s.docs.map(d=>d.data()).filter(x=>x.isActive&&x.currentSessionId);
+    }
+    t.sort((a,b)=>a.tableNumber-b.tableNumber);
+    document.getElementById('clearSelect').innerHTML='<option value="">Select...</option>'+t.map(x=>`<option value="${x.id}">${x.tableName}${multiOutletMode?' ('+x.outletId+')':''}</option>`).join('');
 }
 async function clearTable(){
     const id=document.getElementById('clearSelect').value;
