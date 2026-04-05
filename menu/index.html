@@ -227,9 +227,11 @@
         <div id="tab-outletmenu" style="display:none;">
             <div class="card" style="padding:12px 16px;">
                 <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Manage Menus</div>
-                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
                     <input class="fi" id="newMenuName" placeholder="Menu name (e.g. House of Nosh)" style="flex:1;min-width:200px;">
                     <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="addMenu()">+ Add Menu</button>
+                    <button style="padding:8px 16px;font-size:12px;background:#2ecc7115;border:1px solid #2ecc7130;border-radius:6px;color:#2ecc71;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="refreshCustomerMenu()">🔄 Publish Menu</button>
+                    <span id="publishStatus" style="font-size:11px;color:#4ecdc4;"></span>
                 </div>
                 <div id="menusList" style="margin-bottom:10px;"></div>
                 <div style="border-top:1px solid #1e2030;padding-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -2099,6 +2101,16 @@ async function deleteMenu(docId, name) {
         await loadMenus();
         renderMenusList();
         populateMenuSelects();
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function refreshCustomerMenu() {
+    try {
+        await db.collection('qr_settings').doc('config').set({
+            menuVersion: Date.now()
+        }, { merge: true });
+        document.getElementById('publishStatus').textContent = '✅ Published! Customers will see updated menu.';
+        setTimeout(() => { document.getElementById('publishStatus').textContent = ''; }, 5000);
     } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
