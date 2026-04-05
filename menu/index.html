@@ -427,10 +427,8 @@
                             <option value="super_admin">Super Admin</option>
                         </select>
                     </div>
-                    <div class="ff"><label>Outlet</label>
-                        <select class="fi" id="sOutlet">
-                            <option value="all">All Outlets</option>
-                        </select>
+                    <div class="ff"><label>Outlet Access</label>
+                        <div id="sOutletChecks" style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0;"></div>
                     </div>
                 </div>
                 <input type="hidden" id="sEditPhone" value="">
@@ -889,8 +887,8 @@ async function loadData() {
     sel.innerHTML = '<option value="">All Categories</option>' + categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
     // Populate outlet selects
-    const sSel = document.getElementById('sOutlet');
-    if (sSel) sSel.innerHTML = '<option value="all">All Outlets</option>' + outlets.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+    const sSel = document.getElementById('sOutletChecks');
+    if (sSel) sSel.innerHTML = `<label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="s-outlet-chk" value="all"> All Outlets</label>` + outlets.map(o => `<label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="s-outlet-chk" value="${o.id}"> ${o.name}</label>`).join('');
     
     // Populate template dropdown in item modal
     populateTemplateDropdown();
@@ -2486,19 +2484,26 @@ async function loadStaff() {
 
     document.getElementById('staffList').innerHTML = staff.length ? `
         <table>
-            <tr><th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th></th></tr>
-            ${staff.map(s => `
+            <tr><th>Name</th><th>Phone</th><th>Role</th><th>Outlets</th><th>Status</th><th></th></tr>
+            ${staff.map(s => {
+                const oids = s.outletIds || ['all'];
+                const outletNames = oids.includes('all') ? 'All' : oids.map(id => {
+                    const o = outlets.find(x => (x.id || x.docId) === id);
+                    return o ? o.name : id;
+                }).join(', ');
+                return `
                 <tr>
                     <td><strong>${s.name || '—'}</strong></td>
                     <td>${s.phone || ''}</td>
                     <td><span class="badge b-${s.role === 'super_admin' ? 'super' : s.role === 'outlet_manager' ? 'manager' : 'cashier'}">${s.role}</span></td>
+                    <td style="font-size:11px;color:#888;max-width:150px;">${outletNames}</td>
                     <td>${s.isActive ? '🟢' : '🔴'}</td>
                     <td>
                         <button class="btn-edit" onclick="editStaff('${s.docId}')">Edit</button>
                         <button class="btn-del" onclick="deleteStaff('${s.docId}','${(s.name||'').replace(/'/g,"\\'")}')">Del</button>
                     </td>
-                </tr>
-            `).join('')}
+                </tr>`;
+            }).join('')}
         </table>
     ` : '<div class="empty-state"><span class="icon">👥</span>No staff</div>';
 }
@@ -2507,15 +2512,23 @@ async function saveStaff() {
     const name = document.getElementById('sName').value.trim();
     const phone = document.getElementById('sPhone').value.trim();
     const role = document.getElementById('sRole').value;
-    const outletId = document.getElementById('sOutlet').value;
     const editPhone = document.getElementById('sEditPhone').value;
 
+    // Collect checked outlets
+    const checkedOutlets = [];
+    document.querySelectorAll('.s-outlet-chk:checked').forEach(chk => checkedOutlets.push(chk.value));
+    if (checkedOutlets.includes('all')) {
+        checkedOutlets.length = 0;
+        checkedOutlets.push('all');
+    }
+
     if (!name || !/^\d{10}$/.test(phone)) { toast('Enter name and 10-digit phone', 'err'); return; }
+    if (checkedOutlets.length === 0) { toast('Select at least one outlet', 'err'); return; }
 
     const fullPhone = '+91' + phone;
     const data = {
         phone: fullPhone, name, role,
-        outletIds: outletId === 'all' ? ['all'] : [outletId],
+        outletIds: checkedOutlets,
         isActive: true,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -2531,6 +2544,7 @@ async function saveStaff() {
         document.getElementById('sName').value = '';
         document.getElementById('sPhone').value = '';
         document.getElementById('sEditPhone').value = '';
+        document.querySelectorAll('.s-outlet-chk').forEach(chk => chk.checked = false);
         loadStaff();
     } catch (e) { toast('Error: ' + e.message, 'err'); }
 }
@@ -2542,7 +2556,11 @@ async function editStaff(docId) {
     document.getElementById('sName').value = s.name || '';
     document.getElementById('sPhone').value = (s.phone || '').replace('+91', '');
     document.getElementById('sRole').value = s.role || 'cashier';
-    document.getElementById('sOutlet').value = (s.outletIds || ['all'])[0];
+    // Check the right outlet boxes
+    const staffOutlets = s.outletIds || ['all'];
+    document.querySelectorAll('.s-outlet-chk').forEach(chk => {
+        chk.checked = staffOutlets.includes(chk.value);
+    });
     document.getElementById('sEditPhone').value = docId;
     window.scrollTo(0, 0);
 }
