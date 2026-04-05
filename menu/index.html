@@ -2591,20 +2591,89 @@ function renderOutletsList() {
         container.innerHTML = '<div style="font-size:12px;color:#555;">No outlets yet</div>';
         return;
     }
+    const menuOptions = outlets.map(o => `<option value="${o.id || o.docId}">${o.name}</option>`).join('');
     container.innerHTML = outlets.map(o => {
         const id = o.id || o.docId;
+        const menuId = o.menuId || id;
         return `
-        <div class="item-row">
+        <div class="item-row" style="flex-wrap:wrap;">
             <div class="item-name"><strong>${o.name}</strong></div>
-            <div style="font-size:11px;color:#666;min-width:100px;">${id}</div>
+            <div style="font-size:11px;color:#666;min-width:80px;">${id}</div>
+            <select onchange="saveOutletMenuId('${o.docId}',this.value)" style="padding:3px 6px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#f0a500;font-size:10px;min-width:100px;">
+                <option value="${id}" ${menuId===id?'selected':''}>Own menu</option>
+                ${outlets.filter(x=>(x.id||x.docId)!==id).map(x=>{
+                    const xid=x.id||x.docId;
+                    return `<option value="${xid}" ${menuId===xid?'selected':''}>${x.name} menu</option>`;
+                }).join('')}
+            </select>
             <div class="toggle ${o.isActive ? 'on' : ''}" onclick="toggleOutletActive('${o.docId}', ${!o.isActive})" title="${o.isActive ? 'Active' : 'Inactive'}"></div>
             <div class="item-actions">
-                <button class="btn-edit" style="background:#9b59b615;color:#9b59b6;border-color:#9b59b630;" onclick="copyMenuLink('${id}')">🔗 Link</button>
+                <button class="btn-edit" style="background:#9b59b615;color:#9b59b6;border-color:#9b59b630;" onclick="copyMenuLink('${id}')">🔗</button>
+                <button class="btn-edit" style="background:#f39c1215;color:#f39c12;border-color:#f39c1230;" onclick="editZones('${o.docId}')">📍</button>
                 <button class="btn-edit" onclick="editOutletName('${o.docId}','${(o.name||'').replace(/'/g,"\\'")}')">Edit</button>
                 <button class="btn-del" onclick="deleteOutlet('${o.docId}','${(o.name||'').replace(/'/g,"\\'")}')">Del</button>
             </div>
         </div>`;
     }).join('');
+}
+
+async function saveOutletMenuId(docId, menuId) {
+    try {
+        await db.collection('qr_outlets').doc(docId).update({ menuId: menuId });
+        const outlet = outlets.find(o => o.docId === docId);
+        if (outlet) outlet.menuId = menuId;
+        toast('✅ Menu source updated');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+// TABLE ZONES
+function editZones(outletDocId) {
+    document.getElementById('zonesOutletId').value = outletDocId;
+    const outlet = outlets.find(o => o.docId === outletDocId);
+    const zones = (outlet && outlet.tableZones) || [];
+    document.getElementById('zonesList').innerHTML = '';
+    if (zones.length === 0) {
+        addZoneRow(); // start with one empty row
+    } else {
+        zones.forEach(z => addZoneRow(z.start, z.end, z.name));
+    }
+    document.getElementById('zonesModal').classList.add('active');
+}
+
+function addZoneRow(start, end, name) {
+    const container = document.getElementById('zonesList');
+    const row = document.createElement('div');
+    row.className = 'zone-row';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+    row.innerHTML = `
+        <input class="fi zone-start" type="number" placeholder="From" value="${start || ''}" style="width:60px;padding:6px;font-size:12px;" inputmode="numeric">
+        <span style="color:#666;">–</span>
+        <input class="fi zone-end" type="number" placeholder="To" value="${end || ''}" style="width:60px;padding:6px;font-size:12px;" inputmode="numeric">
+        <input class="fi zone-name" placeholder="Display name (e.g. Level 5)" value="${name || ''}" style="flex:1;padding:6px;font-size:12px;">
+        <button onclick="this.parentElement.remove();" style="background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:14px;">✕</button>
+    `;
+    container.appendChild(row);
+}
+
+async function saveZones() {
+    const outletDocId = document.getElementById('zonesOutletId').value;
+    const zones = [];
+    document.querySelectorAll('#zonesList .zone-row').forEach(row => {
+        const start = parseInt(row.querySelector('.zone-start').value);
+        const end = parseInt(row.querySelector('.zone-end').value);
+        const name = row.querySelector('.zone-name').value.trim();
+        if (name && !isNaN(start) && !isNaN(end)) {
+            zones.push({ start, end, name });
+        }
+    });
+    try {
+        await db.collection('qr_outlets').doc(outletDocId).update({ tableZones: zones });
+        // Update local
+        const outlet = outlets.find(o => o.docId === outletDocId);
+        if (outlet) outlet.tableZones = zones;
+        closeModal('zonesModal');
+        toast('✅ Zones saved (' + zones.length + ' zones)');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
 const MENU_BASE_URL = 'https://kalingarestaurant.github.io/nosh-qr-ordering/customer/';
@@ -2908,5 +2977,16 @@ async function toggleOrderingSetting() {
 // ============================================================
 window.addEventListener('DOMContentLoaded', checkAutoLogin);
 </script>
+<!-- Table Zones Modal -->
+<div class="modal-overlay" id="zonesModal">
+    <div class="modal" style="max-width:500px;">
+        <div class="modal-title"><span>📍 Table Zones</span><button class="modal-close" onclick="closeModal('zonesModal')">✕</button></div>
+        <div style="font-size:12px;color:#888;margin-bottom:12px;">Map table number ranges to restaurant/area names. Customers and WhatsApp messages will show this name.</div>
+        <div id="zonesList"></div>
+        <button type="button" style="padding:6px 12px;background:#2a2d3e;border:none;border-radius:6px;color:#888;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;margin:8px 0;" onclick="addZoneRow()">+ Add Zone</button>
+        <input type="hidden" id="zonesOutletId" value="">
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="saveZones()">💾 Save Zones</button>
+    </div>
+</div>
 </body>
 </html>
