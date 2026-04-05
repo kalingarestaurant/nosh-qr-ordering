@@ -324,6 +324,20 @@
                     <div id="pixelStatus" style="font-size:12px;margin-top:8px;"></div>
                 </div>
                 <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🎨 Customer Menu Template</div>
+                    <div style="font-size:12px;color:#888;margin-bottom:12px;">Choose the customer-facing menu UI style. All templates use the same menu data.</div>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <select class="fi" id="templateSelect" style="width:200px;">
+                            <option value="onyx">💎 Onyx — Photo Grid</option>
+                            <option value="ivory" disabled>🦴 Ivory — Minimal (coming soon)</option>
+                            <option value="slate" disabled>🪨 Slate — Compact (coming soon)</option>
+                            <option value="amber" disabled>🔶 Amber — Premium (coming soon)</option>
+                        </select>
+                        <button class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:12px;" onclick="saveTemplate()">Save</button>
+                        <span id="templateStatus" style="font-size:11px;color:#4ecdc4;"></span>
+                    </div>
+                </div>
                     <div style="font-size:14px;font-weight:600;margin-bottom:8px;">📋 Modifier Templates</div>
                     <div style="font-size:12px;color:#888;margin-bottom:12px;">Reusable modifier groups you can quickly apply to any item. Prices are defaults — editable per item.</div>
                     <div class="card" style="padding:12px;margin-bottom:10px;">
@@ -1811,6 +1825,25 @@ async function deleteCat(docId, name) {
     } catch (e) { toast('Error: ' + e.message, 'err'); }
 }
 
+// CUSTOMER MENU TEMPLATE
+async function loadTemplate() {
+    try {
+        const doc = await db.collection('qr_settings').doc('config').get();
+        if (doc.exists && doc.data().customerTemplate) {
+            document.getElementById('templateSelect').value = doc.data().customerTemplate;
+        }
+    } catch(e) { console.log('No template setting found'); }
+}
+
+async function saveTemplate() {
+    const template = document.getElementById('templateSelect').value;
+    try {
+        await db.collection('qr_settings').doc('config').set({ customerTemplate: template }, { merge: true });
+        document.getElementById('templateStatus').textContent = '✅ Saved: ' + template.charAt(0).toUpperCase() + template.slice(1);
+        setTimeout(() => { document.getElementById('templateStatus').textContent = ''; }, 3000);
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
 // ============================================================
 // MODIFIER TEMPLATES
 // ============================================================
@@ -2519,6 +2552,7 @@ async function loadSettings() {
         initOrderingHours();
         initPixelConfig();
         loadModTemplates();
+        loadTemplate();
     } catch(e) {
         console.error('Load settings error:', e);
     }
