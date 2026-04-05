@@ -422,7 +422,8 @@
                 <div class="frow">
                     <div class="ff"><label>Role *</label>
                         <select class="fi" id="sRole">
-                            <option value="cashier">Cashier</option>
+                            <option value="cashier">Cashier (single outlet login)</option>
+                            <option value="order_entry_cashier">Order Entry Cashier (all assigned outlets)</option>
                             <option value="outlet_manager">Outlet Manager</option>
                             <option value="super_admin">Super Admin</option>
                         </select>
@@ -2495,7 +2496,7 @@ async function loadStaff() {
                 <tr>
                     <td><strong>${s.name || '—'}</strong></td>
                     <td>${s.phone || ''}</td>
-                    <td><span class="badge b-${s.role === 'super_admin' ? 'super' : s.role === 'outlet_manager' ? 'manager' : 'cashier'}">${s.role}</span></td>
+                    <td><span class="badge b-${s.role === 'super_admin' ? 'super' : s.role === 'outlet_manager' ? 'manager' : s.role === 'order_entry_cashier' ? 'cashier' : 'cashier'}">${s.role === 'order_entry_cashier' ? 'OE Cashier' : s.role}</span></td>
                     <td style="font-size:11px;color:#888;max-width:150px;">${outletNames}</td>
                     <td>${s.isActive ? '🟢' : '🔴'}</td>
                     <td>
