@@ -95,7 +95,7 @@ function formatItemsList(items) {
       }
       return line;
     })
-    .join("\n");
+    .join(", ");
 }
 
 /**
