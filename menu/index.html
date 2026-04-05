@@ -369,6 +369,14 @@
                     </div>
                     <div id="mtList"></div>
                 </div>
+                <div style="padding:16px 0;border-bottom:1px solid #1e2030;">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:8px;">💬 WhatsApp Order Confirmation</div>
+                    <div style="font-size:12px;color:#888;margin-bottom:12px;">Send order confirmation with items list via WhatsApp when a customer places an order. Each message costs ~₹0.14.</div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div class="toggle" id="waConfirmToggle" onclick="toggleWaConfirm()"></div>
+                        <span id="waConfirmStatus" style="font-size:12px;color:#888;">Loading...</span>
+                    </div>
+                </div>
                 <div style="padding:16px 0;font-size:12px;color:#666;">
                     ⚠️ Remember to turn OTP back ON before going live with real customers.
                 </div>
@@ -1829,10 +1837,29 @@ async function deleteCat(docId, name) {
 async function loadTemplate() {
     try {
         const doc = await db.collection('qr_settings').doc('config').get();
-        if (doc.exists && doc.data().customerTemplate) {
-            document.getElementById('templateSelect').value = doc.data().customerTemplate;
+        if (doc.exists) {
+            if (doc.data().customerTemplate) {
+                document.getElementById('templateSelect').value = doc.data().customerTemplate;
+            }
+            // Load WhatsApp confirmation toggle
+            const waOn = doc.data().waOrderConfirmation === true;
+            document.getElementById('waConfirmToggle').classList.toggle('on', waOn);
+            document.getElementById('waConfirmStatus').textContent = waOn ? '✅ Enabled — messages will be sent' : '⏸️ Disabled — no messages sent';
+            document.getElementById('waConfirmStatus').style.color = waOn ? '#4ecdc4' : '#888';
         }
     } catch(e) { console.log('No template setting found'); }
+}
+
+async function toggleWaConfirm() {
+    const toggle = document.getElementById('waConfirmToggle');
+    const newValue = !toggle.classList.contains('on');
+    try {
+        await db.collection('qr_settings').doc('config').set({ waOrderConfirmation: newValue }, { merge: true });
+        toggle.classList.toggle('on', newValue);
+        document.getElementById('waConfirmStatus').textContent = newValue ? '✅ Enabled — messages will be sent' : '⏸️ Disabled — no messages sent';
+        document.getElementById('waConfirmStatus').style.color = newValue ? '#4ecdc4' : '#888';
+        toast(newValue ? '✅ WhatsApp confirmations ON' : '⏸️ WhatsApp confirmations OFF');
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
 async function saveTemplate() {
