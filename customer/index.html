@@ -920,23 +920,34 @@ async function loadMenu() {
     const urlParams = new URLSearchParams(window.location.search);
     const forceRefresh = urlParams.has('clearcache') || urlParams.has('refresh');
     
-    // Clear cache if requested
     if (forceRefresh) {
         localStorage.removeItem(cacheKey);
         console.log('Cache cleared by URL param');
     }
+    
+    // Check menu version from Firestore (1 read) to invalidate stale cache
+    let serverVersion = 0;
+    try {
+        const settingsDoc = await db.collection('qr_settings').doc('config').get();
+        if (settingsDoc.exists) serverVersion = settingsDoc.data().menuVersion || 0;
+    } catch(e) {}
     
     // Check cache
     if (!forceRefresh) {
         try {
             const cached = JSON.parse(localStorage.getItem(cacheKey));
             if (cached && (Date.now() - cached.ts) < MENU_CACHE_HOURS * 60 * 60 * 1000) {
-                menuCategories = cached.categories;
-                menuItems = cached.items;
-                console.log('Menu loaded from cache (' + menuItems.length + ' items)');
-                menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-                renderCatGrid();
-                return;
+                // Invalidate if server version is newer than cache
+                if (serverVersion && cached.ver && serverVersion > cached.ver) {
+                    console.log('Menu updated by admin — refreshing cache');
+                } else {
+                    menuCategories = cached.categories;
+                    menuItems = cached.items;
+                    console.log('Menu loaded from cache (' + menuItems.length + ' items)');
+                    menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                    renderCatGrid();
+                    return;
+                }
             }
         } catch(e) { /* cache miss */ }
     }
@@ -944,10 +955,11 @@ async function loadMenu() {
     // Load from Firestore
     await loadMenuFromFirestore();
     
-    // Save to cache
+    // Save to cache with version
     try {
         localStorage.setItem(cacheKey, JSON.stringify({
             ts: Date.now(),
+            ver: serverVersion || Date.now(),
             categories: menuCategories,
             items: menuItems
         }));
