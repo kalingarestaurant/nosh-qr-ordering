@@ -708,8 +708,29 @@ function hideLoading() { document.getElementById('loadingOverlay').classList.rem
 // ============================================================
 async function init() {
     const params = new URLSearchParams(window.location.search);
-    outletId = params.get('o') || '';
-    tableId = params.get('t') || '';
+    
+    // Support clean URLs: /outlet_id/table_id or /outlet_id/1
+    const pathParts = window.location.pathname.split('/').filter(p => p && p !== 'index.html');
+    
+    if (pathParts.length >= 1) {
+        outletId = pathParts[0];
+        if (pathParts.length >= 2) {
+            const tablePart = pathParts[1];
+            // If just a number like /bnr/5 → tableId = bnr_table_5
+            // If full like /bnr/table_5 → tableId = bnr_table_5
+            if (/^\d+$/.test(tablePart)) {
+                tableId = outletId + '_table_' + tablePart;
+            } else if (tablePart.startsWith('table')) {
+                tableId = outletId + '_' + tablePart;
+            } else {
+                tableId = outletId + '_table_' + tablePart;
+            }
+        }
+    }
+    
+    // Fallback to query params (backward compat)
+    if (!outletId) outletId = params.get('o') || '';
+    if (!tableId) tableId = params.get('t') || '';
 
     if (!outletId) {
         showError('Invalid Link', 'Please scan the QR code or use the link shared with you.');
