@@ -2489,10 +2489,12 @@ async function deleteTable(docId, name) {
 // ============================================================
 // QR CODE GENERATION
 // ============================================================
-const CUSTOMER_BASE_URL = 'https://kalingarestaurant.github.io/nosh-qr-ordering/customer/';
+const CUSTOMER_BASE_URL = 'https://order.houseofnosh.in/';
 
 function getTableQRUrl(outletId, tableId) {
-    return CUSTOMER_BASE_URL + '?o=' + encodeURIComponent(outletId) + '&t=' + encodeURIComponent(tableId);
+    // Clean URL: order.houseofnosh.in/outlet/table_number
+    const tableNum = tableId.replace(outletId + '_', '');
+    return CUSTOMER_BASE_URL + outletId + '/' + tableNum;
 }
 
 function generateQRCanvas(url, label, size) {
@@ -2795,9 +2797,9 @@ async function saveZones() {
     } catch(e) { toast('Error: ' + e.message, 'err'); }
 }
 
-const MENU_BASE_URL = 'https://kalingarestaurant.github.io/nosh-qr-ordering/customer/';
+const MENU_BASE_URL = 'https://order.houseofnosh.in/';
 function copyMenuLink(outletId) {
-    const link = MENU_BASE_URL + '?o=' + outletId;
+    const link = MENU_BASE_URL + outletId;
     navigator.clipboard.writeText(link).then(() => {
         toast('✅ Link copied: ' + link);
     }).catch(() => {
