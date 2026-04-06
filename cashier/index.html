@@ -278,6 +278,8 @@ async function checkAutoLogin(){
     try{const l=JSON.parse(s);if(Date.now()-l.at>12*3600000){localStorage.removeItem('nosh_cashier');return;}
     const d=await db.collection('qr_staff').doc(l.phone).get();if(!d.exists||!d.data().isActive){localStorage.removeItem('nosh_cashier');return;}
     staffPhone=l.phone;staffRole=d.data().role;staffOutletIds=d.data().outletIds||[];
+    // Order Entry Cashier always goes through pickOutlet for multi-outlet mode
+    if(staffRole==='order_entry_cashier'){await pickOutlet();return;}
     const lo=localStorage.getItem('nosh_cashier_outlet');
     if(lo){const od=await db.collection('qr_outlets').doc(lo).get();if(od.exists&&od.data().isActive){selectedOutletId=lo;selectedOutletName=od.data().name;startDash();return;}}
     await pickOutlet();}catch(e){console.error(e);}
