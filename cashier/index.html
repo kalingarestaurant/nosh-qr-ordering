@@ -671,8 +671,16 @@ async function quickClearTable(){
 
 let allTablesData=[];
 async function loadTablesData(){
-    const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();
-    allTablesData=s.docs.map(d=>({docId:d.id,...d.data()}));
+    allTablesData=[];
+    if(multiOutletMode){
+        for(const o of activeOutlets){
+            const s=await db.collection('qr_tables').where('outletId','==',o.id).get();
+            allTablesData.push(...s.docs.map(d=>({docId:d.id,...d.data()})));
+        }
+    } else {
+        const s=await db.collection('qr_tables').where('outletId','==',selectedOutletId).get();
+        allTablesData=s.docs.map(d=>({docId:d.id,...d.data()}));
+    }
 }
 function focusClearInput(){const inp=document.getElementById('quickClearInput');if(inp){inp.value='';setTimeout(()=>inp.focus(),100);}}
 
