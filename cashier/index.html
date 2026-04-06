@@ -98,6 +98,48 @@
         #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
         #toast.ok{background:#2ecc71;color:#fff;}
         #toast.err{background:#ff6b6b;color:#fff;}
+
+        /* Mobile Responsive */
+        @media(max-width:768px){
+            .topbar{padding:8px 10px;flex-wrap:wrap;gap:6px;}
+            .t-title{font-size:13px;}
+            .t-outlet{font-size:10px;}
+            .topbar-right{gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+            .stat-num{font-size:14px;}
+            .stat-lbl{font-size:8px;}
+            .tbtn{padding:4px 7px;font-size:9px;}
+            .sound-btn{width:28px;height:28px;font-size:14px;}
+            #orderSearch{font-size:12px !important;padding:8px 10px !important;}
+            .tile{padding:10px 12px;margin-bottom:6px;}
+            .tile-tbl{font-size:14px;}
+            .tile-num{font-size:10px;}
+            .tile-items{font-size:10px;}
+            .tile-r2{font-size:10px;}
+            .modal-box{padding:16px;max-width:none;width:98%;max-height:90vh;}
+            .od-head{margin-bottom:10px;}
+            .od-title{font-size:20px;}
+            .od-info{gap:10px;font-size:12px;}
+            .od-qty{font-size:15px;min-width:28px;}
+            .od-name{font-size:14px;}
+            .od-mods{font-size:11px;}
+            .od-price{font-size:13px;}
+            .od-btn{padding:12px;font-size:14px;}
+            .od-actions{gap:8px;}
+            .bottom-bar{padding:6px 10px;flex-wrap:wrap;gap:6px;}
+            .bb-select{font-size:11px;padding:6px 8px;}
+            .bb-btn{font-size:11px;padding:6px 10px;}
+            .col-body{padding:6px;}
+            .col-head{padding:8px 10px;}
+        }
+        @media(max-width:480px){
+            .topbar-right .tbtn:not(.tbtn-gold){display:none;}
+            .cols{flex-direction:column;}
+            .col{max-height:45vh;border-right:none;border-bottom:1px solid #1e2030;}
+            .tile{padding:8px 10px;}
+            .tile-tbl{font-size:13px;}
+            .od-title{font-size:18px;}
+            .modal-box{padding:12px;border-radius:10px;}
+        }
     </style>
 </head>
 <body>
