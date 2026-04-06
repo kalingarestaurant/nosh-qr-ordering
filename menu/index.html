@@ -121,6 +121,46 @@
         #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         #toast.ok { background: #2ecc71; color: #fff; }
         #toast.err { background: #ff6b6b; color: #fff; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .topbar { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+            .topbar-title { font-size: 14px; }
+            .topbar-right { gap: 6px; }
+            .btn-sm { padding: 5px 8px; font-size: 10px; }
+            .role-badge { font-size: 9px; padding: 3px 8px; }
+            .tabs { padding: 8px 12px; gap: 4px; -webkit-overflow-scrolling: touch; }
+            .tab { padding: 7px 12px; font-size: 11px; }
+            .content { padding: 12px; }
+            .card { padding: 12px; }
+            .frow { grid-template-columns: 1fr; gap: 8px; }
+            .search-bar { flex-direction: column; gap: 6px; }
+            .search-bar select { width: 100%; }
+            .item-row { gap: 6px; padding: 8px; flex-wrap: wrap; }
+            .item-name { font-size: 12px; min-width: 100px; }
+            .item-cat, .item-subcat { display: none; }
+            .item-actions { gap: 3px; }
+            .btn-edit, .btn-del { padding: 5px 8px; font-size: 10px; }
+            .modal { padding: 16px; width: 95%; max-width: none; }
+            .modal-title { font-size: 16px; }
+            table { display: block; overflow-x: auto; white-space: nowrap; }
+            th, td { padding: 6px; font-size: 11px; }
+            .fi { padding: 8px 10px; font-size: 13px; }
+            .mod-option input { font-size: 11px; padding: 5px 6px; }
+            .count-label { font-size: 11px; }
+        }
+        @media (max-width: 480px) {
+            .topbar { padding: 8px 10px; }
+            .topbar-title { font-size: 13px; }
+            .tabs { padding: 6px 10px; }
+            .tab { padding: 6px 10px; font-size: 10px; }
+            .content { padding: 8px; }
+            .card { padding: 10px; border-radius: 8px; }
+            .item-row { padding: 6px 8px; border-radius: 6px; }
+            .item-name { font-size: 11px; }
+            .item-price { font-size: 11px; min-width: 40px; }
+            .modal { padding: 12px; border-radius: 10px; }
+        }
     </style>
 </head>
 <body>
