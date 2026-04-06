@@ -397,27 +397,35 @@ function getYesterdayISTDate(){
 }
 function startListener(){
     if(multiOutletMode){
-        // Multi-outlet: one listener per outlet, merge results
         const ordersByOutlet={};
         activeOutlets.forEach(o=>{
             ordersByOutlet[o.id]=[];
             const unsub=db.collection('qr_orders').where('outletId','==',o.id).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
                 .onSnapshot(snap=>{
                     ordersByOutlet[o.id]=snap.docs.map(d=>({docId:d.id,...d.data(),_outletName:o.name}));
-                    // Merge all outlets
                     allOrders=[];
                     Object.values(ordersByOutlet).forEach(arr=>allOrders.push(...arr));
                     allOrders.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
                     render();
                     const nc=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;
                     if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;
+                }, err=>{
+                    console.error('Listener error for '+o.id+':',err.message);
+                    toast('Listener error: '+err.message,'err');
                 });
             multiListeners.push(unsub);
         });
     } else {
+        console.log('Starting listener for outlet:',selectedOutletId,'date:',getISTDate());
         ordersListener=db.collection('qr_orders').where('outletId','==',selectedOutletId).where('dateString','==',getISTDate()).orderBy('createdAt','desc')
-            .onSnapshot(snap=>{allOrders=snap.docs.map(d=>({docId:d.id,...d.data()}));render();
-            const nc=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;});
+            .onSnapshot(snap=>{
+                console.log('Listener fired:',snap.size,'orders');
+                allOrders=snap.docs.map(d=>({docId:d.id,...d.data()}));render();
+                const nc=allOrders.filter(o=>o.status==='new'&&!o.cleared).length;if(nc>lastNewCount&&lastNewCount>=0)playAlert();lastNewCount=nc;
+            }, err=>{
+                console.error('Listener error:',err.message);
+                toast('Listener error: '+err.message,'err');
+            });
     }
 }
 function render(){
