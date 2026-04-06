@@ -831,7 +831,12 @@ async function checkExistingSession() {
 
         // Session is for a DIFFERENT table?
         if (session.tableId !== tableId) {
-            // Check if the other session is still active in Firestore
+            // If different outlet entirely, allow fresh start (customer visiting different restaurant)
+            if (session.outletId && session.outletId !== outletId) {
+                localStorage.removeItem('nosh_qr_session');
+                return null;
+            }
+            // Same outlet, different table — check if old session still active
             const fsSession = await db.collection('qr_sessions').doc(session.sessionId).get();
             if (fsSession.exists && fsSession.data().isActive) {
                 const otherTable = fsSession.data().tableName || 'another table';
@@ -868,26 +873,50 @@ async function checkExistingSession() {
 
 async function createSession(phone) {
     const now = getISTTimestamp();
-    const sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-
-    await db.collection('qr_sessions').doc(sid).set({
-        sessionId: sid,
-        phone: phone,
-        outletId: outletId,
-        tableId: tableId,
-        tableName: tableName,
-        tableNumber: tableNumber,
-        isActive: true,
-        verifiedAt: now,
-        expiresAt: now + (SESSION_DURATION_HOURS * 60 * 60 * 1000),
-        dateString: getISTDateString(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    // Update table's currentSessionId
-    await db.collection('qr_tables').doc(tableId).update({
-        currentSessionId: sid
-    });
+    
+    // Check if table already has an active session (multi-customer table)
+    let joinedExisting = false;
+    let sid = '';
+    try {
+        const tableDoc = await db.collection('qr_tables').doc(tableId).get();
+        const existingSessionId = tableDoc.exists ? tableDoc.data().currentSessionId : '';
+        
+        if (existingSessionId) {
+            const existingSession = await db.collection('qr_sessions').doc(existingSessionId).get();
+            if (existingSession.exists && existingSession.data().isActive) {
+                // Join existing session
+                sid = existingSessionId;
+                const customers = existingSession.data().customers || [existingSession.data().phone];
+                if (!customers.includes(phone)) {
+                    customers.push(phone);
+                    await db.collection('qr_sessions').doc(sid).update({ customers: customers });
+                }
+                joinedExisting = true;
+                console.log('Joined existing session:', sid, 'customers:', customers.length);
+            }
+        }
+    } catch(e) { console.log('Session join check error:', e); }
+    
+    if (!joinedExisting) {
+        // Create new session
+        sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        await db.collection('qr_sessions').doc(sid).set({
+            sessionId: sid,
+            phone: phone,
+            customers: [phone],
+            outletId: outletId,
+            tableId: tableId,
+            tableName: tableName,
+            tableNumber: tableNumber,
+            isActive: true,
+            verifiedAt: now,
+            expiresAt: now + (SESSION_DURATION_HOURS * 60 * 60 * 1000),
+            dateString: getISTDateString(),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await db.collection('qr_tables').doc(tableId).update({ currentSessionId: sid });
+        console.log('Created new session:', sid);
+    }
 
     // Save to localStorage
     localStorage.setItem('nosh_qr_session', JSON.stringify({
@@ -906,7 +935,6 @@ async function createSession(phone) {
             lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastOutletId: outletId
         };
-        // Update name if provided and current name is empty
         if (customerName && (!custDoc.data().name || custDoc.data().name !== customerName)) {
             updateData.name = customerName;
         }
@@ -2049,19 +2077,26 @@ function renderSessionHistory() {
         return;
     }
 
+    const uniqueCustomers = [...new Set(sessionOrders.map(o => o.customerPhone).filter(Boolean))];
+    const multiCustomer = uniqueCustomers.length > 1;
+
     container.innerHTML = `
-        <div class="session-history-title">Your Orders This Visit</div>
+        <div class="session-history-title">Your Orders This Visit${multiCustomer ? ' · ' + uniqueCustomers.length + ' people at this table' : ''}</div>
         ${sessionOrders.map(order => {
             const statusClass = 'status-' + order.status;
             const statusText = order.status === 'new' ? 'Sent to kitchen' : 
                              order.status === 'accepted' ? 'Confirmed ✓' : 
                              order.status === 'served' ? 'Confirmed ✓' : 
                              order.status === 'cancelled' ? 'Cancelled' : order.status;
+            const isMyOrder = order.customerPhone === customerPhone;
+            const byLabel = multiCustomer && order.customerName 
+                ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;${isMyOrder ? 'background:#e9456020;color:#e94560;' : 'background:#3498db20;color:#5dade2;'}">${isMyOrder ? 'You' : order.customerName}</span>` 
+                : '';
             
             return `
-            <div class="session-order">
+            <div class="session-order" style="${isMyOrder && multiCustomer ? 'border-left:3px solid #e94560;' : ''}">
                 <div class="session-order-header">
-                    <span class="session-order-num">Order #${order.orderNumber}</span>
+                    <span class="session-order-num">Order #${order.orderNumber}${byLabel}</span>
                     <span class="session-order-status ${statusClass}">${statusText}</span>
                 </div>
                 <div style="font-size:12px;color:#999;margin-bottom:8px;">${order.createdAtIST || ''}</div>
