@@ -3,22 +3,26 @@
     {
       "site": "nosh-order",
       "public": "customer",
-      "ignore": ["firebase.json", ".github"]
+      "ignore": ["firebase.json", ".github"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
     },
     {
       "site": "nosh-desk",
       "public": "cashier",
-      "ignore": ["firebase.json", ".github"]
+      "ignore": ["firebase.json", ".github"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
     },
     {
       "site": "nosh-carte",
       "public": "menu",
-      "ignore": ["firebase.json", ".github"]
+      "ignore": ["firebase.json", ".github"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
     },
     {
       "site": "nosh-kitchen",
       "public": "chef",
-      "ignore": ["firebase.json", ".github"]
+      "ignore": ["firebase.json", ".github"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
     }
   ]
 }
