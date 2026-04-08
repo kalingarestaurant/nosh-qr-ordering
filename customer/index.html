@@ -1322,12 +1322,14 @@ function renderMenuItems() {
     // Apply detail search within category
     if (detailSearchTerm) {
         filtered = filtered.filter(i => 
-            i.name.toLowerCase().includes(detailSearchTerm) || 
-            (i.description && i.description.toLowerCase().includes(detailSearchTerm))
+            i.name.toLowerCase().includes(detailSearchTerm)
         );
     }
     
     if (filtered.length === 0) { container.innerHTML = '<div class="no-results">No items found</div>'; return; }
+    
+    // Sort bestseller/upsell items to top
+    filtered.sort((a, b) => (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0));
     
     let html = '';
     if (activeCategory === '__bestsellers__' && !activeSubcat && !detailSearchTerm) {
@@ -1385,13 +1387,14 @@ function filterMenu(source) {
             if (input1) input1.value = searchTerm;
             if (input2) input2.value = searchTerm;
             if (detailInput) detailInput.value = '';
-            // Focus the search overlay input
-            if (input2 && document.activeElement !== input2) {
-                setTimeout(() => { input2.focus(); const len = input2.value.length; input2.setSelectionRange(len, len); }, 50);
+            // Focus search overlay input only on first switch (not on every keystroke)
+            if (input2 && document.activeElement !== input2 && document.activeElement === input1) {
+                input2.value = searchTerm;
+                setTimeout(() => { input2.focus(); }, 50);
             }
             // Global search across ALL items
             const t = searchTerm.toLowerCase();
-            const results = getVegFilteredItems(menuItems).filter(i => i.name.toLowerCase().includes(t) || (i.description && i.description.toLowerCase().includes(t)));
+            const results = getVegFilteredItems(menuItems).filter(i => i.name.toLowerCase().includes(t));
             const container = document.getElementById('searchResultsContainer');
             container.innerHTML = results.length === 0
                 ? '<div class="no-results">No items found</div>'
@@ -1425,7 +1428,7 @@ function renderItemCard(item) {
     const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
     const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
     const customLabel = hasModifiers ? '<div style="font-size:11px;color:#888;text-align:center;">customizable</div>' : '';
-    const bsBadge = item.isBestseller ? '<span style="font-size:9px;background:#e9456020;color:#e94560;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700;">🔥 Bestseller</span>' : '';
+    const bsBadge = item.isBestseller ? '<span style="font-size:10px;background:#e9456020;color:#e94560;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700;">🔥 Bestseller</span>' : '';
     
     let displayPrice = item.price;
     const variantGroup = hasModifiers ? item.modifierGroups.find(mg => mg.type === 'variant') : null;
@@ -1441,12 +1444,12 @@ function renderItemCard(item) {
                 <div>
                     <div class="menu-item-name">
                         ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
-                        ${item.name}${bsBadge}
+                        ${item.name}
                     </div>
                     ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
                 </div>
                 <div class="menu-item-bottom">
-                    <span class="menu-item-price">₹${Math.round(displayPrice)}</span>
+                    <span class="menu-item-price">₹${Math.round(displayPrice)}${bsBadge}</span>
                     <div id="ibtn_${item.id}">${getItemBtnHtml(item.id)}${customLabel}</div>
                 </div>
             </div>
@@ -1457,10 +1460,10 @@ function renderItemCard(item) {
             <div class="menu-item-compact-left">
                 <div class="menu-item-name">
                     ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
-                    ${item.name}${bsBadge}
+                    ${item.name}
                 </div>
                 ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
-                <div class="menu-item-price" style="margin-top:2px;">₹${Math.round(displayPrice)}</div>
+                <div class="menu-item-price" style="margin-top:2px;">₹${Math.round(displayPrice)}${bsBadge}</div>
             </div>
             <div id="ibtn_${item.id}" style="flex-shrink:0;text-align:center;">${getItemBtnHtml(item.id)}${customLabel}</div>
         </div>`;
