@@ -556,6 +556,10 @@
             </div>
             <div class="ff"><label>Sort Order</label><input class="fi" id="imSort" type="number" placeholder="1" inputmode="numeric"></div>
         </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div class="toggle" id="imBestseller" onclick="this.classList.toggle('on')" style="width:40px;height:22px;"></div>
+            <span style="font-size:13px;font-weight:600;">🔥 Bestseller</span>
+        </div>
         <div class="ff"><label>Description</label><textarea class="fi" id="imDesc" placeholder="Short description..."></textarea></div>
 
         <!-- Photo Upload -->
@@ -1054,7 +1058,7 @@ function renderItems() {
         <div class="item-row">
             ${posHtml}
             <div class="item-veg ${vegClass}"></div>
-            <div class="item-name" title="${item.name}">${item.name}</div>
+            <div class="item-name" title="${item.name}">${item.isBestseller ? '🔥 ' : ''}${item.name}</div>
             <div class="item-price">₹${Math.round(item.price || 0)}</div>
             <div class="item-cat">${cat ? cat.name : ''}</div>
             <div class="item-subcat">${subcat ? subcat.name : ''}</div>
@@ -1134,6 +1138,7 @@ function openItemModal(editId) {
         document.getElementById('imVegType').value = item.vegType || 'Veg';
         document.getElementById('imSort').value = item.sortOrder || '';
         document.getElementById('imDesc').value = item.description || '';
+        document.getElementById('imBestseller').classList.toggle('on', !!item.isBestseller);
         renderModGroups(item.modifierGroups || []);
         // Show existing photo if any
         if (item.imageUrl) {
@@ -1148,6 +1153,7 @@ function openItemModal(editId) {
         document.getElementById('imVegType').value = 'Veg';
         document.getElementById('imSort').value = '';
         document.getElementById('imDesc').value = '';
+        document.getElementById('imBestseller').classList.remove('on');
         renderModGroups([]);
     }
 
@@ -1189,6 +1195,7 @@ function addModGroupHTML(container, g, gIdx) {
     div.dataset.idx = gIdx;
     const gType = g.type || 'addon';
     const priceLabel = gType === 'variant' ? 'Price ₹' : 'Extra ₹';
+    const isCounter = gType === 'counter';
     let optionsHTML = (g.options || []).map((opt, oIdx) => `
         <div class="mod-option">
             <input placeholder="Option name" value="${opt.name || ''}" class="mg-opt-name">
@@ -1197,23 +1204,43 @@ function addModGroupHTML(container, g, gIdx) {
         </div>
     `).join('');
 
+    const counterHTML = `
+        <div class="mg-counter-fields" style="display:${isCounter?'flex':'none'};gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+            <label style="font-size:11px;color:#888;">Label: <input class="mg-counter-label" value="${g.counterLabel || 'glasses'}" placeholder="glasses" style="width:70px;padding:2px 4px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;"></label>
+            <label style="font-size:11px;color:#888;">Min: <input type="number" class="mg-counter-min" value="${g.counterMin || 1}" style="width:40px;padding:2px 4px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;text-align:center;"></label>
+            <label style="font-size:11px;color:#888;">Max: <input type="number" class="mg-counter-max" value="${g.counterMax || 10}" style="width:40px;padding:2px 4px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;text-align:center;"></label>
+            <label style="font-size:11px;color:#888;">Default: <input type="number" class="mg-counter-default" value="${g.counterDefault || 2}" style="width:40px;padding:2px 4px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;text-align:center;"></label>
+            <label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="mg-counter-required" ${g.counterRequired !== false ? 'checked' : ''}> Required</label>
+        </div>
+    `;
+
     div.innerHTML = `
         <div class="mod-group-header">
             <input class="fi mg-name" value="${g.groupName || ''}" placeholder="Group name (e.g. Spice Level)" style="flex:1;padding:6px 8px;font-size:12px;">
             <button type="button" onclick="this.closest('.mod-group').remove()" style="background:none;border:none;color:#ff6b6b;cursor:pointer;margin-left:8px;">🗑️</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-            <select class="mg-type" style="padding:2px 6px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;">
+            <select class="mg-type" onchange="toggleCounterFields(this)" style="padding:2px 6px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;">
                 <option value="variant" ${gType==='variant'?'selected':''}>Variant (replaces price)</option>
                 <option value="addon" ${gType==='addon'?'selected':''}>Add-on (adds to price)</option>
+                <option value="counter" ${gType==='counter'?'selected':''}>Counter (stepper, no charge)</option>
             </select>
-            <label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="mg-required" ${g.required ? 'checked' : ''}> Required</label>
-            <label style="font-size:11px;display:flex;align-items:center;gap:4px;">Max: <input type="number" class="mg-max" value="${g.maxSelect || 1}" style="width:40px;padding:2px 4px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;text-align:center;"></label>
+            <label style="font-size:11px;display:flex;align-items:center;gap:4px;${isCounter?'display:none;':''}"><input type="checkbox" class="mg-required" ${g.required ? 'checked' : ''}> Required</label>
+            <label style="font-size:11px;display:flex;align-items:center;gap:4px;${isCounter?'display:none;':''}">Max: <input type="number" class="mg-max" value="${g.maxSelect || 1}" style="width:40px;padding:2px 4px;background:#1a1c2e;border:1px solid #2a2d3e;border-radius:4px;color:#fff;font-size:11px;text-align:center;"></label>
         </div>
-        <div class="mg-options">${optionsHTML}</div>
-        <button type="button" onclick="addModOption(this)" style="padding:4px 10px;background:#2a2d3e;border:none;border-radius:4px;color:#888;font-size:11px;cursor:pointer;margin-top:4px;">+ Add Option</button>
+        ${counterHTML}
+        <div class="mg-options" style="${isCounter?'display:none;':''}">${optionsHTML}</div>
+        <button type="button" class="mg-add-opt-btn" onclick="addModOption(this)" style="padding:4px 10px;background:#2a2d3e;border:none;border-radius:4px;color:#888;font-size:11px;cursor:pointer;margin-top:4px;${isCounter?'display:none;':''}">+ Add Option</button>
     `;
     container.appendChild(div);
+}
+
+function toggleCounterFields(select) {
+    const group = select.closest('.mod-group');
+    const isCounter = select.value === 'counter';
+    group.querySelector('.mg-counter-fields').style.display = isCounter ? 'flex' : 'none';
+    group.querySelector('.mg-options').style.display = isCounter ? 'none' : 'block';
+    group.querySelector('.mg-add-opt-btn').style.display = isCounter ? 'none' : 'inline-block';
 }
 
 function addModOption(btn) {
@@ -1234,15 +1261,31 @@ function collectModGroups() {
         const name = div.querySelector('.mg-name').value.trim();
         if (!name) return;
         const type = div.querySelector('.mg-type').value || 'addon';
-        const required = div.querySelector('.mg-required').checked;
-        const maxSelect = parseInt(div.querySelector('.mg-max').value) || 1;
-        const options = [];
-        div.querySelectorAll('.mod-option').forEach(optDiv => {
-            const optName = optDiv.querySelector('.mg-opt-name').value.trim();
-            const extraPrice = parseFloat(optDiv.querySelector('.mg-opt-price').value) || 0;
-            if (optName) options.push({ name: optName, extraPrice: extraPrice });
-        });
-        if (options.length > 0) groups.push({ groupName: name, type, required, maxSelect, options });
+        
+        if (type === 'counter') {
+            groups.push({
+                groupName: name,
+                type: 'counter',
+                required: false,
+                maxSelect: 1,
+                counterLabel: div.querySelector('.mg-counter-label').value.trim() || 'glasses',
+                counterMin: parseInt(div.querySelector('.mg-counter-min').value) || 1,
+                counterMax: parseInt(div.querySelector('.mg-counter-max').value) || 10,
+                counterDefault: parseInt(div.querySelector('.mg-counter-default').value) || 2,
+                counterRequired: div.querySelector('.mg-counter-required').checked,
+                options: []
+            });
+        } else {
+            const required = div.querySelector('.mg-required').checked;
+            const maxSelect = parseInt(div.querySelector('.mg-max').value) || 1;
+            const options = [];
+            div.querySelectorAll('.mod-option').forEach(optDiv => {
+                const optName = optDiv.querySelector('.mg-opt-name').value.trim();
+                const extraPrice = parseFloat(optDiv.querySelector('.mg-opt-price').value) || 0;
+                if (optName) options.push({ name: optName, extraPrice: extraPrice });
+            });
+            if (options.length > 0) groups.push({ groupName: name, type, required, maxSelect, options });
+        }
     });
     return groups;
 }
@@ -1647,6 +1690,7 @@ async function saveItem() {
     const sortOrder = parseInt(document.getElementById('imSort').value) || 0;
     const description = document.getElementById('imDesc').value.trim();
     const modifierGroups = collectModGroups();
+    const isBestseller = document.getElementById('imBestseller').classList.contains('on');
 
     if (!name) { toast('Enter item name', 'err'); return; }
     if (isNaN(price)) { toast('Enter valid price', 'err'); return; }
@@ -1666,7 +1710,7 @@ async function saveItem() {
             // EDIT — only update changed fields, preserve imageUrl & isAvailable
             const updateData = {
                 name, price, categoryId, subCategoryId, vegType, sortOrder, description,
-                modifierGroups,
+                modifierGroups, isBestseller,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             if (imageUrl !== null) updateData.imageUrl = imageUrl;
@@ -1677,7 +1721,7 @@ async function saveItem() {
             const id = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 50) + '_' + Date.now();
             const data = {
                 id, name, price, categoryId, subCategoryId, vegType, sortOrder, description,
-                modifierGroups, isActive: true, isAvailable: true,
+                modifierGroups, isBestseller, isActive: true, isAvailable: true,
                 imageUrl: imageUrl || '', outletSpecific: false, outletIds: [],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1943,7 +1987,7 @@ function renderMtList() {
         return;
     }
     container.innerHTML = modTemplates.map(t => {
-        const typeLabel = t.type === 'variant' ? '🔄 Variant' : '➕ Add-on';
+        const typeLabel = t.type === 'variant' ? '🔄 Variant' : t.type === 'counter' ? '🔢 Counter' : '➕ Add-on';
         const optNames = (t.options || []).map(o => o.name + (o.extraPrice ? ' ₹' + o.extraPrice : '')).join(', ');
         return `
         <div class="item-row">
@@ -2046,7 +2090,7 @@ function populateTemplateDropdown() {
     const sel = document.getElementById('applyTemplateSelect');
     if (!sel) return;
     sel.innerHTML = '<option value="">📋 Apply Template...</option>' +
-        modTemplates.map(t => `<option value="${t.docId}">${t.name} (${t.type === 'variant' ? 'Variant' : 'Add-on'})</option>`).join('');
+        modTemplates.map(t => `<option value="${t.docId}">${t.name} (${t.type === 'variant' ? 'Variant' : t.type === 'counter' ? 'Counter' : 'Add-on'})</option>`).join('');
 }
 
 function applyModTemplate(docId) {
