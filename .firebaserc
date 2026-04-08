@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "nosh-qr-ordering-trial"
+  },
+  "targets": {
+    "nosh-qr-ordering-trial": {
+      "hosting": {
+        "nosh-order": ["nosh-order"],
+        "nosh-desk": ["nosh-desk"],
+        "nosh-carte": ["nosh-carte"],
+        "nosh-kitchen": ["nosh-kitchen"]
+      }
+    }
+  }
+}
