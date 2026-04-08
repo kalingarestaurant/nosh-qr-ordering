@@ -1015,6 +1015,7 @@ async function loadMenu() {
                     menuItems = cached.items;
                     console.log('Menu loaded from cache (' + menuItems.length + ' items)');
                     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                    await applyMenuControl();
                     renderCatGrid();
                     return;
                 }
@@ -1105,7 +1106,18 @@ async function loadMenuFromFirestore() {
     // Sort items by sortOrder
     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-    // Load menu control (hidden cats/subcats + upsell)
+    // Apply menu control (always fresh — not cached)
+    await applyMenuControl();
+
+    // Render
+    renderCatGrid();
+}
+
+async function applyMenuControl() {
+    // Clear any stale upsell flags (permanent isBestseller from Firestore stays via item data)
+    // Only clear dynamic upsell — but since cache may have stale flags, reset all non-permanent
+    // Actually: items from cache/Firestore already have permanent isBestseller if set in admin.
+    // We just need to ALSO mark dynamic upsell items.
     try {
         const mcDoc = await db.collection('qr_settings').doc('menu_control').get();
         if (mcDoc.exists) {
@@ -1133,9 +1145,6 @@ async function loadMenuFromFirestore() {
             }
         }
     } catch(e) { console.log('Menu control load error:', e); }
-
-    // Render
-    renderCatGrid();
 }
 
 function setDietFilter(mode) {
