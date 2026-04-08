@@ -292,7 +292,7 @@
                 </div>
                 <div class="menu-search">
                     <span class="menu-search-icon">🔍</span>
-                    <input type="text" id="detailSearchInput" placeholder="Search in menu..." oninput="filterDetailItems()">
+                    <input type="text" id="detailSearchInput" placeholder="Search entire menu..." oninput="filterMenu('detail')">
                 </div>
                 <div class="cat-tabs" id="catTabs"></div>
             </div>
@@ -1351,41 +1351,57 @@ function renderMenuItems() {
 }
 
 let gridSearchTimer = null;
-function filterMenu() {
+function filterMenu(source) {
+    // All search bars trigger global search
+    const input1 = document.getElementById('menuSearchInput');
+    const input2 = document.getElementById('menuSearchInput2');
+    const detailInput = document.getElementById('detailSearchInput');
+    
+    // Get search term from whichever input has text
+    let term = '';
+    if (source === 'detail' && detailInput) term = detailInput.value.trim();
+    else if (input2 && document.getElementById('menuSearchResults').style.display === 'flex') term = input2.value.trim();
+    else if (input1) term = input1.value.trim();
+    
+    searchTerm = term;
+    
     clearTimeout(gridSearchTimer);
     gridSearchTimer = setTimeout(() => {
-        const input1 = document.getElementById('menuSearchInput');
-        const input2 = document.getElementById('menuSearchInput2');
-        searchTerm = (input1 ? input1.value : '').trim() || (input2 ? input2.value : '').trim();
         if (searchTerm) {
+            // Switch to search overlay
             document.getElementById('menuCatGrid').style.display = 'none';
             document.getElementById('menuCatDetail').style.display = 'none';
             document.getElementById('menuSearchResults').style.display = 'flex';
+            // Sync all search inputs
             if (input1) input1.value = searchTerm;
             if (input2) input2.value = searchTerm;
-            const term = searchTerm.toLowerCase();
-            const results = getVegFilteredItems(menuItems).filter(i => i.name.toLowerCase().includes(term) || (i.description && i.description.toLowerCase().includes(term)));
+            if (detailInput) detailInput.value = '';
+            // Focus the search overlay input
+            if (input2 && document.activeElement !== input2) {
+                setTimeout(() => { input2.focus(); const len = input2.value.length; input2.setSelectionRange(len, len); }, 50);
+            }
+            // Global search across ALL items
+            const t = searchTerm.toLowerCase();
+            const results = getVegFilteredItems(menuItems).filter(i => i.name.toLowerCase().includes(t) || (i.description && i.description.toLowerCase().includes(t)));
             const container = document.getElementById('searchResultsContainer');
             container.innerHTML = results.length === 0
                 ? '<div class="no-results">No items found</div>'
                 : results.map(item => renderItemCard(item)).join('');
-            // Refocus active input
-            const active = document.activeElement;
-            if (active && (active.id === 'menuSearchInput' || active.id === 'menuSearchInput2')) {
-                setTimeout(() => { active.focus(); }, 10);
-            }
         } else {
             clearSearch();
         }
-    }, 200);
+    }, 150);
 }
 
 function clearSearch() {
     searchTerm = '';
+    detailSearchTerm = '';
     const i1 = document.getElementById('menuSearchInput');
     const i2 = document.getElementById('menuSearchInput2');
+    const i3 = document.getElementById('detailSearchInput');
     if (i1) i1.value = '';
     if (i2) i2.value = '';
+    if (i3) i3.value = '';
     document.getElementById('menuSearchResults').style.display = 'none';
     if (activeCategory) document.getElementById('menuCatDetail').style.display = 'flex';
     else document.getElementById('menuCatGrid').style.display = 'flex';
