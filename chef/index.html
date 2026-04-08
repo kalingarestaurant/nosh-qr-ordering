@@ -68,7 +68,7 @@
             <div class="t-sub" id="dOutlet">-</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-            <button class="tbtn" style="background:#ff6b6b15;color:#ff6b6b;border-color:#ff6b6b30;" onclick="openCatControl()">🚫 Dry Day</button>
+            <button id="dryDayBtn" class="tbtn" style="background:#ff6b6b15;color:#ff6b6b;border-color:#ff6b6b30;display:none;" onclick="openCatControl()">🚫 Dry Day</button>
             <span style="font-size:11px;color:#666;" id="dTime"></span>
             <button class="tbtn" onclick="doLogout()">Logout</button>
         </div>
@@ -155,6 +155,7 @@ async function startDash(){
     document.getElementById('authWrap').style.display='none';
     document.getElementById('dash').classList.add('on');
     document.getElementById('dOutlet').textContent=staffData.role==='chef'?'🍽️ Food Items':staffData.role==='barman'?'🍺 Drinks & Alcohol':'All Items';
+    if(staffData.role==='barman'||staffData.role==='super_admin') document.getElementById('dryDayBtn').style.display='';
     setInterval(()=>document.getElementById('dTime').textContent=getISTTime(),1000);
     document.getElementById('dTime').textContent=getISTTime();
     await loadData();
