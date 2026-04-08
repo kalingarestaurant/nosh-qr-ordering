@@ -154,7 +154,7 @@ async function checkAutoLogin(){
 async function startDash(){
     document.getElementById('authWrap').style.display='none';
     document.getElementById('dash').classList.add('on');
-    document.getElementById('dOutlet').textContent=staffData.outletIds?staffData.outletIds.join(', '):'All outlets';
+    document.getElementById('dOutlet').textContent=staffData.role==='chef'?'🍽️ Food Items':staffData.role==='barman'?'🍺 Drinks & Alcohol':'All Items';
     setInterval(()=>document.getElementById('dTime').textContent=getISTTime(),1000);
     document.getElementById('dTime').textContent=getISTTime();
     await loadData();
@@ -171,11 +171,19 @@ async function loadData(){
     allMenuItems=itemSnap.docs.map(d=>({docId:d.id,id:d.data().id||d.id,...d.data()}));
     allMenuItems.sort((a,b)=>a.name.localeCompare(b.name));
     
-    // Build category name map
+    // Build category name and type map
     allMenuItems.forEach(item=>{
         const cat=allCategories.find(c=>c.id===item.categoryId);
         item._catName=cat?cat.name:'';
+        item._catType=cat?cat.catType||'food':'food';
     });
+    
+    // Filter items by role: chef=food only, barman=alcohol+beverage, super_admin=all
+    if(staffData.role==='chef'){
+        allMenuItems=allMenuItems.filter(i=>i._catType==='food');
+    }else if(staffData.role==='barman'){
+        allMenuItems=allMenuItems.filter(i=>i._catType==='alcohol'||i._catType==='beverage');
+    }
     
     // Load current upsell state
     try{
