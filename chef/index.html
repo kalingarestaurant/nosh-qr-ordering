@@ -52,7 +52,7 @@
 <body>
 
 <div id="authWrap" class="auth-wrap"><div class="auth-box">
-    <div class="auth-logo">🔥 NOSH — Chef Panel</div>
+    <div class="auth-logo">🔥 NOSH — Chef / Bar Panel</div>
     <div id="loginStep">
         <div class="auth-err" id="loginErr"></div>
         <div class="auth-group"><span class="auth-pre">+91</span><input type="tel" class="auth-inp" id="inpPhone" placeholder="Phone number" maxlength="10" inputmode="numeric"></div>
@@ -114,7 +114,7 @@ async function doLogin(){
         if(snap.empty){document.getElementById('loginErr').textContent='Staff not found';return;}
         const doc=snap.docs[0];const data=doc.data();
         if(data.pin!==pin){document.getElementById('loginErr').textContent='Wrong PIN';return;}
-        if(data.role!=='chef'&&data.role!=='super_admin'){document.getElementById('loginErr').textContent='Chef access only';return;}
+        if(data.role!=='chef'&&data.role!=='barman'&&data.role!=='super_admin'){document.getElementById('loginErr').textContent='Chef/Barman access only';return;}
         staffData={docId:doc.id,...data};
         localStorage.setItem('nosh_chef',JSON.stringify({phone,pin}));
         startDash();
@@ -131,7 +131,7 @@ async function checkAutoLogin(){
         if(snap.empty)return;
         const doc=snap.docs[0];const data=doc.data();
         if(data.pin!==saved.pin)return;
-        if(data.role!=='chef'&&data.role!=='super_admin')return;
+        if(data.role!=='chef'&&data.role!=='barman'&&data.role!=='super_admin')return;
         staffData={docId:doc.id,...data};
         startDash();
     }catch(e){}
