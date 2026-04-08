@@ -81,6 +81,9 @@
         .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; }
         .toggle.on::after { transform: translateX(18px); }
         .item-actions { display: flex; gap: 4px; }
+        .bs-toggle { background: none; border: 1px solid #333; border-radius: 4px; font-size: 12px; cursor: pointer; padding: 2px 4px; opacity: 0.3; transition: all 0.2s; flex-shrink: 0; }
+        .bs-toggle.on { opacity: 1; border-color: #e94560; background: #e9456020; }
+        .bs-toggle:hover { opacity: 0.7; }
         .btn-edit { padding: 4px 10px; border: 1px solid #3498db30; background: #3498db15; color: #5dade2; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Poppins', sans-serif; }
         .btn-del { padding: 4px 10px; border: 1px solid #ff6b6b30; background: #ff6b6b15; color: #ff6b6b; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: 'Poppins', sans-serif; }
 
@@ -1060,7 +1063,8 @@ function renderItems() {
         <div class="item-row">
             ${posHtml}
             <div class="item-veg ${vegClass}"></div>
-            <div class="item-name" title="${item.name}">${item.isBestseller ? '🔥 ' : ''}${item.name}</div>
+            <div class="item-name" title="${item.name}">${item.name}</div>
+            <button class="bs-toggle ${item.isBestseller ? 'on' : ''}" onclick="event.stopPropagation();toggleBestseller('${item.docId}',${!item.isBestseller})" title="${item.isBestseller ? 'Remove Bestseller' : 'Mark as Bestseller'}">🔥</button>
             <div class="item-price">₹${Math.round(item.price || 0)}</div>
             <div class="item-cat">${cat ? cat.name : ''}</div>
             <div class="item-subcat">${subcat ? subcat.name : ''}</div>
@@ -1088,6 +1092,19 @@ async function toggleAvail(docId, newValue) {
         if (item) item.isAvailable = newValue;
         renderItems();
         toast(newValue ? '✅ Item available' : '🚫 Item 86\'d');
+    } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function toggleBestseller(docId, newValue) {
+    try {
+        await db.collection('menu_items').doc(docId).update({
+            isBestseller: newValue,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        const item = items.find(i => i.docId === docId);
+        if (item) item.isBestseller = newValue;
+        renderItems();
+        toast(newValue ? '🔥 Marked as Bestseller' : 'Removed from Bestsellers');
     } catch (e) { toast('Error: ' + e.message, 'err'); }
 }
 
