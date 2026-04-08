@@ -117,7 +117,7 @@ function getISTTime(){const d=getIST();return d.toLocaleTimeString('en-IN',{hour
 
 // ═══════ AUTH ═══════
 async function doLogin(){
-    const phone='91'+document.getElementById('inpPhone').value.trim();
+    const phone='+91'+document.getElementById('inpPhone').value.trim();
     const pin=document.getElementById('inpPin').value.trim();
     document.getElementById('loginErr').textContent='';
     if(phone.length!==12){document.getElementById('loginErr').textContent='Enter 10-digit phone';return;}
