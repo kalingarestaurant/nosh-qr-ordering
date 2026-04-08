@@ -120,7 +120,7 @@ async function doLogin(){
     const phone='+91'+document.getElementById('inpPhone').value.trim();
     const pin=document.getElementById('inpPin').value.trim();
     document.getElementById('loginErr').textContent='';
-    if(phone.length!==12){document.getElementById('loginErr').textContent='Enter 10-digit phone';return;}
+    if(phone.length!==13){document.getElementById('loginErr').textContent='Enter 10-digit phone';return;}
     if(!pin){document.getElementById('loginErr').textContent='Enter PIN';return;}
     try{
         const snap=await db.collection('qr_staff').where('phone','==',phone).get();
