@@ -2744,6 +2744,7 @@ async function saveStaff() {
         if (editPhone) {
             await db.collection('qr_staff').doc(editPhone).update(data);
         } else {
+            data.pin = '1234'; // default PIN, forced change on first login
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection('qr_staff').doc(fullPhone).set(data);
         }
