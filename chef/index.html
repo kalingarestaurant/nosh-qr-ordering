@@ -68,6 +68,7 @@
             <div class="t-sub" id="dOutlet">-</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
+            <button class="tbtn" style="background:#ff6b6b15;color:#ff6b6b;border-color:#ff6b6b30;" onclick="openCatControl()">🚫 Dry Day</button>
             <span style="font-size:11px;color:#666;" id="dTime"></span>
             <button class="tbtn" onclick="doLogout()">Logout</button>
         </div>
@@ -85,6 +86,18 @@
 </div>
 
 <div class="toast" id="toastEl"></div>
+
+<!-- Category Control Modal -->
+<div id="catControlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;justify-content:center;align-items:center;">
+    <div style="background:#1a1c2e;border-radius:16px;padding:24px;width:95%;max-width:550px;max-height:85vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <span style="font-size:20px;font-weight:800;color:#fff;">🚫 Category Control</span>
+            <button onclick="closeCatControl()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">✕</button>
+        </div>
+        <div style="font-size:12px;color:#888;margin-bottom:14px;">Toggle categories/subcategories OFF for today (e.g. dry day — hide alcohol). Auto-resets at daily reset.</div>
+        <div id="catControlList"></div>
+    </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -236,6 +249,70 @@ async function toggleUpsell(itemId,add){
         renderItems();
     }catch(e){toast('Error: '+e.message);}
 }
+
+// ═══════ CATEGORY CONTROL (Dry Day) ═══════
+let hiddenCats=[];
+let hiddenSubcats=[];
+
+async function openCatControl(){
+    // Load current state
+    try{
+        const mc=await db.collection('qr_settings').doc('menu_control').get();
+        if(mc.exists){
+            hiddenCats=mc.data().hiddenCats||[];
+            hiddenSubcats=mc.data().hiddenSubcats||[];
+        }
+    }catch(e){}
+    
+    const container=document.getElementById('catControlList');
+    const activeCats=allCategories.filter(c=>c.isActive);
+    container.innerHTML=activeCats.map(cat=>{
+        const catId=cat.id||cat.docId;
+        const isHidden=hiddenCats.includes(catId);
+        const subcats=cat.subcategories||[];
+        const scHtml=subcats.length>0?subcats.map(sc=>{
+            const scOff=hiddenSubcats.includes(sc.id);
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 6px 24px;border-bottom:1px solid #1e2030;">
+                <span style="font-size:12px;color:#aaa;">${sc.name}</span>
+                <label style="cursor:pointer;"><input type="checkbox" ${scOff?'':'checked'} onchange="toggleSubcatCtrl('${sc.id}',this.checked)" style="width:16px;height:16px;accent-color:#4ecdc4;cursor:pointer;"></label>
+            </div>`;
+        }).join(''):'';
+        return `<div style="border:1px solid #252840;border-radius:8px;margin-bottom:8px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:${isHidden?'#ff6b6b10':'#1e2030'};">
+                <span style="font-size:14px;font-weight:600;color:${isHidden?'#ff6b6b':'#e8e8e8'};">${cat.name}${isHidden?' (OFF)':''}</span>
+                <label style="cursor:pointer;"><input type="checkbox" ${isHidden?'':'checked'} onchange="toggleCatCtrl('${catId}',this.checked)" style="width:18px;height:18px;accent-color:#4ecdc4;cursor:pointer;"></label>
+            </div>
+            ${scHtml}
+        </div>`;
+    }).join('');
+    
+    const modal=document.getElementById('catControlModal');
+    modal.style.display='flex';
+}
+
+function closeCatControl(){document.getElementById('catControlModal').style.display='none';}
+
+async function toggleCatCtrl(catId,isOn){
+    hiddenCats=hiddenCats.filter(c=>c!==catId);
+    if(!isOn) hiddenCats.push(catId);
+    try{
+        await db.collection('qr_settings').doc('menu_control').set({hiddenCats:hiddenCats,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+        toast(isOn?'✅ Category visible':'🚫 Category hidden');
+        openCatControl();
+    }catch(e){toast('Error: '+e.message);}
+}
+
+async function toggleSubcatCtrl(scId,isOn){
+    hiddenSubcats=hiddenSubcats.filter(s=>s!==scId);
+    if(!isOn) hiddenSubcats.push(scId);
+    try{
+        await db.collection('qr_settings').doc('menu_control').set({hiddenSubcats:hiddenSubcats,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+        toast(isOn?'✅ Subcategory visible':'🚫 Subcategory hidden');
+        openCatControl();
+    }catch(e){toast('Error: '+e.message);}
+}
+
+document.getElementById('catControlModal').addEventListener('click',function(e){if(e.target===this)closeCatControl();});
 
 window.addEventListener('DOMContentLoaded',checkAutoLogin);
 </script>
