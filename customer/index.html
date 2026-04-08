@@ -82,12 +82,16 @@
         .menu-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #999; font-size: 14px; }
 
         /* Veg Only Toggle */
-        .veg-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; }
-        .veg-toggle-label { font-size: 13px; font-weight: 600; color: #0a8f0a; }
-        .veg-toggle-switch { width: 36px; height: 20px; border-radius: 10px; background: #ccc; position: relative; transition: background 0.2s; }
-        .veg-toggle-switch.on { background: #0a8f0a; }
-        .veg-toggle-switch::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: transform 0.2s; }
-        .veg-toggle-switch.on::after { transform: translateX(16px); }
+        .diet-toggles { display: flex; gap: 8px; flex-shrink: 0; }
+        .diet-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .diet-toggle-label { font-size: 12px; font-weight: 600; }
+        .diet-toggle-label.veg { color: #0a8f0a; }
+        .diet-toggle-label.nonveg { color: #e94560; }
+        .diet-toggle-switch { width: 32px; height: 18px; border-radius: 9px; background: #ccc; position: relative; transition: background 0.2s; }
+        .diet-toggle-switch.on-veg { background: #0a8f0a; }
+        .diet-toggle-switch.on-nonveg { background: #e94560; }
+        .diet-toggle-switch::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: transform 0.2s; }
+        .diet-toggle-switch.on-veg::after, .diet-toggle-switch.on-nonveg::after { transform: translateX(14px); }
 
         /* Category Tabs */
         .cat-tabs { background: #fff; border-bottom: 1px solid #eee; overflow-x: auto; white-space: nowrap; padding: 0 6px; margin-top: 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -250,9 +254,15 @@
             <div class="menu-header">
                 <div class="menu-header-top">
                     <span class="menu-outlet-name" id="menuOutletName">House Of Nosh</span>
-                    <div class="veg-toggle" onclick="toggleVegOnly()">
-                        <span class="veg-toggle-label">Veg</span>
-                        <div class="veg-toggle-switch" id="vegToggle1"></div>
+                    <div class="diet-toggles">
+                        <div class="diet-toggle" onclick="setDietFilter('veg')">
+                            <span class="diet-toggle-label veg">Veg</span>
+                            <div class="diet-toggle-switch" id="vegSwitch1"></div>
+                        </div>
+                        <div class="diet-toggle" onclick="setDietFilter('nonveg')">
+                            <span class="diet-toggle-label nonveg">Non-Veg</span>
+                            <div class="diet-toggle-switch" id="nvSwitch1"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="menu-search">
@@ -269,9 +279,15 @@
                 <div class="menu-header-top">
                     <button class="back-btn" onclick="showCatGrid()">←</button>
                     <span class="menu-outlet-name" id="detailCatName">Starters</span>
-                    <div class="veg-toggle" onclick="toggleVegOnly()">
-                        <span class="veg-toggle-label">Veg</span>
-                        <div class="veg-toggle-switch" id="vegToggle2"></div>
+                    <div class="diet-toggles">
+                        <div class="diet-toggle" onclick="setDietFilter('veg')">
+                            <span class="diet-toggle-label veg">Veg</span>
+                            <div class="diet-toggle-switch" id="vegSwitch2"></div>
+                        </div>
+                        <div class="diet-toggle" onclick="setDietFilter('nonveg')">
+                            <span class="diet-toggle-label nonveg">Non-Veg</span>
+                            <div class="diet-toggle-switch" id="nvSwitch2"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="menu-search">
@@ -330,6 +346,10 @@
             </div>
             <div id="confirmBanner" style="display:none;"></div>
             <div class="session-history" id="sessionHistory"></div>
+            <div id="pastOrdersSection" style="display:none;">
+                <div style="font-size:14px;font-weight:700;color:#333;padding:16px 0 8px;border-top:1px solid #eee;margin-top:16px;">🔄 Your Past Orders</div>
+                <div id="pastOrdersList"></div>
+            </div>
         </div>
     </div>
 
@@ -571,7 +591,7 @@ let activeCategory = '';
 let activeSubcat = '';
 let searchTerm = '';
 let detailSearchTerm = '';
-let vegOnly = false;
+let dietFilter = 'all'; // 'all', 'veg', 'nonveg'
 let ordersListener = null; // Firestore listener for session orders
 let sessionListener = null; // Firestore listener for session deactivation
 let outletOrderingHours = []; // [{open: "11:00", close: "15:30"}, ...]
@@ -785,6 +805,7 @@ async function init() {
                 customerPhone = existingSession.phone;
                 sessionId = existingSession.sessionId;
                 await startOrdersListener();
+            loadPastOrders();
             }
         } else {
             tableName = '📋 Browse Menu';
@@ -1084,13 +1105,50 @@ async function loadMenuFromFirestore() {
     // Sort items by sortOrder
     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
+    // Load menu control (hidden cats/subcats + upsell)
+    try {
+        const mcDoc = await db.collection('qr_settings').doc('menu_control').get();
+        if (mcDoc.exists) {
+            const mc = mcDoc.data();
+            const hiddenCats = mc.hiddenCats || [];
+            const hiddenSubcats = mc.hiddenSubcats || [];
+            const upsellIds = mc.upsellItems || [];
+            // Filter out hidden categories
+            if (hiddenCats.length > 0) {
+                menuCategories = menuCategories.filter(c => !hiddenCats.includes(c.id));
+            }
+            // Filter out hidden subcategories
+            if (hiddenSubcats.length > 0) {
+                menuCategories = menuCategories.map(c => ({
+                    ...c,
+                    subcategories: (c.subcategories || []).filter(sc => !hiddenSubcats.includes(sc.id))
+                }));
+                menuItems = menuItems.filter(i => !hiddenSubcats.includes(i.subCategoryId));
+            }
+            // Mark upsell items as bestseller
+            if (upsellIds.length > 0) {
+                menuItems.forEach(item => {
+                    if (upsellIds.includes(item.id)) item.isBestseller = true;
+                });
+            }
+        }
+    } catch(e) { console.log('Menu control load error:', e); }
+
     // Render
     renderCatGrid();
 }
 
-function toggleVegOnly() {
-    vegOnly = !vegOnly;
-    document.querySelectorAll('.veg-toggle-switch').forEach(s => s.classList.toggle('on', vegOnly));
+function setDietFilter(mode) {
+    // Toggle: tap same = turn off (back to all), tap other = switch
+    if (dietFilter === mode) {
+        dietFilter = 'all';
+    } else {
+        dietFilter = mode;
+    }
+    // Update all toggle switches
+    document.querySelectorAll('[id^="vegSwitch"]').forEach(s => { s.className = 'diet-toggle-switch' + (dietFilter === 'veg' ? ' on-veg' : ''); });
+    document.querySelectorAll('[id^="nvSwitch"]').forEach(s => { s.className = 'diet-toggle-switch' + (dietFilter === 'nonveg' ? ' on-nonveg' : ''); });
+    
     if (activeCategory) {
         renderSubcatTiles();
         renderMenuItems();
@@ -1100,8 +1158,10 @@ function toggleVegOnly() {
 }
 
 function getVegFilteredItems(itemList) {
-    if (!vegOnly) return itemList;
-    return itemList.filter(i => !i.vegType || i.vegType === 'Veg' || i.vegType === '');
+    if (dietFilter === 'all') return itemList;
+    if (dietFilter === 'veg') return itemList.filter(i => !i.vegType || i.vegType === 'Veg' || i.vegType === '');
+    if (dietFilter === 'nonveg') return itemList.filter(i => !i.vegType || i.vegType === 'NonVeg' || i.vegType === 'Egg' || i.vegType === '');
+    return itemList;
 }
 
 function renderCatGrid() {
@@ -1109,7 +1169,15 @@ function renderCatGrid() {
     const filteredItems = getVegFilteredItems(menuItems);
     const activeCats = menuCategories.filter(c => c.isActive && filteredItems.some(i => i.categoryId === c.id));
     if (activeCats.length === 0) { container.innerHTML = '<div class="no-results">No categories available</div>'; return; }
-    container.innerHTML = activeCats.map(cat => {
+    
+    // Check if any bestseller items exist
+    const bestsellerItems = filteredItems.filter(i => i.isBestseller);
+    const bestsellerTile = bestsellerItems.length > 0 ? `<div class="cat-tile" onclick="selectCategory('__bestsellers__')" style="position:relative;">
+        <div class="cat-tile-placeholder" style="background:linear-gradient(135deg, #e94560 0%, #f39c12 100%);"><span class="cat-tile-name">🔥 Bestsellers</span></div>
+        <div class="cat-tile-count">${bestsellerItems.length}</div>
+    </div>` : '';
+    
+    container.innerHTML = bestsellerTile + activeCats.map(cat => {
         const count = filteredItems.filter(i => i.categoryId === cat.id).length;
         const imgHtml = cat.imageUrl
             ? `<img src="${cat.imageUrl}" alt="${cat.name}" loading="lazy">`
@@ -1136,12 +1204,22 @@ function selectCategory(catId) {
     detailSearchTerm = '';
     const detailInput = document.getElementById('detailSearchInput');
     if (detailInput) detailInput.value = '';
-    const cat = menuCategories.find(c => c.id === catId);
-    document.getElementById('detailCatName').textContent = cat ? cat.name : '';
-    // Default to first visible subcategory
-    const subcats = cat ? cat.subcategories || [] : [];
-    const visibleSubcats = subcats.filter(sc => getVegFilteredItems(menuItems).some(i => i.categoryId === catId && i.subCategoryId === sc.id));
-    activeSubcat = visibleSubcats.length > 1 ? visibleSubcats[0].id : '';
+    
+    if (catId === '__bestsellers__') {
+        document.getElementById('detailCatName').textContent = '🔥 Bestsellers';
+        // Subcats = parent categories that have bestseller items
+        const bsItems = getVegFilteredItems(menuItems).filter(i => i.isBestseller);
+        const bsCatIds = [...new Set(bsItems.map(i => i.categoryId))];
+        const bsCats = bsCatIds.map(cid => menuCategories.find(c => c.id === cid)).filter(Boolean);
+        activeSubcat = bsCats.length > 1 ? bsCats[0].id : '';
+    } else {
+        const cat = menuCategories.find(c => c.id === catId);
+        document.getElementById('detailCatName').textContent = cat ? cat.name : '';
+        const subcats = cat ? cat.subcategories || [] : [];
+        const visibleSubcats = subcats.filter(sc => getVegFilteredItems(menuItems).some(i => i.categoryId === catId && i.subCategoryId === sc.id));
+        activeSubcat = visibleSubcats.length > 1 ? visibleSubcats[0].id : '';
+    }
+    
     document.getElementById('menuCatGrid').style.display = 'none';
     document.getElementById('menuSearchResults').style.display = 'none';
     document.getElementById('menuCatDetail').style.display = 'flex';
@@ -1161,6 +1239,24 @@ function showCatGrid() {
 
 function renderSubcatTiles() {
     const container = document.getElementById('subcatTiles');
+    
+    // Bestsellers mode — subcats = parent categories
+    if (activeCategory === '__bestsellers__') {
+        const bsItems = getVegFilteredItems(menuItems).filter(i => i.isBestseller);
+        const bsCatIds = [...new Set(bsItems.map(i => i.categoryId))];
+        const bsCats = bsCatIds.map(cid => menuCategories.find(c => c.id === cid)).filter(Boolean);
+        if (bsCats.length <= 1) { container.style.display = 'none'; return; }
+        container.style.display = 'flex';
+        container.innerHTML = bsCats.map(c => {
+            const isActive = activeSubcat === c.id;
+            const imgHtml = c.imageUrl
+                ? '<img class="subcat-tile-img" src="' + c.imageUrl + '" alt="' + c.name + '" loading="lazy">'
+                : '<div class="subcat-tile-placeholder">🍽️</div>';
+            return '<div class="subcat-tile ' + (isActive ? 'active' : '') + '" onclick="selectSubcat(\'' + c.id + '\')">' + imgHtml + '<div class="subcat-tile-name">' + c.name + '</div></div>';
+        }).join('');
+        return;
+    }
+    
     const cat = menuCategories.find(c => c.id === activeCategory);
     const subcats = cat ? cat.subcategories || [] : [];
     const visibleSubcats = subcats.filter(sc => getVegFilteredItems(menuItems).some(i => i.categoryId === activeCategory && i.subCategoryId === sc.id));
@@ -1171,7 +1267,7 @@ function renderSubcatTiles() {
         const isActive = activeSubcat === sc.id;
         const imgHtml = sc.imageUrl
             ? '<img class="subcat-tile-img" src="' + sc.imageUrl + '" alt="' + sc.name + '" loading="lazy">'
-            : '<div class="subcat-tile-placeholder">\ud83c\udf7d\ufe0f</div>';
+            : '<div class="subcat-tile-placeholder">🍽️</div>';
         html += '<div class="subcat-tile ' + (isActive ? 'active' : '') + '" onclick="selectSubcat(\'' + sc.id + '\')">' + imgHtml + '<div class="subcat-tile-name">' + sc.name + '</div></div>';
     }
     container.innerHTML = html;
@@ -1203,8 +1299,16 @@ function filterDetailItems() {
 
 function renderMenuItems() {
     const container = document.getElementById('menuItemsContainer');
-    let filtered = getVegFilteredItems(menuItems).filter(i => i.categoryId === activeCategory);
-    if (activeSubcat) filtered = filtered.filter(i => i.subCategoryId === activeSubcat);
+    let filtered;
+    
+    if (activeCategory === '__bestsellers__') {
+        // Bestsellers mode — filter by isBestseller, subcat = parent category
+        filtered = getVegFilteredItems(menuItems).filter(i => i.isBestseller);
+        if (activeSubcat) filtered = filtered.filter(i => i.categoryId === activeSubcat);
+    } else {
+        filtered = getVegFilteredItems(menuItems).filter(i => i.categoryId === activeCategory);
+        if (activeSubcat) filtered = filtered.filter(i => i.subCategoryId === activeSubcat);
+    }
     
     // Apply detail search within category
     if (detailSearchTerm) {
@@ -1215,20 +1319,33 @@ function renderMenuItems() {
     }
     
     if (filtered.length === 0) { container.innerHTML = '<div class="no-results">No items found</div>'; return; }
-    const cat = menuCategories.find(c => c.id === activeCategory);
-    const subcats = cat ? cat.subcategories || [] : [];
+    
     let html = '';
-    if (!activeSubcat && !detailSearchTerm && subcats.length > 0) {
-        for (const sc of subcats) {
-            const scItems = filtered.filter(i => i.subCategoryId === sc.id);
-            if (scItems.length === 0) continue;
-            html += '<div class="subcat-header">' + sc.name + '</div>';
-            html += scItems.map(item => renderItemCard(item)).join('');
+    if (activeCategory === '__bestsellers__' && !activeSubcat && !detailSearchTerm) {
+        // Group by parent category
+        const bsCatIds = [...new Set(filtered.map(i => i.categoryId))];
+        for (const cid of bsCatIds) {
+            const cat = menuCategories.find(c => c.id === cid);
+            const catItems = filtered.filter(i => i.categoryId === cid);
+            if (catItems.length === 0) continue;
+            html += '<div class="subcat-header">' + (cat ? cat.name : '') + '</div>';
+            html += catItems.map(item => renderItemCard(item)).join('');
         }
-        const noSubcat = filtered.filter(i => !i.subCategoryId);
-        if (noSubcat.length > 0) html += noSubcat.map(item => renderItemCard(item)).join('');
     } else {
-        html = filtered.map(item => renderItemCard(item)).join('');
+        const cat = menuCategories.find(c => c.id === activeCategory);
+        const subcats = cat ? cat.subcategories || [] : [];
+        if (!activeSubcat && !detailSearchTerm && subcats.length > 0) {
+            for (const sc of subcats) {
+                const scItems = filtered.filter(i => i.subCategoryId === sc.id);
+                if (scItems.length === 0) continue;
+                html += '<div class="subcat-header">' + sc.name + '</div>';
+                html += scItems.map(item => renderItemCard(item)).join('');
+            }
+            const noSubcat = filtered.filter(i => !i.subCategoryId);
+            if (noSubcat.length > 0) html += noSubcat.map(item => renderItemCard(item)).join('');
+        } else {
+            html = filtered.map(item => renderItemCard(item)).join('');
+        }
     }
     container.innerHTML = html;
 }
@@ -1283,6 +1400,7 @@ function renderItemCard(item) {
     const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
     const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
     const customLabel = hasModifiers ? '<div style="font-size:11px;color:#888;text-align:center;">customizable</div>' : '';
+    const bsBadge = item.isBestseller ? '<span style="font-size:9px;background:#e9456020;color:#e94560;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700;">🔥 Bestseller</span>' : '';
     
     let displayPrice = item.price;
     const variantGroup = hasModifiers ? item.modifierGroups.find(mg => mg.type === 'variant') : null;
@@ -1298,7 +1416,7 @@ function renderItemCard(item) {
                 <div>
                     <div class="menu-item-name">
                         ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
-                        ${item.name}
+                        ${item.name}${bsBadge}
                     </div>
                     ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
                 </div>
@@ -1314,7 +1432,7 @@ function renderItemCard(item) {
             <div class="menu-item-compact-left">
                 <div class="menu-item-name">
                     ${vegClass ? `<span class="veg-badge ${vegClass}"></span>` : ''}
-                    ${item.name}
+                    ${item.name}${bsBadge}
                 </div>
                 ${item.description ? `<div class="menu-item-desc">${item.description}</div>` : ''}
                 <div class="menu-item-price" style="margin-top:2px;">₹${Math.round(displayPrice)}</div>
@@ -1413,6 +1531,26 @@ function openItemDetail(itemId) {
     // Modifier groups (if any)
     if (item.modifierGroups && item.modifierGroups.length > 0) {
         item.modifierGroups.forEach((mg, gIdx) => {
+            // Counter type — render stepper
+            if (mg.type === 'counter') {
+                const label = mg.counterLabel || 'glasses';
+                const min = mg.counterMin || 1;
+                const max = mg.counterMax || 10;
+                const def = mg.counterDefault || 2;
+                const isRequired = mg.counterRequired !== false;
+                html += `<div class="modifier-group">
+                    <div class="modifier-group-title">${mg.groupName}</div>
+                    <div class="modifier-group-subtitle">${isRequired ? 'Required' : 'Optional'}</div>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 0;">
+                        <button onclick="counterStep(${gIdx},-1,${isRequired ? min : 0},${max})" style="width:36px;height:36px;border-radius:50%;border:2px solid #e94560;background:none;color:#e94560;font-size:18px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;">−</button>
+                        <span id="counter_${gIdx}" style="font-size:24px;font-weight:800;color:#fff;min-width:36px;text-align:center;">${isRequired ? def : 0}</span>
+                        <button onclick="counterStep(${gIdx},1,${isRequired ? min : 0},${max})" style="width:36px;height:36px;border-radius:50%;border:2px solid #e94560;background:none;color:#e94560;font-size:18px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;">+</button>
+                    </div>
+                    <div style="text-align:center;font-size:12px;color:#888;">${label}</div>
+                </div>`;
+                return; // skip normal options rendering for counter
+            }
+
             const isRadio = mg.maxSelect === 1;
             const isVariant = mg.type === 'variant';
             html += `<div class="modifier-group">
@@ -1476,6 +1614,14 @@ function openItemDetail(itemId) {
             }
         });
     }
+}
+
+function counterStep(gIdx, delta, min, max) {
+    const el = document.getElementById('counter_' + gIdx);
+    let val = parseInt(el.textContent) + delta;
+    if (val < min) val = min;
+    if (val > max) val = max;
+    el.textContent = val;
 }
 
 function closeModifierPopup() {
@@ -1545,7 +1691,7 @@ function addFromModifier() {
 
     // Build modifier list
     const modifiers = [];
-    let variantPrice = null; // if a variant is selected, this replaces base price
+    let variantPrice = null;
     for (const [gIdx, optIndices] of Object.entries(selections)) {
         const mg = item.modifierGroups[parseInt(gIdx)];
         const isVariant = mg.type === 'variant';
@@ -1561,6 +1707,43 @@ function addFromModifier() {
                 variantPrice = opt.extraPrice;
             }
         }
+    }
+
+    // Validate required counters
+    if (item.modifierGroups) {
+        for (let gIdx = 0; gIdx < item.modifierGroups.length; gIdx++) {
+            const mg = item.modifierGroups[gIdx];
+            if (mg.type === 'counter' && mg.counterRequired !== false) {
+                const el = document.getElementById('counter_' + gIdx);
+                const count = el ? parseInt(el.textContent) || 0 : 0;
+                if (count < (mg.counterMin || 1)) {
+                    alert('Please select ' + mg.groupName);
+                    return;
+                }
+            }
+        }
+    }
+
+    // Collect counter values
+    if (item.modifierGroups) {
+        item.modifierGroups.forEach((mg, gIdx) => {
+            if (mg.type === 'counter') {
+                const el = document.getElementById('counter_' + gIdx);
+                if (el) {
+                    const count = parseInt(el.textContent) || 0;
+                    if (count > 0) {
+                        const label = mg.counterLabel || 'glasses';
+                        modifiers.push({
+                            group: mg.groupName,
+                            option: count + ' ' + label,
+                            extraPrice: 0,
+                            type: 'counter',
+                            count: count
+                        });
+                    }
+                }
+            }
+        });
     }
 
     // For variants, the selected option price IS the item price
@@ -1813,6 +1996,7 @@ function otpModalSendOTP() {
         createSession(customerPhone).then(sid => {
             sessionId = sid;
             startOrdersListener();
+            loadPastOrders();
             submitOrder();
         }).catch(err => {
             hideLoading();
@@ -2037,6 +2221,95 @@ function renderOrderConfirmation(orderNumber, items) {
 // ============================================================
 // SESSION HISTORY (real-time)
 // ============================================================
+// ═══════ PAST ORDERS (Order Again) ═══════
+async function loadPastOrders() {
+    if (!customerPhone) return;
+    try {
+        const snap = await db.collection('qr_orders')
+            .where('customerPhone', '==', customerPhone)
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get();
+        
+        // Filter out current session orders and group by date
+        const pastOrders = snap.docs.map(d => d.data()).filter(o => o.sessionId !== sessionId);
+        if (pastOrders.length === 0) {
+            document.getElementById('pastOrdersSection').style.display = 'none';
+            return;
+        }
+        
+        // Group unique item combos (deduplicate repeated orders)
+        const uniqueOrders = [];
+        const seen = new Set();
+        for (const o of pastOrders) {
+            const key = (o.items || []).map(i => i.name).sort().join(',');
+            if (seen.has(key)) continue;
+            seen.add(key);
+            uniqueOrders.push(o);
+            if (uniqueOrders.length >= 5) break; // show max 5 unique past orders
+        }
+        
+        document.getElementById('pastOrdersSection').style.display = 'block';
+        document.getElementById('pastOrdersList').innerHTML = uniqueOrders.map((o, idx) => {
+            const itemNames = (o.items || []).slice(0, 4).map(i => i.qty + '× ' + i.name).join(', ');
+            const more = (o.items || []).length > 4 ? ' +' + ((o.items || []).length - 4) + ' more' : '';
+            const date = o.dateString || '';
+            const outletLabel = o.outletName ? o.outletName + ' · ' : '';
+            return `<div style="background:#f9f9f9;border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;" onclick="reorderPast(${idx})">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:11px;color:#888;">${outletLabel}${date}</span>
+                    <span style="font-size:12px;font-weight:700;color:#e94560;">+ Reorder</span>
+                </div>
+                <div style="font-size:13px;color:#333;">${itemNames}${more}</div>
+            </div>`;
+        }).join('');
+        
+        // Store for reorder
+        window._pastOrders = uniqueOrders;
+    } catch (e) { console.log('Past orders load error:', e); }
+}
+
+function reorderPast(idx) {
+    const order = window._pastOrders && window._pastOrders[idx];
+    if (!order || !order.items) return;
+    
+    let added = 0;
+    for (const item of order.items) {
+        // Find item in current menu
+        const menuItem = menuItems.find(i => i.name === item.name);
+        if (!menuItem) continue; // item no longer on menu
+        
+        // Skip if has modifiers (customer should configure those)
+        if (menuItem.modifierGroups && menuItem.modifierGroups.length > 0) {
+            // Add without modifiers, customer can customize
+            cart.push({
+                itemId: menuItem.id, name: menuItem.name, vegType: menuItem.vegType,
+                categoryId: menuItem.categoryId, price: menuItem.price, qty: item.qty,
+                modifiers: [], instructions: ''
+            });
+        } else {
+            const existing = cart.find(c => c.itemId === menuItem.id && c.modifiers.length === 0);
+            if (existing) { existing.qty += item.qty; }
+            else {
+                cart.push({
+                    itemId: menuItem.id, name: menuItem.name, vegType: menuItem.vegType,
+                    categoryId: menuItem.categoryId, price: menuItem.price, qty: item.qty,
+                    modifiers: [], instructions: ''
+                });
+            }
+        }
+        added++;
+    }
+    
+    updateCartBar();
+    if (added > 0) {
+        switchTab('cart');
+        alert(added + ' item' + (added > 1 ? 's' : '') + ' added to cart. Review and place your order!');
+    } else {
+        alert('Sorry, these items are no longer on the menu.');
+    }
+}
+
 async function startOrdersListener() {
     if (ordersListener) ordersListener(); // unsubscribe previous
     
