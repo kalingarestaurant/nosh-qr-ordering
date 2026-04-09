@@ -333,6 +333,7 @@ async function confirmDryDayPin(){
     if(!pin){document.getElementById('pinConfirmErr').textContent='Enter your PIN';return;}
     if(pin!==staffData.pin){document.getElementById('pinConfirmErr').textContent='Wrong PIN';return;}
     
+    const action=pendingDryDayAction; // save before closing
     closePinConfirm();
     
     const alcoholCatIds=allCategories.filter(c=>c.catType==='alcohol').map(c=>c.id||c.docId);
@@ -341,7 +342,7 @@ async function confirmDryDayPin(){
         const mc=await db.collection('qr_settings').doc('menu_control').get();
         let hiddenCats=(mc.exists?mc.data().hiddenCats:[])||[];
         
-        if(pendingDryDayAction==='on'){
+        if(action==='on'){
             alcoholCatIds.forEach(id=>{if(!hiddenCats.includes(id))hiddenCats.push(id);});
             isDryDay=true;
             toast('🚫 Dry Day ON — all alcohol hidden from menu');
