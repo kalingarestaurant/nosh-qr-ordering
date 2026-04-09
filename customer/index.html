@@ -642,7 +642,7 @@ function getOrderingHoursText() {
 // ============================================================
 // CART PERSISTENCE (localStorage per MENU, shared across outlets with same menu)
 // ============================================================
-const CART_EXPIRY_DAYS = 7;
+const CART_EXPIRY_DAYS = 30; // 30 days — supports advance booking + pre-ordering
 
 function saveCartToStorage() {
     if (!menuId) return;
