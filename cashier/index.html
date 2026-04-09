@@ -853,13 +853,13 @@ async function openMenuControl(){
             const scHidden=menuControlData.hiddenSubcats.includes(sc.id);
             return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 6px 24px;border-bottom:1px solid #1e2030;">
                 <span style="font-size:12px;color:#aaa;">${sc.name}</span>
-                <label style="cursor:pointer;"><input type="checkbox" ${scHidden?'':'checked'} onchange="toggleSubcat('${sc.id}',this.checked)" style="width:16px;height:16px;accent-color:#4ecdc4;cursor:pointer;"></label>
+                <button onclick="toggleSubcat('${sc.id}',${scHidden})" style="padding:3px 10px;border:none;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;${scHidden?'background:#ff6b6b;color:#fff;':'background:#2ecc7130;color:#2ecc71;'}">${scHidden?'HIDDEN — Tap to Show':'VISIBLE — Tap to Hide'}</button>
             </div>`;
         }).join(''):'';
         return `<div style="border:1px solid #252840;border-radius:8px;margin-bottom:8px;overflow:hidden;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:${isHidden?'#ff6b6b10':'#1e2030'};">
-                <span style="font-size:14px;font-weight:600;color:${isHidden?'#ff6b6b':'#e8e8e8'};">${cat.name}${isHidden?' (OFF)':''}</span>
-                <label style="cursor:pointer;"><input type="checkbox" ${isHidden?'':'checked'} onchange="toggleCat('${catId}',this.checked)" style="width:18px;height:18px;accent-color:#4ecdc4;cursor:pointer;"></label>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:${isHidden?'#ff6b6b15':'#1e2030'};">
+                <span style="font-size:14px;font-weight:600;color:${isHidden?'#ff6b6b':'#e8e8e8'};">${cat.name}</span>
+                <button onclick="toggleCat('${catId}',${isHidden})" style="padding:4px 12px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;${isHidden?'background:#ff6b6b;color:#fff;':'background:#2ecc7130;color:#2ecc71;'}">${isHidden?'HIDDEN — Tap to Show':'VISIBLE — Tap to Hide'}</button>
             </div>
             ${subcatHtml}
         </div>`;
@@ -882,25 +882,25 @@ async function restoreAllAlcohol(){
     }catch(e){toast('Error: '+e.message);}
 }
 
-async function toggleCat(catId,isOn){
+async function toggleCat(catId,currentlyHidden){
     let arr=menuControlData.hiddenCats.filter(c=>c!==catId);
-    if(!isOn) arr.push(catId);
+    if(!currentlyHidden) arr.push(catId); // was visible → now hide
     menuControlData.hiddenCats=arr;
     try{
         await db.collection('qr_settings').doc('menu_control').set({hiddenCats:arr,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-        toast(isOn?'✅ '+catId+' visible':'❌ '+catId+' hidden');
-        openMenuControl();// refresh
+        toast(currentlyHidden?'✅ '+catId+' back on menu':'🚫 '+catId+' hidden from menu');
+        openMenuControl();
     }catch(e){toast('Error: '+e.message);}
 }
 
-async function toggleSubcat(scId,isOn){
+async function toggleSubcat(scId,currentlyHidden){
     let arr=menuControlData.hiddenSubcats.filter(s=>s!==scId);
-    if(!isOn) arr.push(scId);
+    if(!currentlyHidden) arr.push(scId); // was visible → now hide
     menuControlData.hiddenSubcats=arr;
     try{
         await db.collection('qr_settings').doc('menu_control').set({hiddenSubcats:arr,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-        toast(isOn?'✅ Subcategory visible':'❌ Subcategory hidden');
-        openMenuControl();// refresh
+        toast(currentlyHidden?'✅ Subcategory back on menu':'🚫 Subcategory hidden from menu');
+        openMenuControl();
     }catch(e){toast('Error: '+e.message);}
 }
 
