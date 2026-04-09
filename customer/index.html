@@ -586,6 +586,8 @@ let sessionId = '';
 let sessionOrders = []; // orders in this session
 let menuCategories = [];
 let menuItems = [];
+let _origMenuCategories = []; // unfiltered copy for live re-apply
+let _origMenuItems = [];
 let cart = []; // { itemId, name, vegType, qty, modifiers: [{group, option, extraPrice}], instructions }
 let activeCategory = '';
 let activeSubcat = '';
@@ -1027,9 +1029,12 @@ async function loadMenu() {
                     menuItems = cached.items;
                     console.log('Menu loaded from cache (' + menuItems.length + ' items)');
                     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                    _origMenuCategories = JSON.parse(JSON.stringify(menuCategories));
+                    _origMenuItems = JSON.parse(JSON.stringify(menuItems));
                     await applyMenuControl();
                     repriceCart();
                     renderCatGrid();
+                    startMenuControlListener();
                     return;
                 }
             }
@@ -1119,6 +1124,10 @@ async function loadMenuFromFirestore() {
     // Sort items by sortOrder
     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
+    // Save unfiltered originals for live re-apply
+    _origMenuCategories = JSON.parse(JSON.stringify(menuCategories));
+    _origMenuItems = JSON.parse(JSON.stringify(menuItems));
+
     // Apply menu control (always fresh — not cached)
     await applyMenuControl();
 
@@ -1127,6 +1136,9 @@ async function loadMenuFromFirestore() {
 
     // Render
     renderCatGrid();
+    
+    // Start real-time listener for menu control changes
+    startMenuControlListener();
 }
 
 function repriceCart() {
@@ -1176,37 +1188,61 @@ function repriceCart() {
 }
 
 async function applyMenuControl() {
-    // Clear any stale upsell flags (permanent isBestseller from Firestore stays via item data)
-    // Only clear dynamic upsell — but since cache may have stale flags, reset all non-permanent
-    // Actually: items from cache/Firestore already have permanent isBestseller if set in admin.
-    // We just need to ALSO mark dynamic upsell items.
     try {
         const mcDoc = await db.collection('qr_settings').doc('menu_control').get();
         if (mcDoc.exists) {
-            const mc = mcDoc.data();
-            const hiddenCats = mc.hiddenCats || [];
-            const hiddenSubcats = mc.hiddenSubcats || [];
-            const upsellIds = mc.upsellItems || [];
-            // Filter out hidden categories
-            if (hiddenCats.length > 0) {
-                menuCategories = menuCategories.filter(c => !hiddenCats.includes(c.id));
-            }
-            // Filter out hidden subcategories
-            if (hiddenSubcats.length > 0) {
-                menuCategories = menuCategories.map(c => ({
-                    ...c,
-                    subcategories: (c.subcategories || []).filter(sc => !hiddenSubcats.includes(sc.id))
-                }));
-                menuItems = menuItems.filter(i => !hiddenSubcats.includes(i.subCategoryId));
-            }
-            // Mark upsell items as bestseller
-            if (upsellIds.length > 0) {
-                menuItems.forEach(item => {
-                    if (upsellIds.includes(item.id)) item.isBestseller = true;
-                });
-            }
+            applyMenuControlData(mcDoc.data());
         }
     } catch(e) { console.log('Menu control load error:', e); }
+}
+
+function applyMenuControlData(mc) {
+    // Restore from unfiltered originals first
+    menuCategories = JSON.parse(JSON.stringify(_origMenuCategories));
+    menuItems = JSON.parse(JSON.stringify(_origMenuItems));
+    
+    if (!mc) return;
+    
+    const hiddenCats = mc.hiddenCats || [];
+    const hiddenSubcats = mc.hiddenSubcats || [];
+    const upsellIds = mc.upsellItems || [];
+    
+    if (hiddenCats.length > 0) {
+        menuCategories = menuCategories.filter(c => !hiddenCats.includes(c.id));
+    }
+    if (hiddenSubcats.length > 0) {
+        menuCategories = menuCategories.map(c => ({
+            ...c,
+            subcategories: (c.subcategories || []).filter(sc => !hiddenSubcats.includes(sc.id))
+        }));
+        menuItems = menuItems.filter(i => !hiddenSubcats.includes(i.subCategoryId));
+    }
+    if (upsellIds.length > 0) {
+        menuItems.forEach(item => {
+            if (upsellIds.includes(item.id)) item.isBestseller = true;
+        });
+    }
+}
+
+// Real-time listener — updates menu instantly when cashier/barman changes menu_control
+let menuControlListener = null;
+function startMenuControlListener() {
+    if (menuControlListener) return; // already listening
+    menuControlListener = db.collection('qr_settings').doc('menu_control').onSnapshot(doc => {
+        if (!doc.exists) return;
+        console.log('Menu control changed — refreshing');
+        applyMenuControlData(doc.data());
+        repriceCart();
+        // Re-render current view
+        if (activeCategory) {
+            renderCategoryTabs();
+            renderSubcatTiles();
+            renderMenuItems();
+        } else {
+            renderCatGrid();
+        }
+        updateCartBar();
+    }, err => { console.log('Menu control listener error:', err); });
 }
 
 function setDietFilter(mode) {
