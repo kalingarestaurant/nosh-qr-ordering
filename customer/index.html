@@ -1044,15 +1044,15 @@ async function loadMenu() {
     // Load from Firestore
     await loadMenuFromFirestore();
     
-    // Save to cache with version
+    // Save to cache BEFORE menu control (cache = full unfiltered menu)
     try {
         localStorage.setItem(cacheKey, JSON.stringify({
             ts: Date.now(),
             ver: serverVersion || Date.now(),
-            categories: menuCategories,
-            items: menuItems
+            categories: _origMenuCategories,
+            items: _origMenuItems
         }));
-        console.log('Menu cached (' + menuItems.length + ' items)');
+        console.log('Menu cached (' + _origMenuItems.length + ' items)');
     } catch(e) { /* storage full, ignore */ }
 }
 
