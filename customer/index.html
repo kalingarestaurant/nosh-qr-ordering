@@ -638,25 +638,36 @@ function getOrderingHoursText() {
 }
 
 // ============================================================
-// CART PERSISTENCE (localStorage per outlet, 7-day expiry)
+// CART PERSISTENCE (localStorage per MENU, shared across outlets with same menu)
 // ============================================================
 const CART_EXPIRY_DAYS = 7;
 
 function saveCartToStorage() {
-    if (!outletId) return;
+    if (!menuId) return;
     const data = { cart: cart, updatedAt: Date.now() };
-    localStorage.setItem('nosh_cart_' + outletId, JSON.stringify(data));
+    localStorage.setItem('nosh_cart_' + menuId, JSON.stringify(data));
 }
 
 function loadCartFromStorage() {
-    if (!outletId) return;
+    if (!menuId) return;
     try {
-        const stored = localStorage.getItem('nosh_cart_' + outletId);
-        if (!stored) return;
+        const stored = localStorage.getItem('nosh_cart_' + menuId);
+        if (!stored) {
+            // Try old outlet-based key (migration)
+            const oldStored = localStorage.getItem('nosh_cart_' + outletId);
+            if (oldStored) {
+                const oldData = JSON.parse(oldStored);
+                if (oldData.cart && oldData.cart.length > 0 && Date.now() - oldData.updatedAt < CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
+                    cart = oldData.cart;
+                    localStorage.removeItem('nosh_cart_' + outletId);
+                    saveCartToStorage(); // save under new key
+                }
+            }
+            return;
+        }
         const data = JSON.parse(stored);
-        // Check expiry
         if (Date.now() - data.updatedAt > CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000) {
-            localStorage.removeItem('nosh_cart_' + outletId);
+            localStorage.removeItem('nosh_cart_' + menuId);
             return;
         }
         if (data.cart && data.cart.length > 0) {
@@ -666,7 +677,8 @@ function loadCartFromStorage() {
 }
 
 function clearCartStorage() {
-    if (outletId) localStorage.removeItem('nosh_cart_' + outletId);
+    if (menuId) localStorage.removeItem('nosh_cart_' + menuId);
+    if (outletId) localStorage.removeItem('nosh_cart_' + outletId); // clear old key too
 }
 
 // ============================================================
@@ -1016,6 +1028,7 @@ async function loadMenu() {
                     console.log('Menu loaded from cache (' + menuItems.length + ' items)');
                     menuItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
                     await applyMenuControl();
+                    repriceCart();
                     renderCatGrid();
                     return;
                 }
@@ -1109,8 +1122,57 @@ async function loadMenuFromFirestore() {
     // Apply menu control (always fresh — not cached)
     await applyMenuControl();
 
+    // Re-price cart items using current outlet's prices
+    repriceCart();
+
     // Render
     renderCatGrid();
+}
+
+function repriceCart() {
+    if (cart.length === 0) return;
+    let changed = 0;
+    let removed = 0;
+    
+    for (let i = cart.length - 1; i >= 0; i--) {
+        const cartItem = cart[i];
+        const menuItem = menuItems.find(m => m.id === cartItem.itemId);
+        
+        if (!menuItem) {
+            // Item not available at this outlet — remove from cart
+            cart.splice(i, 1);
+            removed++;
+            continue;
+        }
+        
+        // Update base price from current outlet
+        if (cartItem.price !== menuItem.price) {
+            cartItem.price = menuItem.price;
+            changed++;
+        }
+        
+        // Update name in case it changed
+        cartItem.name = menuItem.name;
+        cartItem.vegType = menuItem.vegType;
+        
+        // Re-price variant modifiers if item has modifier groups
+        if (cartItem.modifiers && cartItem.modifiers.length > 0 && menuItem.modifierGroups) {
+            cartItem.modifiers.forEach(mod => {
+                for (const group of menuItem.modifierGroups) {
+                    const matchOpt = group.options.find(o => o.name === mod.option);
+                    if (matchOpt && mod.extraPrice !== matchOpt.extraPrice) {
+                        mod.extraPrice = matchOpt.extraPrice;
+                        changed++;
+                    }
+                }
+            });
+        }
+    }
+    
+    if (changed > 0 || removed > 0) {
+        saveCartToStorage();
+        console.log('Cart repriced: ' + changed + ' prices updated, ' + removed + ' items removed');
+    }
 }
 
 async function applyMenuControl() {
