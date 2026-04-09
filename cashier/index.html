@@ -195,6 +195,9 @@
 <div id="menuControlModal" class="modal-bg"><div class="modal-box" style="max-width:550px;">
     <div class="od-head"><span class="od-title">⚙️ Menu Control</span><button class="od-x" onclick="closeM('menuControlModal')">✕</button></div>
     <div style="font-size:12px;color:#888;margin-bottom:14px;">Toggle categories/subcategories OFF for today (e.g. dry day). Auto-resets at daily reset.</div>
+    <div id="restoreAlcoholBtn" style="display:none;margin-bottom:12px;">
+        <button style="width:100%;padding:10px;background:#2ecc7120;border:1px solid #2ecc7140;border-radius:8px;color:#2ecc71;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;" onclick="restoreAllAlcohol()">✅ Restore All Alcohol Categories</button>
+    </div>
     <div id="menuControlList" style="max-height:60vh;overflow-y:auto;"></div>
 </div></div>
 
@@ -862,6 +865,21 @@ async function openMenuControl(){
         </div>`;
     }).join('');
     openM('menuControlModal');
+    // Show restore button for super_admin only, and only when alcohol is hidden
+    const alcoholHidden=allCategories.filter(c=>(c.catType==='alcohol')&&menuControlData.hiddenCats.includes(c.id||c.docId)).length>0;
+    document.getElementById('restoreAlcoholBtn').style.display=(staffRole==='super_admin'&&alcoholHidden)?'block':'none';
+}
+
+async function restoreAllAlcohol(){
+    if(!confirm('Restore all alcohol categories? This will make them visible on the menu again.'))return;
+    const alcoholCatIds=allCategories.filter(c=>c.catType==='alcohol').map(c=>c.id||c.docId);
+    let arr=menuControlData.hiddenCats.filter(id=>!alcoholCatIds.includes(id));
+    menuControlData.hiddenCats=arr;
+    try{
+        await db.collection('qr_settings').doc('menu_control').set({hiddenCats:arr,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+        toast('✅ All alcohol categories restored');
+        openMenuControl();
+    }catch(e){toast('Error: '+e.message);}
 }
 
 async function toggleCat(catId,isOn){
