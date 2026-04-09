@@ -68,7 +68,7 @@
             <div class="t-sub" id="dOutlet">-</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-            <button id="dryDayBtn" class="tbtn" style="background:#ff6b6b15;color:#ff6b6b;border-color:#ff6b6b30;display:none;" onclick="openCatControl()">🚫 Dry Day</button>
+            <button id="dryDayBtn" class="tbtn" style="display:none;" onclick="toggleDryDay()">🚫 Dry Day: OFF</button>
             <span style="font-size:11px;color:#666;" id="dTime"></span>
             <button class="tbtn" onclick="doLogout()">Logout</button>
         </div>
@@ -87,15 +87,18 @@
 
 <div class="toast" id="toastEl"></div>
 
-<!-- Category Control Modal -->
-<div id="catControlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;justify-content:center;align-items:center;">
-    <div style="background:#1a1c2e;border-radius:16px;padding:24px;width:95%;max-width:550px;max-height:85vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-            <span style="font-size:20px;font-weight:800;color:#fff;">🚫 Category Control</span>
-            <button onclick="closeCatControl()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">✕</button>
+<!-- PIN Confirmation Modal -->
+<div id="pinConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:300;justify-content:center;align-items:center;">
+    <div style="background:#1a1c2e;border-radius:16px;padding:28px;width:90%;max-width:340px;text-align:center;">
+        <div style="font-size:36px;margin-bottom:8px;">🚫</div>
+        <div id="pinConfirmTitle" style="font-size:18px;font-weight:800;color:#fff;margin-bottom:6px;">Confirm Dry Day</div>
+        <div id="pinConfirmDesc" style="font-size:12px;color:#888;margin-bottom:16px;">All alcohol categories will be hidden from the menu immediately. Enter your PIN to confirm.</div>
+        <input type="password" id="pinConfirmInput" class="auth-pin" placeholder="Enter PIN" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')confirmDryDayPin()" style="margin-bottom:10px;">
+        <div class="auth-err" id="pinConfirmErr"></div>
+        <div style="display:flex;gap:10px;">
+            <button class="btn" style="background:#2a2d3e;color:#888;" onclick="closePinConfirm()">Cancel</button>
+            <button class="btn" style="background:#ff6b6b;color:#fff;" onclick="confirmDryDayPin()">Confirm</button>
         </div>
-        <div style="font-size:12px;color:#888;margin-bottom:14px;">Toggle categories/subcategories OFF for today (e.g. dry day — hide alcohol). Auto-resets at daily reset.</div>
-        <div id="catControlList"></div>
     </div>
 </div>
 
@@ -155,10 +158,13 @@ async function startDash(){
     document.getElementById('authWrap').style.display='none';
     document.getElementById('dash').classList.add('on');
     document.getElementById('dOutlet').textContent=staffData.role==='chef'?'🍽️ Food Items':staffData.role==='barman'?'🍺 Drinks & Alcohol':'All Items';
-    if(staffData.role==='barman'||staffData.role==='super_admin') document.getElementById('dryDayBtn').style.display='';
     setInterval(()=>document.getElementById('dTime').textContent=getISTTime(),1000);
     document.getElementById('dTime').textContent=getISTTime();
     await loadData();
+    if(staffData.role==='barman'||staffData.role==='super_admin') {
+        document.getElementById('dryDayBtn').style.display='';
+        await checkDryDayStatus();
+    }
     renderItems();
 }
 
@@ -259,69 +265,102 @@ async function toggleUpsell(itemId,add){
     }catch(e){toast('Error: '+e.message);}
 }
 
-// ═══════ CATEGORY CONTROL (Dry Day) ═══════
-let hiddenCats=[];
-let hiddenSubcats=[];
+// ═══════ DRY DAY (one-button toggle for all alcohol categories) ═══════
+let isDryDay=false;
 
-async function openCatControl(){
-    // Load current state
+async function checkDryDayStatus(){
     try{
         const mc=await db.collection('qr_settings').doc('menu_control').get();
         if(mc.exists){
-            hiddenCats=mc.data().hiddenCats||[];
-            hiddenSubcats=mc.data().hiddenSubcats||[];
+            const hidden=mc.data().hiddenCats||[];
+            const alcoholCats=allCategories.filter(c=>c.catType==='alcohol').map(c=>c.id||c.docId);
+            isDryDay=alcoholCats.length>0&&alcoholCats.every(id=>hidden.includes(id));
         }
     }catch(e){}
-    
-    const container=document.getElementById('catControlList');
-    const activeCats=allCategories.filter(c=>c.isActive);
-    container.innerHTML=activeCats.map(cat=>{
-        const catId=cat.id||cat.docId;
-        const isHidden=hiddenCats.includes(catId);
-        const subcats=cat.subcategories||[];
-        const scHtml=subcats.length>0?subcats.map(sc=>{
-            const scOff=hiddenSubcats.includes(sc.id);
-            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 6px 24px;border-bottom:1px solid #1e2030;">
-                <span style="font-size:12px;color:#aaa;">${sc.name}</span>
-                <label style="cursor:pointer;"><input type="checkbox" ${scOff?'':'checked'} onchange="toggleSubcatCtrl('${sc.id}',this.checked)" style="width:16px;height:16px;accent-color:#4ecdc4;cursor:pointer;"></label>
-            </div>`;
-        }).join(''):'';
-        return `<div style="border:1px solid #252840;border-radius:8px;margin-bottom:8px;overflow:hidden;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:${isHidden?'#ff6b6b10':'#1e2030'};">
-                <span style="font-size:14px;font-weight:600;color:${isHidden?'#ff6b6b':'#e8e8e8'};">${cat.name}${isHidden?' (OFF)':''}</span>
-                <label style="cursor:pointer;"><input type="checkbox" ${isHidden?'':'checked'} onchange="toggleCatCtrl('${catId}',this.checked)" style="width:18px;height:18px;accent-color:#4ecdc4;cursor:pointer;"></label>
-            </div>
-            ${scHtml}
-        </div>`;
-    }).join('');
-    
-    const modal=document.getElementById('catControlModal');
-    modal.style.display='flex';
+    updateDryDayBtn();
 }
 
-function closeCatControl(){document.getElementById('catControlModal').style.display='none';}
+function updateDryDayBtn(){
+    const btn=document.getElementById('dryDayBtn');
+    if(!btn)return;
+    if(isDryDay){
+        btn.textContent='🚫 Dry Day: ON';
+        btn.style.background='#ff6b6b';
+        btn.style.color='#fff';
+        btn.style.borderColor='#ff6b6b';
+    }else{
+        btn.textContent='🚫 Dry Day: OFF';
+        btn.style.background='#ff6b6b15';
+        btn.style.color='#ff6b6b';
+        btn.style.borderColor='#ff6b6b30';
+    }
+}
 
-async function toggleCatCtrl(catId,isOn){
-    hiddenCats=hiddenCats.filter(c=>c!==catId);
-    if(!isOn) hiddenCats.push(catId);
+async function toggleDryDay(){
+    const alcoholCatIds=allCategories.filter(c=>c.catType==='alcohol').map(c=>c.id||c.docId);
+    if(alcoholCatIds.length===0){toast('No alcohol categories found. Tag categories as Alcohol in Admin.');return;}
+    
+    if(!isDryDay){
+        // Turning ON — require PIN confirmation
+        document.getElementById('pinConfirmTitle').textContent='Confirm Dry Day ON';
+        document.getElementById('pinConfirmDesc').textContent='All alcohol categories will be hidden from the menu immediately. Enter your PIN to confirm.';
+        document.getElementById('pinConfirmInput').value='';
+        document.getElementById('pinConfirmErr').textContent='';
+        document.getElementById('pinConfirmModal').style.display='flex';
+        setTimeout(()=>document.getElementById('pinConfirmInput').focus(),100);
+        pendingDryDayAction='on';
+    }else{
+        // Turning OFF — also require PIN
+        document.getElementById('pinConfirmTitle').textContent='Confirm Dry Day OFF';
+        document.getElementById('pinConfirmDesc').textContent='All alcohol categories will be restored on the menu. Enter your PIN to confirm.';
+        document.getElementById('pinConfirmInput').value='';
+        document.getElementById('pinConfirmErr').textContent='';
+        document.getElementById('pinConfirmModal').style.display='flex';
+        setTimeout(()=>document.getElementById('pinConfirmInput').focus(),100);
+        pendingDryDayAction='off';
+    }
+}
+
+let pendingDryDayAction='';
+
+function closePinConfirm(){
+    document.getElementById('pinConfirmModal').style.display='none';
+    pendingDryDayAction='';
+}
+
+async function confirmDryDayPin(){
+    const pin=document.getElementById('pinConfirmInput').value.trim();
+    if(!pin){document.getElementById('pinConfirmErr').textContent='Enter your PIN';return;}
+    if(pin!==staffData.pin){document.getElementById('pinConfirmErr').textContent='Wrong PIN';return;}
+    
+    closePinConfirm();
+    
+    const alcoholCatIds=allCategories.filter(c=>c.catType==='alcohol').map(c=>c.id||c.docId);
+    
     try{
-        await db.collection('qr_settings').doc('menu_control').set({hiddenCats:hiddenCats,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-        toast(isOn?'✅ Category visible':'🚫 Category hidden');
-        openCatControl();
+        const mc=await db.collection('qr_settings').doc('menu_control').get();
+        let hiddenCats=(mc.exists?mc.data().hiddenCats:[])||[];
+        
+        if(pendingDryDayAction==='on'){
+            alcoholCatIds.forEach(id=>{if(!hiddenCats.includes(id))hiddenCats.push(id);});
+            isDryDay=true;
+            toast('🚫 Dry Day ON — all alcohol hidden from menu');
+        }else{
+            hiddenCats=hiddenCats.filter(id=>!alcoholCatIds.includes(id));
+            isDryDay=false;
+            toast('✅ Dry Day OFF — alcohol back on menu');
+        }
+        
+        await db.collection('qr_settings').doc('menu_control').set({
+            hiddenCats:hiddenCats,
+            updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+        },{merge:true});
+        
+        updateDryDayBtn();
     }catch(e){toast('Error: '+e.message);}
 }
 
-async function toggleSubcatCtrl(scId,isOn){
-    hiddenSubcats=hiddenSubcats.filter(s=>s!==scId);
-    if(!isOn) hiddenSubcats.push(scId);
-    try{
-        await db.collection('qr_settings').doc('menu_control').set({hiddenSubcats:hiddenSubcats,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-        toast(isOn?'✅ Subcategory visible':'🚫 Subcategory hidden');
-        openCatControl();
-    }catch(e){toast('Error: '+e.message);}
-}
-
-document.getElementById('catControlModal').addEventListener('click',function(e){if(e.target===this)closeCatControl();});
+document.getElementById('pinConfirmModal').addEventListener('click',function(e){if(e.target===this)closePinConfirm();});
 
 window.addEventListener('DOMContentLoaded',checkAutoLogin);
 </script>
