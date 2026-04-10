@@ -323,14 +323,25 @@
                 <div id="ohStatus" style="font-size:12px;margin-top:8px;"></div>
             </div>
             <div class="card" style="margin-top:12px;">
-                <div class="card-title">📊 Meta (Facebook) Pixel</div>
-                <div style="font-size:12px;color:#888;margin-bottom:12px;">Add Meta Pixel ID per outlet for ad tracking.</div>
-                <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                <div class="card-title">📊 Ad & Analytics Tracking</div>
+                <div style="font-size:12px;color:#888;margin-bottom:12px;">Add tracking IDs per outlet. Meta Pixel, Google Ads, and GA4 all work together.</div>
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
                     <label style="font-size:12px;color:#888;">Outlet:</label>
                     <select class="fi" id="pixelOutletSelect" onchange="loadPixelId()" style="flex:1;"></select>
-                    <input class="fi" id="pixelIdInput" placeholder="Meta Pixel ID" style="flex:1;" inputmode="numeric">
-                    <button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:12px;" onclick="savePixelId()">💾 Save</button>
                 </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:#888;min-width:80px;">Meta Pixel:</span>
+                    <input class="fi" id="pixelIdInput" placeholder="e.g. 1234567890" style="flex:1;" inputmode="numeric">
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:#888;min-width:80px;">Google Ads:</span>
+                    <input class="fi" id="googleAdsIdInput" placeholder="e.g. AW-1234567890" style="flex:1;">
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:#888;min-width:80px;">GA4:</span>
+                    <input class="fi" id="ga4IdInput" placeholder="e.g. G-XXXXXXXXXX" style="flex:1;">
+                </div>
+                <button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:12px;" onclick="savePixelId()">💾 Save All</button>
                 <div id="pixelStatus" style="font-size:12px;margin-top:8px;"></div>
             </div>
         </div>
@@ -1073,7 +1084,7 @@ function renderItems() {
             ${posHtml}
             <div class="item-veg ${vegClass}"></div>
             <div class="item-name" title="${item.name}">${item.name}</div>
-            <button class="bs-toggle ${item.isBestseller ? 'on' : ''}" onclick="event.stopPropagation();toggleBestseller('${item.docId}',${!item.isBestseller})" title="${item.isBestseller ? 'Remove Bestseller' : 'Mark as Bestseller'}">🔥</button>
+            <button class="bs-toggle ${item.isBestseller ? 'on' : ''}" onclick="event.stopPropagation();toggleBestseller('${item.docId}',${!item.isBestseller})" title="${item.isBestseller ? 'Remove Must Try' : 'Mark as Must Try'}">🔥</button>
             <div class="item-price">₹${Math.round(item.price || 0)}</div>
             <div class="item-cat">${cat ? cat.name : ''}</div>
             <div class="item-subcat">${subcat ? subcat.name : ''}</div>
@@ -1113,7 +1124,7 @@ async function toggleBestseller(docId, newValue) {
         const item = items.find(i => i.docId === docId);
         if (item) item.isBestseller = newValue;
         renderItems();
-        toast(newValue ? '🔥 Marked as Bestseller' : 'Removed from Bestsellers');
+        toast(newValue ? '🔥 Marked as Must Try' : 'Removed from Must Try');
     } catch (e) { toast('Error: ' + e.message, 'err'); }
 }
 
@@ -3134,7 +3145,7 @@ async function saveOrderingHours() {
 }
 
 // ============================================================
-// META PIXEL CONFIG
+// AD & ANALYTICS TRACKING CONFIG
 // ============================================================
 function initPixelConfig() {
     const sel = document.getElementById('pixelOutletSelect');
@@ -3147,29 +3158,41 @@ async function loadPixelId() {
     if (!outletId) return;
     try {
         const doc = await db.collection('qr_outlets').doc(outletId).get();
-        const pixelId = doc.exists ? doc.data().metaPixelId || '' : '';
-        document.getElementById('pixelIdInput').value = pixelId;
-        document.getElementById('pixelStatus').innerHTML = pixelId
-            ? '<span style="color:#2ecc71;">✅ Pixel active: ' + pixelId + '</span>'
-            : '<span style="color:#666;">No pixel set — tracking disabled for this outlet</span>';
+        const data = doc.exists ? doc.data() : {};
+        document.getElementById('pixelIdInput').value = data.metaPixelId || '';
+        document.getElementById('googleAdsIdInput').value = data.googleAdsId || '';
+        document.getElementById('ga4IdInput').value = data.ga4Id || '';
+        
+        const active = [];
+        if (data.metaPixelId) active.push('Meta Pixel');
+        if (data.googleAdsId) active.push('Google Ads');
+        if (data.ga4Id) active.push('GA4');
+        document.getElementById('pixelStatus').innerHTML = active.length > 0
+            ? '<span style="color:#2ecc71;">✅ Active: ' + active.join(', ') + '</span>'
+            : '<span style="color:#666;">No tracking set for this outlet</span>';
     } catch(e) { console.error(e); }
 }
 
 async function savePixelId() {
     const outletId = document.getElementById('pixelOutletSelect').value;
-    const pixelId = document.getElementById('pixelIdInput').value.trim();
+    const metaPixelId = document.getElementById('pixelIdInput').value.trim();
+    const googleAdsId = document.getElementById('googleAdsIdInput').value.trim();
+    const ga4Id = document.getElementById('ga4IdInput').value.trim();
     if (!outletId) return;
-    if (pixelId && !/^\d+$/.test(pixelId)) { toast('Pixel ID should be a number', 'err'); return; }
+    
     try {
-        await db.collection('qr_outlets').doc(outletId).update({ metaPixelId: pixelId });
-        document.getElementById('pixelStatus').innerHTML = '<span style="color:#2ecc71;">✅ Saved: ' + (pixelId || 'cleared') + '</span>';
-        toast('✅ Pixel ID saved');
+        await db.collection('qr_outlets').doc(outletId).update({
+            metaPixelId: metaPixelId,
+            googleAdsId: googleAdsId,
+            ga4Id: ga4Id
+        });
+        const active = [];
+        if (metaPixelId) active.push('Meta Pixel');
+        if (googleAdsId) active.push('Google Ads');
+        if (ga4Id) active.push('GA4');
+        document.getElementById('pixelStatus').innerHTML = '<span style="color:#2ecc71;">✅ Saved: ' + (active.length > 0 ? active.join(', ') : 'all cleared') + '</span>';
+        toast('✅ Tracking IDs saved');
     } catch(e) { toast('Error: ' + e.message, 'err'); }
-}
-
-async function clearPixelId() {
-    document.getElementById('pixelIdInput').value = '';
-    await savePixelId();
 }
 
 async function toggleOTPSetting() {
