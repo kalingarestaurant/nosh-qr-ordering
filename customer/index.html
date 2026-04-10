@@ -533,10 +533,10 @@ const db = firebase.firestore();
 // META PIXEL (loaded dynamically from outlet config)
 // ============================================================
 let metaPixelActive = false;
+let gtagActive = false;
 
 function initMetaPixel(pixelId) {
     if (!pixelId || metaPixelActive) return;
-    // Inject Meta Pixel base code
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
     n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
@@ -548,9 +548,51 @@ function initMetaPixel(pixelId) {
     console.log('Meta Pixel initialized:', pixelId);
 }
 
+function initGoogleTags(googleAdsId, ga4Id) {
+    if (gtagActive || (!googleAdsId && !ga4Id)) return;
+    // Load gtag.js once (use whichever ID is available)
+    const primaryId = ga4Id || googleAdsId;
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + primaryId;
+    document.head.appendChild(script);
+    
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(){ dataLayer.push(arguments); };
+    gtag('js', new Date());
+    
+    if (ga4Id) { gtag('config', ga4Id); console.log('GA4 initialized:', ga4Id); }
+    if (googleAdsId) { gtag('config', googleAdsId); console.log('Google Ads initialized:', googleAdsId); }
+    gtagActive = true;
+}
+
 function trackPixelEvent(event, data) {
-    if (!metaPixelActive || typeof fbq !== 'function') return;
-    try { fbq('track', event, data || {}); } catch(e) {}
+    // Meta Pixel
+    if (metaPixelActive && typeof fbq === 'function') {
+        try { fbq('track', event, data || {}); } catch(e) {}
+    }
+    // Google tags (gtag)
+    if (gtagActive && typeof gtag === 'function') {
+        try {
+            // Map Meta Pixel events to Google events
+            const gMap = {
+                'PageView': 'page_view',
+                'ViewContent': 'view_item',
+                'AddToCart': 'add_to_cart',
+                'InitiateCheckout': 'begin_checkout',
+                'Purchase': 'purchase'
+            };
+            const gEvent = gMap[event] || event;
+            const gData = {};
+            if (data) {
+                if (data.value) gData.value = data.value;
+                if (data.currency) gData.currency = data.currency;
+                if (data.content_name) gData.item_name = data.content_name;
+                if (data.num_items) gData.items_count = data.num_items;
+            }
+            gtag('event', gEvent, gData);
+        } catch(e) {}
+    }
 }
 
 // ============================================================
@@ -796,6 +838,9 @@ async function init() {
 
         const pixelId = outletDoc.data().metaPixelId || '';
         if (pixelId) initMetaPixel(pixelId);
+        const googleAdsId = outletDoc.data().googleAdsId || '';
+        const ga4Id = outletDoc.data().ga4Id || '';
+        if (googleAdsId || ga4Id) initGoogleTags(googleAdsId, ga4Id);
 
         try {
             const settingsDoc = await db.collection('qr_settings').doc('config').get();
@@ -1280,7 +1325,7 @@ function renderCatGrid() {
     // Check if any bestseller items exist
     const bestsellerItems = filteredItems.filter(i => i.isBestseller);
     const bestsellerTile = bestsellerItems.length > 0 ? `<div class="cat-tile" onclick="selectCategory('__bestsellers__')" style="position:relative;">
-        <div class="cat-tile-placeholder" style="background:linear-gradient(135deg, #e94560 0%, #f39c12 100%);"><span class="cat-tile-name">🔥 Bestsellers</span></div>
+        <div class="cat-tile-placeholder" style="background:linear-gradient(135deg, #e94560 0%, #f39c12 100%);"><span class="cat-tile-name">🔥 Must Try</span></div>
         <div class="cat-tile-count">${bestsellerItems.length}</div>
     </div>` : '';
     
@@ -1313,7 +1358,7 @@ function selectCategory(catId) {
     if (detailInput) detailInput.value = '';
     
     if (catId === '__bestsellers__') {
-        document.getElementById('detailCatName').textContent = '🔥 Bestsellers';
+        document.getElementById('detailCatName').textContent = '🔥 Must Try';
         // Subcats = parent categories that have bestseller items
         const bsItems = getVegFilteredItems(menuItems).filter(i => i.isBestseller);
         const bsCatIds = [...new Set(bsItems.map(i => i.categoryId))];
@@ -1526,7 +1571,7 @@ function renderItemCard(item) {
     const vegClass = item.vegType === 'Veg' ? 'veg' : item.vegType === 'NonVeg' ? 'nonveg' : item.vegType === 'Egg' ? 'egg' : '';
     const hasModifiers = item.modifierGroups && item.modifierGroups.length > 0;
     const customLabel = hasModifiers ? '<div style="font-size:11px;color:#888;text-align:center;">customizable</div>' : '';
-    const bsBadge = item.isBestseller ? '<span style="font-size:10px;background:#e9456020;color:#e94560;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700;">🔥 Bestseller</span>' : '';
+    const bsBadge = item.isBestseller ? '<span style="font-size:10px;background:#e9456020;color:#e94560;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700;">🔥 Must Try</span>' : '';
     
     let displayPrice = item.price;
     const variantGroup = hasModifiers ? item.modifierGroups.find(mg => mg.type === 'variant') : null;
